@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charly Táctico · Dashboard Alumno</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #0b1120;
+      --navy2:  #111a2e;
+      --navy3:  #162038;
+      --gold:   #c9a84c;
+      --white:  #f0f4ff;
+      --muted:  #7a90b0;
+      --border: rgba(201,168,76,0.25);
+      --green:  #4caf7d;
+      --red:    #e05555;
+      --yellow: #e8c96a;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 60px;
+      background: rgba(11,17,32,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 24px;
+      z-index: 100;
+      gap: 16px;
+    }
+    .topbar-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .topbar-brand span { color: var(--white); }
+    .topbar-sep { flex: 1; }
+    .topbar-user {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .topbar-user strong { color: var(--gold); }
+    .btn-logout {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── SIDEBAR ── */
+    .layout { display: flex; padding-top: 60px; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--navy2);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 60px; bottom: 0;
+      overflow-y: auto;
+      z-index: 50;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-section {
+      padding: 20px 0 8px;
+    }
+    .sidebar-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 20px 8px;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      cursor: pointer;
+      border: none; background: none; width: 100%;
+      text-align: left;
+      border-left: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .sidebar-link:hover { color: var(--white); background: var(--navy3); }
+    .sidebar-link.active { color: var(--gold); border-left-color: var(--gold); background: var(--navy3); }
+    .sidebar-link .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* hamburger for mobile sidebar */
+    .sidebar-toggle {
+      display: none;
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 200;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      width: 48px; height: 48px;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      flex: 1;
+      margin-left: 220px;
+      padding: 32px 28px;
+      position: relative; z-index: 1;
+    }
+
+    /* loading */
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 60vh;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* panels */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* page header */
+    .page-header { margin-bottom: 28px; }
+    .page-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    /* ── CARDS ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      padding: 24px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+    }
+    .stat-card-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stat-card-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .stat-card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .table-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.05em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 14px 20px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(201,168,76,0.08);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--navy3); }
+
+    /* badges */
+    .badge {
+      display: inline-block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border: 1px solid;
+    }
+    .badge-green  { color: var(--green);  border-color: var(--green);  background: rgba(76,175,125,0.1); }
+    .badge-red    { color: var(--red);    border-color: var(--red);    background: rgba(224,85,85,0.1); }
+    .badge-yellow { color: var(--yellow); border-color: var(--yellow); background: rgba(232,201,106,0.1); }
+    .badge-blue   { color: #6ab0e8;       border-color: #6ab0e8;       background: rgba(106,176,232,0.1); }
+
+    /* nota color */
+    .nota-alta  { color: var(--green);  font-weight: 600; }
+    .nota-media { color: var(--yellow); font-weight: 600; }
+    .nota-baja  { color: var(--red);    font-weight: 600; }
+
+    /* progress bar */
+    .progress-wrap { background: var(--navy); height: 4px; margin-top: 6px; }
+    .progress-bar  { height: 4px; background: var(--gold); transition: width 0.6s ease; }
+
+    /* notificaciones */
+    .notif-list { display: flex; flex-direction: column; gap: 2px; }
+    .notif-item {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      padding: 16px 20px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .notif-item.urgente { border-left-color: var(--red); }
+    .notif-item.info    { border-left-color: #6ab0e8; }
+    .notif-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .notif-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .notif-msg  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .notif-time {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.1em;
+    }
+
+    /* horario */
+    .horario-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 2px;
+    }
+    .horario-dia {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+    .horario-dia-nombre {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      color: var(--gold);
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .horario-clase {
+      background: var(--navy3);
+      border-left: 2px solid var(--gold);
+      padding: 8px 10px;
+      margin-bottom: 6px;
+    }
+    .horario-clase-nombre {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .horario-clase-hora {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* empty state */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding: 20px 16px; }
+      .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+      .topbar-user { display: none; }
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+      .page-title { font-size: 32px; }
+    }
+    @media (max-width: 480px) {
+      .cards-grid { grid-template-columns: 1fr 1fr; }
+      .horario-grid { grid-template-columns: 1fr; }
+    }
+
+    /* sidebar overlay */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 49;
+    }
+    .overlay.show { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand"><span>CHARLY</span> TÁCTICO</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-user">Cadete: <strong id="topNombre">Cargando...</strong></div>
+  <button class="btn-logout" onclick="doLogout()">Salir</button>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Mi cuenta</div>
+    <button class="sidebar-link active" onclick="showPanel('inicio')">
+      <span class="icon">🏠</span> Inicio
+    </button>
+    <button class="sidebar-link" onclick="showPanel('notas')">
+      <span class="icon">📊</span> Mis Notas
+    </button>
+    <button class="sidebar-link" onclick="showPanel('asistencias')">
+      <span class="icon">📅</span> Asistencias
+    </button>
+    <button class="sidebar-link" onclick="showPanel('notificaciones')">
+      <span class="icon">🔔</span> Notificaciones
+    </button>
+    <button class="sidebar-link" onclick="showPanel('horario')">
+      <span class="icon">🕐</span> Horario
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <div class="main">
+
+    <!-- INICIO -->
+    <div class="panel active" id="panel-inicio">
+      <div class="page-header">
+        <div class="page-eyebrow">Bienvenido de vuelta</div>
+        <div class="page-title" id="welcomeTitle">CADETE</div>
+      </div>
+
+      <div class="cards-grid" id="resumenCards">
+        <div class="stat-card">
+          <div class="stat-card-label">Promedio general</div>
+          <div class="stat-card-value" id="cardPromedio">--</div>
+          <div class="stat-card-sub">Periodo actual</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Asistencia</div>
+          <div class="stat-card-value" id="cardAsistencia">--%</div>
+          <div class="stat-card-sub">Este mes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Materias</div>
+          <div class="stat-card-value" id="cardMaterias">--</div>
+          <div class="stat-card-sub">Activas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Notificaciones</div>
+          <div class="stat-card-value" id="cardNotifs">--</div>
+          <div class="stat-card-sub">Sin leer</div>
+        </div>
+      </div>
+
+      <!-- Notas resumen -->
+      <div class="table-wrap">
+        <div class="table-header">Resumen de Notas</div>
+        <div id="notasResumenBody"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- NOTAS -->
+    <div class="panel" id="panel-notas">
+      <div class="page-header">
+        <div class="page-eyebrow">Rendimiento académico</div>
+        <div class="page-title">MIS NOTAS</div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">Calificaciones por Materia</div>
+        <div id="notasBody"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- ASISTENCIAS -->
+    <div class="panel" id="panel-asistencias">
+      <div class="page-header">
+        <div class="page-eyebrow">Control de presencia</div>
+        <div class="page-title">MIS ASISTENCIAS</div>
+      </div>
+      <div class="cards-grid" style="grid-template-columns: repeat(3,1fr); margin-bottom: 24px;">
+        <div class="stat-card">
+          <div class="stat-card-label">Presencias</div>
+          <div class="stat-card-value nota-alta" id="aPresente">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Tardanzas</div>
+          <div class="stat-card-value nota-media" id="aTardanza">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Ausencias</div>
+          <div class="stat-card-value nota-baja" id="aAusente">--</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">Registro de Asistencias</div>
+        <div id="asistenciasBody"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICACIONES -->
+    <div class="panel" id="panel-notificaciones">
+      <div class="page-header">
+        <div class="page-eyebrow">Comunicados institucionales</div>
+        <div class="page-title">NOTIFICACIONES</div>
+      </div>
+      <div class="notif-list" id="notifList">
+        <div class="loading">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- HORARIO -->
+    <div class="panel" id="panel-horario">
+      <div class="page-header">
+        <div class="page-eyebrow">Semana académica</div>
+        <div class="page-title">MI HORARIO</div>
+      </div>
+      <div class="horario-grid" id="horarioGrid">
+        <div class="loading">Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let alumnoId = null;
+let perfilData = null;
+
+// ── INIT ──
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  const { data: perfil } = await sb.from('perfiles').select('*').eq('id', currentUser.id).single();
+  perfilData = perfil;
+
+  if (perfil) {
+    const nombre = `${perfil.nombre} ${perfil.apellido}`;
+    document.getElementById('topNombre').textContent = nombre;
+    document.getElementById('welcomeTitle').textContent = perfil.nombre.toUpperCase();
+  }
+
+  const { data: alumno } = await sb.from('alumnos').select('*').eq('perfil_id', currentUser.id).single();
+  if (alumno) alumnoId = alumno.id;
+
+  await Promise.all([loadNotas(), loadAsistencias(), loadNotificaciones(), loadHorario()]);
+}
+
+// ── NOTAS ──
+async function loadNotas() {
+  if (!alumnoId) { renderNotasEmpty(); return; }
+  const { data } = await sb.from('notas').select('*, materias(nombre)').eq('alumno_id', alumnoId);
+
+  // Cards resumen
+  if (data && data.length > 0) {
+    const promedios = data.map(n => n.promedio || 0).filter(p => p > 0);
+    const promGeneral = promedios.length ? (promedios.reduce((a,b)=>a+b,0)/promedios.length).toFixed(1) : '--';
+    document.getElementById('cardPromedio').textContent = promGeneral;
+    document.getElementById('cardMaterias').textContent = data.length;
+  }
+
+  const html = renderNotasTable(data);
+  document.getElementById('notasBody').innerHTML = html;
+  document.getElementById('notasResumenBody').innerHTML = html;
+}
+
+function renderNotasTable(data) {
+  if (!data || data.length === 0) return `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin notas registradas aún</div></div>`;
+  return `<table>
+    <thead><tr>
+      <th>Materia</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Promedio</th><th>Estado</th>
+    </tr></thead>
+    <tbody>${data.map(n => {
+      const p = n.promedio || 0;
+      const cls = p >= 14 ? 'nota-alta' : p >= 11 ? 'nota-media' : 'nota-baja';
+      const estado = p >= 14 ? 'Aprobado' : p >= 11 ? 'En riesgo' : 'Desaprobado';
+      const badgeCls = p >= 14 ? 'badge-green' : p >= 11 ? 'badge-yellow' : 'badge-red';
+      return `<tr>
+        <td><strong>${n.materias?.nombre || 'Materia'}</strong></td>
+        <td>${n.nota_1 ?? '--'}</td>
+        <td>${n.nota_2 ?? '--'}</td>
+        <td>${n.nota_3 ?? '--'}</td>
+        <td class="${cls}"><strong>${p || '--'}</strong></td>
+        <td><span class="badge ${badgeCls}">${estado}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderNotasEmpty() {
+  const msg = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin notas registradas</div></div>`;
+  document.getElementById('notasBody').innerHTML = msg;
+  document.getElementById('notasResumenBody').innerHTML = msg;
+}
+
+// ── ASISTENCIAS ──
+async function loadAsistencias() {
+  if (!alumnoId) { renderAsistenciasEmpty(); return; }
+  const { data } = await sb.from('asistencias').select('*, materias(nombre)').eq('alumno_id', alumnoId).order('fecha', { ascending: false });
+
+  const presente  = data?.filter(a => a.estado === 'presente').length  || 0;
+  const tardanza  = data?.filter(a => a.estado === 'tardanza').length  || 0;
+  const ausente   = data?.filter(a => a.estado === 'ausente').length   || 0;
+  const total     = (presente + tardanza + ausente) || 1;
+  const pct       = Math.round((presente / total) * 100);
+
+  document.getElementById('aPresente').textContent  = presente;
+  document.getElementById('aTardanza').textContent  = tardanza;
+  document.getElementById('aAusente').textContent   = ausente;
+  document.getElementById('cardAsistencia').textContent = `${pct}%`;
+
+  if (!data || data.length === 0) {
+    document.getElementById('asistenciasBody').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Sin registros de asistencia</div></div>`;
+    return;
+  }
+
+  document.getElementById('asistenciasBody').innerHTML = `<table>
+    <thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Facial</th></tr></thead>
+    <tbody>${data.map(a => {
+      const badgeCls = a.estado === 'presente' ? 'badge-green' : a.estado === 'tardanza' ? 'badge-yellow' : 'badge-red';
+      const fecha = new Date(a.fecha).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+      return `<tr>
+        <td>${fecha}</td>
+        <td>${a.materias?.nombre || '--'}</td>
+        <td>${a.hora_ingreso || '--'}</td>
+        <td><span class="badge ${badgeCls}">${a.estado}</span></td>
+        <td>${a.verificado_facial ? '<span class="badge badge-green">✓ Verificado</span>' : '<span class="badge badge-blue">Manual</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderAsistenciasEmpty() {
+  document.getElementById('asistenciasBody').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Sin registros</div></div>`;
+}
+
+// ── NOTIFICACIONES ──
+async function loadNotificaciones() {
+  const { data } = await sb.from('notificaciones')
+    .select('*')
+    .or(`destinatario_id.eq.${currentUser.id},global.eq.true`)
+    .order('creado_en', { ascending: false });
+
+  const sinLeer = data?.filter(n => !n.leida).length || 0;
+  document.getElementById('cardNotifs').textContent = sinLeer;
+
+  if (!data || data.length === 0) {
+    document.getElementById('notifList').innerHTML = `<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Sin notificaciones</div></div>`;
+    return;
+  }
+
+  const icons = { info: 'ℹ️', alerta: '⚠️', urgente: '🚨' };
+  document.getElementById('notifList').innerHTML = data.map(n => {
+    const fecha = new Date(n.creado_en).toLocaleDateString('es-PE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return `<div class="notif-item ${n.tipo}">
+      <div class="notif-icon">${icons[n.tipo] || '📢'}</div>
+      <div>
+        <div class="notif-title">${n.titulo}${!n.leida ? ' <span class="badge badge-yellow" style="font-size:8px">NUEVO</span>' : ''}</div>
+        <div class="notif-msg">${n.mensaje}</div>
+        <div class="notif-time">${fecha}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── HORARIO ──
+async function loadHorario() {
+  const { data: alumno } = await sb.from('alumnos').select('seccion').eq('perfil_id', currentUser.id).single();
+  const seccion = alumno?.seccion;
+
+  const query = seccion
+    ? sb.from('horarios').select('*, materias(nombre)').eq('seccion', seccion).order('hora_inicio')
+    : sb.from('horarios').select('*, materias(nombre)').order('hora_inicio');
+
+  const { data } = await query;
+
+  const dias = ['lunes','martes','miércoles','jueves','viernes','sábado'];
+
+  if (!data || data.length === 0) {
+    document.getElementById('horarioGrid').innerHTML = dias.map(d => `
+      <div class="horario-dia">
+        <div class="horario-dia-nombre">${d.toUpperCase()}</div>
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">Sin clases</div>
+      </div>`).join('');
+    return;
+  }
+
+  document.getElementById('horarioGrid').innerHTML = dias.map(dia => {
+    const clases = data.filter(h => h.dia === dia);
+    return `<div class="horario-dia">
+      <div class="horario-dia-nombre">${dia.toUpperCase()}</div>
+      ${clases.length === 0
+        ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">Libre</div>'
+        : clases.map(c => `<div class="horario-clase">
+            <div class="horario-clase-nombre">${c.materias?.nombre || 'Materia'}</div>
+            <div class="horario-clase-hora">${c.hora_inicio?.slice(0,5)} – ${c.hora_fin?.slice(0,5)}</div>
+            ${c.aula ? `<div class="horario-clase-hora">Aula ${c.aula}</div>` : ''}
+          </div>`).join('')
+      }
+    </div>`;
+  }).join('');
+}
+
+// ── NAVEGACIÓN ──
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(`panel-${id}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+  closeSidebar();
+}
+
+// ── SIDEBAR MOBILE ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── LOGOUT ──
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charly Táctico · Acceso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #0b1120;
+      --navy2:  #111a2e;
+      --navy3:  #162038;
+      --gold:   #c9a84c;
+      --white:  #f0f4ff;
+      --muted:  #7a90b0;
+      --border: rgba(201,168,76,0.25);
+      --red:    #e05555;
+      --green:  #4caf7d;
+    }
+    html, body {
+      height: 100%;
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      overflow: hidden;
+    }
+
+    /* grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .page {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 420px;
+      padding: 48px 40px;
+      position: relative;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    /* gold corner accents */
+    .card::before, .card::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+    }
+    .card::before { top: -1px; left: -1px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+    .card::after  { bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+
+    .card-header { text-align: center; margin-bottom: 36px; }
+
+    .card-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      display: inline-block;
+      padding: 4px 14px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px;
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+    }
+    .card-title .gold { color: var(--gold); }
+
+    .card-sub {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .divider {
+      width: 48px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 20px auto;
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      border: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: var(--gold);
+      color: var(--navy);
+    }
+
+    /* FORM */
+    .form-group { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--gold); }
+    input::placeholder { color: var(--muted); font-size: 13px; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
+    }
+    .btn:hover { background: #e8c96a; }
+    .btn:active { transform: scale(0.99); }
+    .btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+    .msg {
+      margin-top: 16px;
+      padding: 12px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: none;
+    }
+    .msg.error  { border: 1px solid var(--red);   color: var(--red);   background: rgba(224,85,85,0.08); }
+    .msg.success{ border: 1px solid var(--green);  color: var(--green); background: rgba(76,175,125,0.08); }
+    .msg.show   { display: block; }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--gold); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* responsive */
+    @media (max-width: 480px) {
+      .card { padding: 36px 24px; }
+      .card-title { font-size: 42px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-eyebrow">Sistema de Acceso</div>
+      <div class="card-title">CHARLY<br><span class="gold">TÁCTICO</span></div>
+      <div class="card-sub">Academia Pre-Cadetes</div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Ingresar</button>
+      <button class="tab" onclick="switchTab('register')">Registrarse</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="formLogin">
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="loginEmail" placeholder="tu@correo.com"/>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+      <button class="btn" id="btnLogin" onclick="doLogin()">INGRESAR</button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="formRegister" style="display:none">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="regNombre" placeholder="Juan Pérez"/>
+      </div>
+      <div class="form-group">
+        <label>DNI</label>
+        <input type="text" id="regDni" placeholder="12345678" maxlength="8"/>
+      </div>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="regEmail" placeholder="tu@correo.com"/>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres"/>
+      </div>
+      <button class="btn" id="btnRegister" onclick="doRegister()">CREAR CUENTA</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <a class="back-link" href="index.html">← Volver al inicio</a>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='login')));
+    document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
+    document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+    hideMsg();
+  }
+
+  function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = `msg ${type} show`;
+  }
+  function hideMsg() {
+    document.getElementById('msg').className = 'msg';
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPass').value;
+    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
+
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      showMsg('Correo o contraseña incorrectos', 'error');
+      btn.disabled = false; btn.textContent = 'INGRESAR';
+      return;
+    }
+
+    // Get user role
+    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
+    const rol = perfil?.rol || 'alumno';
+
+    showMsg('Acceso concedido. Redirigiendo...', 'success');
+
+    setTimeout(() => {
+      if (rol === 'admin' || rol === 'instructor') {
+        window.location.href = 'admin.html';
+      } else if (rol === 'padre') {
+        window.location.href = 'padres.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    }, 800);
+  }
+
+  async function doRegister() {
+    const nombre = document.getElementById('regNombre').value.trim();
+    const dni    = document.getElementById('regDni').value.trim();
+    const email  = document.getElementById('regEmail').value.trim();
+    const pass   = document.getElementById('regPass').value;
+
+    if (!nombre || !dni || !email || !pass) return showMsg('Completa todos los campos', 'error');
+    if (pass.length < 6) return showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
+
+    const btn = document.getElementById('btnRegister');
+    btn.disabled = true; btn.textContent = 'CREANDO CUENTA...';
+
+    const { data, error } = await sb.auth.signUp({ email, password: pass });
+
+    if (error) {
+      showMsg(error.message, 'error');
+      btn.disabled = false; btn.textContent = 'CREAR CUENTA';
+      return;
+    }
+
+    // Create profile
+    const partes = nombre.split(' ');
+    const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '-';
+    await sb.from('perfiles').insert({
+      id: data.user.id,
+      nombre: partes[0],
+      apellido,
+      dni,
+      rol: 'alumno'
+    });
+
+    showMsg('Cuenta creada. Revisa tu correo para confirmar.', 'success');
+    btn.disabled = false; btn.textContent = 'CREAR CUENTA';
+  }
+
+  // If already logged in, redirect
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = 'dashboard.html';
+  });
+</script>
+</body>
+</html>
