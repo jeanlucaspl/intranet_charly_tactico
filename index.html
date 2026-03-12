@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charly Táctico · Academia Pre-Cadetes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0b1120;
+      --navy2:   #111a2e;
+      --navy3:   #162038;
+      --gold:    #c9a84c;
+      --gold2:   #e8c96a;
+      --gold3:   #f5e199;
+      --white:   #f0f4ff;
+      --muted:   #7a90b0;
+      --border:  rgba(201,168,76,0.25);
+      --glow:    rgba(201,168,76,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      background: rgba(11,17,32,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.25em;
+      color: var(--gold);
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+    }
+
+    .nav-links {
+      display: flex; gap: 32px; list-style: none;
+    }
+    .nav-links a {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--gold); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      overflow: hidden;
+    }
+
+    /* diagonal grid lines */
+    .hero::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.35em;
+      color: var(--gold);
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      padding: 6px 20px;
+      margin-bottom: 36px;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(80px, 14vw, 180px);
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+
+    .hero-title .line-white { color: var(--white); display: block; }
+    .hero-title .line-gold  { color: var(--gold);  display: block; }
+
+    .hero-sub {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; font-weight: 400;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 24px;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    /* gold line divider */
+    .hero-divider {
+      width: 80px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 40px auto;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    /* ── PORTAL CARDS ── */
+    .portals {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 2px;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .portal-card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      padding: 40px 32px;
+      display: flex; flex-direction: column; align-items: flex-start;
+      gap: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    .portal-card::before {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+
+    .portal-card:hover { background: var(--navy3); transform: translateY(-2px); }
+    .portal-card:hover::before { transform: scaleX(1); }
+
+    .portal-icon {
+      width: 44px; height: 44px;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .portal-tag {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.25em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .portal-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.05em;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .portal-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .portal-arrow {
+      margin-top: auto;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      text-transform: uppercase;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .portal-arrow::after { content: '→'; font-size: 14px; }
+
+    /* ── STATS STRIP ── */
+    .stats {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: center;
+      gap: 0;
+      margin-top: 80px;
+      padding: 0 24px;
+    }
+
+    .stat {
+      flex: 1; max-width: 220px;
+      padding: 40px 24px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    /* ── INFO SECTION ── */
+    .info {
+      max-width: 960px;
+      margin: 80px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .info-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .info-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .feature-list li {
+      display: flex; align-items: flex-start; gap: 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--white);
+    }
+
+    .feature-list li::before {
+      content: '◆';
+      color: var(--gold);
+      font-size: 8px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── TECH GRID ── */
+    .tech-section {
+      background: var(--navy2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 64px 24px;
+      text-align: center;
+    }
+
+    .section-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 5vw, 56px);
+      margin-bottom: 48px;
+    }
+
+    .tech-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .tech-item {
+      background: var(--navy);
+      border: 1px solid var(--border);
+      padding: 20px 28px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tech-item:hover { color: var(--gold); border-color: var(--gold); }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 40px 48px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .footer-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+
+    .footer-copy {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── HAMBURGER BUTTON ── */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 22px; height: 2px;
+      background: var(--gold);
+      transition: all 0.3s ease;
+    }
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── MOBILE MENU ── */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 64px; left: 0; right: 0;
+      background: rgba(11,17,32,0.98);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 99;
+      padding: 0;
+    }
+    .mobile-menu.open {
+      display: block;
+      animation: slideDown 0.25s ease both;
+    }
+    .mobile-menu a {
+      display: block;
+      padding: 18px 24px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.2s, background 0.2s;
+    }
+    .mobile-menu a:hover { color: var(--gold); background: var(--navy2); }
+    .mobile-menu a:last-child { border-bottom: none; }
+
+    /* ══════════════════════════════════════
+       BREAKPOINTS
+       XL  > 1200px  (large desktop)
+       LG  > 960px   (desktop)
+       MD  768–960px (tablet landscape)
+       SM  480–768px (tablet portrait / large phone)
+       XS  < 480px   (phone)
+    ══════════════════════════════════════ */
+
+    /* ── XL: large desktop ── */
+    @media (min-width: 1200px) {
+      .portals { grid-template-columns: repeat(4, 1fr); }
+      .hero { padding: 140px 48px 100px; }
+    }
+
+    /* ── LG: standard desktop ── */
+    @media (max-width: 1199px) and (min-width: 960px) {
+      .portals { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── MD: tablet landscape ── */
+    @media (max-width: 959px) and (min-width: 768px) {
+      nav { padding: 0 24px; }
+      .nav-links { gap: 20px; }
+      .nav-links a { font-size: 12px; }
+      .portals { grid-template-columns: repeat(2, 1fr); }
+      .stats { flex-wrap: wrap; }
+      .stat { min-width: 160px; flex: 1 1 160px; }
+      .info { grid-template-columns: 1fr; gap: 40px; }
+    }
+
+    /* ── SM: tablet portrait / large phones ── */
+    @media (max-width: 767px) {
+      /* nav */
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+
+      /* hero */
+      .hero { padding: 100px 20px 60px; min-height: auto; }
+      .hero-eyebrow {
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        padding: 5px 14px;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      .hero-sub { font-size: 11px; letter-spacing: 0.12em; }
+      .hero-divider { margin: 28px auto; }
+
+      /* portals */
+      .portals { grid-template-columns: 1fr 1fr; gap: 2px; }
+      .portal-card { padding: 24px 20px; gap: 10px; }
+      .portal-title { font-size: 22px; }
+      .portal-desc { font-size: 12px; }
+
+      /* stats */
+      .stats { flex-wrap: wrap; margin-top: 48px; }
+      .stat {
+        flex: 1 1 calc(50% - 2px);
+        min-width: 120px;
+        padding: 28px 16px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .stat:nth-child(odd) { border-right: 1px solid var(--border); }
+      .stat:nth-last-child(-n+2) { border-bottom: none; }
+      .stat-num { font-size: 44px; }
+
+      /* info */
+      .info { grid-template-columns: 1fr; gap: 32px; margin: 56px auto; }
+
+      /* tech */
+      .tech-section { padding: 48px 20px; }
+      .tech-item { padding: 14px 18px; font-size: 12px; }
+
+      /* footer */
+      footer {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+        padding: 28px 20px;
+      }
+    }
+
+    /* ── XS: small phones (< 480px) ── */
+    @media (max-width: 479px) {
+      .nav-badge {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        padding: 3px 8px;
+        max-width: 220px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* portals go to single column on very small screens */
+      .portals { grid-template-columns: 1fr; }
+      .portal-card {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 18px;
+      }
+      .portal-card > .portal-icon { flex-shrink: 0; }
+      .portal-card > .portal-desc { display: none; }
+      .portal-card > .portal-arrow { margin-top: 0; margin-left: auto; flex-shrink: 0; }
+
+      .hero { padding: 90px 16px 48px; }
+      .hero-eyebrow { font-size: 8px; letter-spacing: 0.1em; }
+
+      .stats { margin-top: 36px; }
+      .stat-num { font-size: 38px; }
+      .stat-label { font-size: 10px; }
+
+      .info { padding: 0 16px; margin: 40px auto; }
+      .info-heading { font-size: 32px; }
+      .feature-list li { font-size: 13px; }
+
+      .tech-section { padding: 40px 16px; }
+      .tech-grid { gap: 2px; }
+      .tech-item { padding: 12px 14px; font-size: 11px; width: 100%; text-align: center; }
+
+      footer { padding: 24px 16px; }
+      .footer-brand { font-size: 20px; }
+      .footer-copy { font-size: 10px; }
+    }
+
+    /* ── Touch devices: remove hover transforms ── */
+    @media (hover: none) {
+      .portal-card:hover { transform: none; }
+      .tech-item:hover { color: var(--muted); border-color: var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-badge">Academia Pre-Cadetes · Charly Táctico</div>
+    <ul class="nav-links">
+      <li><a href="#portales">Portales</a></li>
+      <li><a href="#sistema">Sistema</a></li>
+      <li><a href="#tecnologia">Tecnología</a></li>
+    </ul>
+    <button class="nav-hamburger" id="hamburger" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#portales" onclick="closeMobileMenu()">◆ Portales</a>
+    <a href="#sistema"  onclick="closeMobileMenu()">◆ Sistema</a>
+    <a href="#tecnologia" onclick="closeMobileMenu()">◆ Tecnología</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">Academia PNP · Sistema de Gestión Institucional</div>
+    <h1 class="hero-title">
+      <span class="line-white">CHARLY</span>
+      <span class="line-gold">TÁCTICO</span>
+    </h1>
+    <p class="hero-sub">Formando los efectivos del mañana · Disciplina · Honor · Servicio</p>
+    <div class="hero-divider"></div>
+
+    <!-- PORTAL CARDS -->
+    <div class="portals" id="portales">
+
+      <a class="portal-card" href="#">
+        <div class="portal-icon">🎓</div>
+        <span class="portal-tag">Acceso Cadete</span>
+        <div class="portal-title">Intranet Alumno</div>
+        <p class="portal-desc">Consulta tus notas, asistencias, horarios y comunicados de la institución.</p>
+        <span class="portal-arrow">Ingresar</span>
+      </a>
+
+      <a class="portal-card" href="#">
+        <div class="portal-icon">👨‍👩‍👧</div>
+        <span class="portal-tag">Acceso Familiar</span>
+        <div class="portal-title">Portal Padres</div>
+        <p class="portal-desc">Seguimiento en tiempo real de asistencia y rendimiento académico de su hijo.</p>
+        <span class="portal-arrow">Ingresar</span>
+      </a>
+
+      <a class="portal-card" href="#">
+        <div class="portal-icon">🏛️</div>
+        <span class="portal-tag">Acceso Institucional</span>
+        <div class="portal-title">Panel Admin</div>
+        <p class="portal-desc">Gestión de alumnos, notas, asistencia, notificaciones y reportes oficiales.</p>
+        <span class="portal-arrow">Ingresar</span>
+      </a>
+
+      <a class="portal-card" href="#">
+        <div class="portal-icon">📋</div>
+        <span class="portal-tag">Información</span>
+        <div class="portal-title">La Academia</div>
+        <p class="portal-desc">Conoce nuestra misión, currícula, cuerpo docente y proceso de admisión.</p>
+        <span class="portal-arrow">Ver más</span>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">300+</div>
+      <div class="stat-label">Cadetes activos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">98%</div>
+      <div class="stat-label">Tasa de aprobación</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">24/7</div>
+      <div class="stat-label">Monitoreo en línea</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">15+</div>
+      <div class="stat-label">Años de formación</div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <section class="info" id="sistema">
+    <div>
+      <div class="info-label">Sistema integrado</div>
+      <h2 class="info-heading">CONTROL TOTAL DE LA INSTITUCIÓN</h2>
+      <p class="info-text">Plataforma digital diseñada para academias policiales. Gestión de asistencia, notas y comunicación institucional en un solo lugar.</p>
+      <p class="info-text">Los padres reciben notificaciones automáticas al inicio de cada clase, con verificación facial y registro GPS.</p>
+    </div>
+    <ul class="feature-list">
+      <li>Verificación facial al ingreso de clases</li>
+      <li>Alertas automáticas a padres de familia</li>
+      <li>Registro GPS de asistencia en tiempo real</li>
+      <li>Notas y evaluaciones por materia</li>
+      <li>Panel de control para instructores</li>
+      <li>Notificaciones institucionales masivas</li>
+      <li>Reportes exportables en PDF / Excel</li>
+      <li>Acceso desde celular y computadora</li>
+    </ul>
+  </section>
+
+  <!-- TECH -->
+  <section class="tech-section" id="tecnologia">
+    <div class="section-eyebrow">Stack tecnológico</div>
+    <h2 class="section-title">CONSTRUIDO PARA ESCALAR</h2>
+    <div class="tech-grid">
+      <div class="tech-item">React · Frontend</div>
+      <div class="tech-item">Supabase · Base de datos</div>
+      <div class="tech-item">Vercel · Hosting</div>
+      <div class="tech-item">Face-api.js · Reconocimiento facial</div>
+      <div class="tech-item">PostgreSQL · SQL</div>
+      <div class="tech-item">GitHub · Control de versiones</div>
+      <div class="tech-item">JWT · Autenticación</div>
+      <div class="tech-item">PWA · App móvil</div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-brand">Charly Táctico</div>
+    <div class="footer-copy">© 2026 · Academia Pre-Cadetes · Todos los derechos reservados</div>
+  </footer>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('open');
+      mobileMenu.classList.toggle('open');
+    });
+
+    function closeMobileMenu() {
+      hamburger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) {
+        closeMobileMenu();
+      }
+    });
+  </script>
+</body>
+</html>
