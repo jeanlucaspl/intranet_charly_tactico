@@ -270,6 +270,11 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // ── ANTI-BACK-BUTTON ──
+  // Replace the current history entry so "back" from dashboard
+  // never returns here showing cached content
+  history.replaceState(null, '', window.location.href);
+
   function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='login')));
     document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
@@ -284,6 +289,17 @@
   }
   function hideMsg() {
     document.getElementById('msg').className = 'msg';
+  }
+
+  function redirectByRol(rol) {
+    // Use replace() so login is NOT in the back-history from dashboard
+    if (rol === 'admin' || rol === 'instructor') {
+      window.location.replace('admin.html');
+    } else if (rol === 'padre') {
+      window.location.replace('padres.html');
+    } else {
+      window.location.replace('dashboard.html');
+    }
   }
 
   async function doLogin() {
@@ -302,21 +318,10 @@
       return;
     }
 
-    // Get user role
     const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
     const rol = perfil?.rol || 'alumno';
-
     showMsg('Acceso concedido. Redirigiendo...', 'success');
-
-    setTimeout(() => {
-      if (rol === 'admin' || rol === 'instructor') {
-        window.location.href = 'admin.html';
-      } else if (rol === 'padre') {
-        window.location.href = 'padres.html';
-      } else {
-        window.location.href = 'dashboard.html';
-      }
-    }, 800);
+    setTimeout(() => redirectByRol(rol), 700);
   }
 
   async function doRegister() {
@@ -339,7 +344,6 @@
       return;
     }
 
-    // Create profile
     const partes = nombre.split(' ');
     const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '-';
     await sb.from('perfiles').insert({
@@ -354,9 +358,12 @@
     btn.disabled = false; btn.textContent = 'CREAR CUENTA';
   }
 
-  // If already logged in, redirect
-  sb.auth.getSession().then(({ data }) => {
-    if (data.session) window.location.href = 'dashboard.html';
+  // If already logged in redirect — use replace() so they can't go back to login either
+  sb.auth.getSession().then(async ({ data }) => {
+    if (data.session) {
+      const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.session.user.id).single();
+      redirectByRol(perfil?.rol || 'alumno');
+    }
   });
 </script>
 </body>
