@@ -3,737 +3,440 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Charly Táctico · Dashboard Alumno</title>
+  <title>Charly Táctico · Intranet Alumno</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --navy:   #0b1120;
-      --navy2:  #111a2e;
-      --navy3:  #162038;
-      --gold:   #c9a84c;
-      --white:  #f0f4ff;
-      --muted:  #7a90b0;
-      --border: rgba(201,168,76,0.25);
-      --green:  #4caf7d;
-      --red:    #e05555;
-      --yellow: #e8c96a;
-    }
-    html { scroll-behavior: smooth; }
-    body {
-      background: var(--navy);
-      color: var(--white);
-      font-family: 'Barlow', sans-serif;
-      min-height: 100vh;
-    }
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none; z-index: 0;
-    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
+    html{scroll-behavior:smooth}
+    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
 
-    /* ── TOPBAR ── */
-    .topbar {
-      position: fixed; top: 0; left: 0; right: 0;
-      height: 60px;
-      background: rgba(11,17,32,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center;
-      padding: 0 24px;
-      z-index: 100;
-      gap: 16px;
-    }
-    .topbar-brand {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22px;
-      color: var(--gold);
-      letter-spacing: 0.05em;
-      flex-shrink: 0;
-    }
-    .topbar-brand span { color: var(--white); }
-    .topbar-sep { flex: 1; }
-    .topbar-user {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px; font-weight: 600;
-      letter-spacing: 0.15em;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-    .topbar-user strong { color: var(--gold); }
-    .btn-logout {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      background: transparent;
-      border: 1px solid var(--border);
-      padding: 6px 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-logout:hover { color: var(--red); border-color: var(--red); }
+    .topbar{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(11,17,32,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
+    .tb-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;flex-shrink:0}
+    .tb-brand span{color:var(--white)}
+    .tb-sep{flex:1}
+    .tb-user{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+    .tb-user strong{color:var(--gold)}
+    .btn-sm{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid var(--border);padding:6px 14px;cursor:pointer;color:var(--muted);transition:all .2s;flex-shrink:0}
+    .btn-sm:hover{color:var(--red);border-color:var(--red)}
 
-    /* ── SIDEBAR ── */
-    .layout { display: flex; padding-top: 60px; min-height: 100vh; }
+    .sidebar{width:220px;flex-shrink:0;background:var(--navy2);border-right:1px solid var(--border);position:fixed;top:60px;bottom:0;overflow-y:auto;z-index:50;transition:transform .3s ease}
+    .sb-sec{padding:16px 0 4px}
+    .sb-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;padding:0 18px 6px}
+    .sb-link{display:flex;align-items:center;gap:10px;padding:11px 18px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-left:2px solid transparent;width:100%;text-align:left;cursor:pointer;transition:all .2s}
+    .sb-link:hover{color:var(--white);background:var(--navy3)}
+    .sb-link.active{color:var(--gold);border-left-color:var(--gold);background:var(--navy3)}
+    .sb-link .ic{font-size:15px;width:18px;text-align:center;flex-shrink:0}
 
-    .sidebar {
-      width: 220px;
-      flex-shrink: 0;
-      background: var(--navy2);
-      border-right: 1px solid var(--border);
-      position: fixed;
-      top: 60px; bottom: 0;
-      overflow-y: auto;
-      z-index: 50;
-      transition: transform 0.3s ease;
-    }
-    .sidebar-section {
-      padding: 20px 0 8px;
-    }
-    .sidebar-label {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 9px; font-weight: 600;
-      letter-spacing: 0.3em;
-      color: var(--muted);
-      text-transform: uppercase;
-      padding: 0 20px 8px;
-    }
-    .sidebar-link {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 20px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      text-decoration: none;
-      cursor: pointer;
-      border: none; background: none; width: 100%;
-      text-align: left;
-      border-left: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    .sidebar-link:hover { color: var(--white); background: var(--navy3); }
-    .sidebar-link.active { color: var(--gold); border-left-color: var(--gold); background: var(--navy3); }
-    .sidebar-link .icon { font-size: 16px; width: 20px; text-align: center; }
+    .layout{display:flex;padding-top:60px;min-height:100vh}
+    .main{flex:1;margin-left:220px;padding:28px 24px;position:relative;z-index:1}
 
-    /* hamburger for mobile sidebar */
-    .sidebar-toggle {
-      display: none;
-      position: fixed;
-      bottom: 24px; right: 24px;
-      z-index: 200;
-      background: var(--gold);
-      color: var(--navy);
-      border: none;
-      width: 48px; height: 48px;
-      font-size: 20px;
-      cursor: pointer;
-      border-radius: 0;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
+    .panel{display:none;animation:fi .25s ease}
+    .panel.active{display:block}
+    @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-    /* ── MAIN CONTENT ── */
-    .main {
-      flex: 1;
-      margin-left: 220px;
-      padding: 32px 28px;
-      position: relative; z-index: 1;
-    }
+    .ph{margin-bottom:22px}
+    .eye{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:4px}
+    .ttl{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1}
 
-    /* loading */
-    .loading {
-      display: flex; align-items: center; justify-content: center;
-      height: 60vh;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      color: var(--muted);
-      letter-spacing: 0.1em;
-    }
+    .btn{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:9px 18px;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+    .btn-gold{background:var(--gold);color:var(--navy)}.btn-gold:hover{background:var(--gold2)}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+    .btn-green{background:var(--green);color:var(--white)}.btn-green:hover{filter:brightness(1.1)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
 
-    /* panels */
-    .panel { display: none; animation: fadeIn 0.3s ease; }
-    .panel.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:2px;margin-bottom:22px}
+    .sc{background:var(--navy2);border:1px solid var(--border);padding:20px 16px;position:relative;overflow:hidden}
+    .sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold)}
+    .sc-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+    .sc-val{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--gold);line-height:1}
+    .sc-sub{font-size:11px;color:var(--muted);margin-top:3px}
 
-    /* page header */
-    .page-header { margin-bottom: 28px; }
-    .page-eyebrow {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.3em;
-      color: var(--gold);
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .page-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 42px;
-      line-height: 1;
-    }
+    .tw{background:var(--navy2);border:1px solid var(--border);overflow-x:auto;margin-bottom:20px;-webkit-overflow-scrolling:touch}
+    .th{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .th-ttl{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em}
+    table{width:100%;border-collapse:collapse;min-width:380px}
+    thead th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:10px 18px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody td{padding:12px 18px;font-size:13px;border-bottom:1px solid rgba(201,168,76,.07)}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--navy3)}
 
-    /* ── CARDS ── */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 2px;
-      margin-bottom: 28px;
-    }
-    .stat-card {
-      background: var(--navy2);
-      border: 1px solid var(--border);
-      padding: 24px 20px;
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card::after {
-      content: '';
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--gold);
-    }
-    .stat-card-label {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.25em;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .stat-card-value {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 40px;
-      color: var(--gold);
-      line-height: 1;
-    }
-    .stat-card-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
+    .badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border:1px solid}
+    .bg{color:var(--green);border-color:var(--green);background:rgba(76,175,125,.1)}
+    .br{color:var(--red);border-color:var(--red);background:rgba(224,85,85,.1)}
+    .by{color:var(--yellow);border-color:var(--yellow);background:rgba(232,201,106,.1)}
+    .bb{color:var(--blue);border-color:var(--blue);background:rgba(106,176,232,.1)}
 
-    /* ── TABLE ── */
-    .table-wrap {
-      background: var(--navy2);
-      border: 1px solid var(--border);
-      overflow-x: auto;
-    }
-    .table-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      letter-spacing: 0.05em;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    thead th {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding: 12px 20px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    tbody td {
-      padding: 14px 20px;
-      font-size: 14px;
-      border-bottom: 1px solid rgba(201,168,76,0.08);
-    }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: var(--navy3); }
+    .nota-a{color:var(--green);font-weight:600}
+    .nota-m{color:var(--yellow);font-weight:600}
+    .nota-b{color:var(--red);font-weight:600}
 
-    /* badges */
-    .badge {
-      display: inline-block;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border: 1px solid;
-    }
-    .badge-green  { color: var(--green);  border-color: var(--green);  background: rgba(76,175,125,0.1); }
-    .badge-red    { color: var(--red);    border-color: var(--red);    background: rgba(224,85,85,0.1); }
-    .badge-yellow { color: var(--yellow); border-color: var(--yellow); background: rgba(232,201,106,0.1); }
-    .badge-blue   { color: #6ab0e8;       border-color: #6ab0e8;       background: rgba(106,176,232,0.1); }
+    /* HORARIO */
+    .hgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+    .hday{background:var(--navy2);border:1px solid var(--border);padding:12px}
+    .hday-name{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:8px}
+    .hclase{background:var(--navy3);border-left:2px solid var(--gold);padding:8px 10px;margin-bottom:4px}
+    .hclase-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+    .hclase-inf{font-size:11px;color:var(--muted);margin-top:2px}
 
-    /* nota color */
-    .nota-alta  { color: var(--green);  font-weight: 600; }
-    .nota-media { color: var(--yellow); font-weight: 600; }
-    .nota-baja  { color: var(--red);    font-weight: 600; }
+    /* NOTIF */
+    .nlist{display:flex;flex-direction:column;gap:3px}
+    .nitem{background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px 18px;display:flex;gap:14px;align-items:flex-start}
+    .nitem.alerta{border-left-color:var(--yellow)}
+    .nitem.urgente{border-left-color:var(--red)}
+    .nitem.info{border-left-color:var(--blue)}
+    .nico{font-size:20px;flex-shrink:0;margin-top:2px}
+    .n-ttl{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+    .n-msg{font-size:13px;color:var(--muted);line-height:1.5}
+    .n-time{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);margin-top:5px;letter-spacing:.1em}
 
-    /* progress bar */
-    .progress-wrap { background: var(--navy); height: 4px; margin-top: 6px; }
-    .progress-bar  { height: 4px; background: var(--gold); transition: width 0.6s ease; }
+    /* PRÁCTICAS */
+    .prac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+    .prac-card{background:var(--navy2);border:1px solid var(--border);padding:18px;position:relative;overflow:hidden}
+    .prac-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold)}
+    .prac-sem{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:6px}
+    .prac-ttl{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1.1;margin-bottom:4px}
+    .prac-mat{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .prac-btns{display:flex;flex-direction:column;gap:6px}
 
-    /* notificaciones */
-    .notif-list { display: flex; flex-direction: column; gap: 2px; }
-    .notif-item {
-      background: var(--navy2);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--gold);
-      padding: 16px 20px;
-      display: flex; gap: 16px; align-items: flex-start;
-    }
-    .notif-item.urgente { border-left-color: var(--red); }
-    .notif-item.info    { border-left-color: #6ab0e8; }
-    .notif-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-    .notif-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 14px; font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--white);
-      margin-bottom: 4px;
-    }
-    .notif-msg  { font-size: 13px; color: var(--muted); line-height: 1.5; }
-    .notif-time {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 6px;
-      letter-spacing: 0.1em;
-    }
+    /* FILE UPLOAD */
+    .file-drop{border:2px dashed var(--border);padding:18px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative}
+    .file-drop:hover,.file-drop.dragover{border-color:var(--gold)}
+    .file-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .fd-icon{font-size:24px;margin-bottom:6px}
+    .fd-txt{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+    .fd-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--gold);margin-top:5px;font-weight:600}
 
-    /* horario */
-    .horario-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 2px;
-    }
-    .horario-dia {
-      background: var(--navy2);
-      border: 1px solid var(--border);
-      padding: 16px;
-    }
-    .horario-dia-nombre {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 18px;
-      color: var(--gold);
-      margin-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
-    }
-    .horario-clase {
-      background: var(--navy3);
-      border-left: 2px solid var(--gold);
-      padding: 8px 10px;
-      margin-bottom: 6px;
-    }
-    .horario-clase-nombre {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px; font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .horario-clase-hora {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+    /* ENTREGA STATUS */
+    .entrega-ok{background:rgba(76,175,125,.08);border:1px solid var(--green);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-top:8px}
 
-    /* empty state */
-    .empty {
-      text-align: center;
-      padding: 48px 24px;
-      color: var(--muted);
-    }
-    .empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-text {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 14px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
+    /* MAP PLACEHOLDER */
+    .map-ph{background:var(--navy3);border:1px solid var(--border);height:180px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;margin-top:8px}
+    .map-ph .mi{font-size:32px}
+    .map-ph .mt{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
-      .sidebar {
-        transform: translateX(-100%);
-        width: 260px;
-      }
-      .sidebar.open { transform: translateX(0); }
-      .main { margin-left: 0; padding: 20px 16px; }
-      .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
-      .topbar-user { display: none; }
-      .cards-grid { grid-template-columns: repeat(2, 1fr); }
-      .page-title { font-size: 32px; }
-    }
-    @media (max-width: 480px) {
-      .cards-grid { grid-template-columns: 1fr 1fr; }
-      .horario-grid { grid-template-columns: 1fr; }
-    }
+    .msg{padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:10px 0;display:none}
+    .msg.show{display:block}
+    .msg.err{border:1px solid var(--red);color:var(--red);background:rgba(224,85,85,.08)}
+    .msg.ok{border:1px solid var(--green);color:var(--green);background:rgba(76,175,125,.08)}
 
-    /* sidebar overlay */
-    .overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 49;
+    .empty{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty .ei{font-size:36px;margin-bottom:10px}
+    .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+
+    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--gold);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+    .overlay.show{display:block}
+
+    @media(max-width:959px) and (min-width:768px){.sidebar{width:190px}.main{margin-left:190px;padding:20px 16px}.hgrid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:767px){
+      .sidebar{transform:translateX(-100%);width:250px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
+      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
+      .tb-user{display:none}.cg{grid-template-columns:repeat(2,1fr)}.ttl{font-size:28px}
+      .hgrid{grid-template-columns:repeat(2,1fr)}.prac-grid{grid-template-columns:1fr}
     }
-    .overlay.show { display: block; }
+    @media(max-width:479px){.cg{grid-template-columns:1fr 1fr}.ttl{font-size:24px}.hgrid{grid-template-columns:1fr}.sc-val{font-size:30px}}
+    @media(hover:none){tbody tr:hover td{background:transparent}}
   </style>
 </head>
 <body>
-
-<!-- TOPBAR -->
 <div class="topbar">
-  <div class="topbar-brand"><span>CHARLY</span> TÁCTICO</div>
-  <div class="topbar-sep"></div>
-  <div class="topbar-user">Cadete: <strong id="topNombre">Cargando...</strong></div>
-  <button class="btn-logout" onclick="doLogout()">Salir</button>
+  <div class="tb-brand"><span>CHARLY</span> TÁCTICO</div>
+  <div class="tb-sep"></div>
+  <div class="tb-user">Cadete: <strong id="tb-nombre">--</strong></div>
+  <button class="btn-sm" onclick="doLogout()">Salir</button>
 </div>
 
-<!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <div class="sidebar-section">
-    <div class="sidebar-label">Mi cuenta</div>
-    <button class="sidebar-link active" onclick="showPanel('inicio')">
-      <span class="icon">🏠</span> Inicio
-    </button>
-    <button class="sidebar-link" onclick="showPanel('notas')">
-      <span class="icon">📊</span> Mis Notas
-    </button>
-    <button class="sidebar-link" onclick="showPanel('asistencias')">
-      <span class="icon">📅</span> Asistencias
-    </button>
-    <button class="sidebar-link" onclick="showPanel('notificaciones')">
-      <span class="icon">🔔</span> Notificaciones
-    </button>
-    <button class="sidebar-link" onclick="showPanel('horario')">
-      <span class="icon">🕐</span> Horario
-    </button>
+  <div class="sb-sec">
+    <div class="sb-lbl">Mi cuenta</div>
+    <button class="sb-link active" onclick="showPanel('inicio',this)"><span class="ic">🏠</span>Inicio</button>
+    <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Horario</button>
+    <button class="sb-link" onclick="showPanel('asistencias',this)"><span class="ic">📅</span>Asistencias</button>
+    <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📊</span>Mis Notas</button>
+    <button class="sb-link" onclick="showPanel('practicas',this)"><span class="ic">📄</span>Prácticas</button>
+    <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
   </div>
 </div>
 
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+<div class="overlay" id="overlay" onclick="closeSb()"></div>
+<button class="sb-tog" onclick="toggleSb()">☰</button>
 
-<!-- LAYOUT -->
-<div class="layout">
-  <div class="main">
+<div class="layout"><div class="main">
 
-    <!-- INICIO -->
-    <div class="panel active" id="panel-inicio">
-      <div class="page-header">
-        <div class="page-eyebrow">Bienvenido de vuelta</div>
-        <div class="page-title" id="welcomeTitle">CADETE</div>
-      </div>
-
-      <div class="cards-grid" id="resumenCards">
-        <div class="stat-card">
-          <div class="stat-card-label">Promedio general</div>
-          <div class="stat-card-value" id="cardPromedio">--</div>
-          <div class="stat-card-sub">Periodo actual</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-label">Asistencia</div>
-          <div class="stat-card-value" id="cardAsistencia">--%</div>
-          <div class="stat-card-sub">Este mes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-label">Materias</div>
-          <div class="stat-card-value" id="cardMaterias">--</div>
-          <div class="stat-card-sub">Activas</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-label">Notificaciones</div>
-          <div class="stat-card-value" id="cardNotifs">--</div>
-          <div class="stat-card-sub">Sin leer</div>
-        </div>
-      </div>
-
-      <!-- Notas resumen -->
-      <div class="table-wrap">
-        <div class="table-header">Resumen de Notas</div>
-        <div id="notasResumenBody"><div class="loading">Cargando...</div></div>
-      </div>
-    </div>
-
-    <!-- NOTAS -->
-    <div class="panel" id="panel-notas">
-      <div class="page-header">
-        <div class="page-eyebrow">Rendimiento académico</div>
-        <div class="page-title">MIS NOTAS</div>
-      </div>
-      <div class="table-wrap">
-        <div class="table-header">Calificaciones por Materia</div>
-        <div id="notasBody"><div class="loading">Cargando...</div></div>
-      </div>
-    </div>
-
-    <!-- ASISTENCIAS -->
-    <div class="panel" id="panel-asistencias">
-      <div class="page-header">
-        <div class="page-eyebrow">Control de presencia</div>
-        <div class="page-title">MIS ASISTENCIAS</div>
-      </div>
-      <div class="cards-grid" style="grid-template-columns: repeat(3,1fr); margin-bottom: 24px;">
-        <div class="stat-card">
-          <div class="stat-card-label">Presencias</div>
-          <div class="stat-card-value nota-alta" id="aPresente">--</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-label">Tardanzas</div>
-          <div class="stat-card-value nota-media" id="aTardanza">--</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-label">Ausencias</div>
-          <div class="stat-card-value nota-baja" id="aAusente">--</div>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <div class="table-header">Registro de Asistencias</div>
-        <div id="asistenciasBody"><div class="loading">Cargando...</div></div>
-      </div>
-    </div>
-
-    <!-- NOTIFICACIONES -->
-    <div class="panel" id="panel-notificaciones">
-      <div class="page-header">
-        <div class="page-eyebrow">Comunicados institucionales</div>
-        <div class="page-title">NOTIFICACIONES</div>
-      </div>
-      <div class="notif-list" id="notifList">
-        <div class="loading">Cargando...</div>
-      </div>
-    </div>
-
-    <!-- HORARIO -->
-    <div class="panel" id="panel-horario">
-      <div class="page-header">
-        <div class="page-eyebrow">Semana académica</div>
-        <div class="page-title">MI HORARIO</div>
-      </div>
-      <div class="horario-grid" id="horarioGrid">
-        <div class="loading">Cargando...</div>
-      </div>
-    </div>
-
+<!-- INICIO -->
+<div class="panel active" id="panel-inicio">
+  <div class="ph"><div class="eye">Bienvenido de vuelta</div><div class="ttl" id="wb-name">CADETE</div></div>
+  <div class="cg">
+    <div class="sc"><div class="sc-lbl">Promedio</div><div class="sc-val" id="s-prom">--</div><div class="sc-sub">General</div></div>
+    <div class="sc"><div class="sc-lbl">Asistencia</div><div class="sc-val" id="s-asist">--%</div><div class="sc-sub">Este mes</div></div>
+    <div class="sc"><div class="sc-lbl">Materias</div><div class="sc-val" id="s-mat">--</div><div class="sc-sub">Activas</div></div>
+    <div class="sc"><div class="sc-lbl">Notificaciones</div><div class="sc-val" id="s-notif" style="color:var(--red)">--</div><div class="sc-sub">Sin leer</div></div>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Mis Notas — Resumen</span></div>
+    <div id="d-notas-res"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
+
+<!-- HORARIO -->
+<div class="panel" id="panel-horario">
+  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div><div class="eye">Semana académica</div><div class="ttl">MI HORARIO</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="date" id="hor-semana" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:7px 10px;font-family:'Barlow',sans-serif;font-size:12px;outline:none"/>
+      <button class="btn btn-outline" onclick="loadHorario()">Ver</button>
+    </div>
+  </div>
+  <div class="hgrid" id="d-horario"><div class="empty" style="grid-column:1/-1"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div></div>
+</div>
+
+<!-- ASISTENCIAS -->
+<div class="panel" id="panel-asistencias">
+  <div class="ph"><div class="eye">Control de presencia</div><div class="ttl">MIS ASISTENCIAS</div></div>
+  <div class="cg" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc"><div class="sc-lbl">Presentes</div><div class="sc-val nota-a" id="a-pres">--</div></div>
+    <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val nota-m" id="a-tard">--</div></div>
+    <div class="sc"><div class="sc-lbl">Ausencias</div><div class="sc-val nota-b" id="a-aus">--</div></div>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Historial de Asistencias</span></div>
+    <div id="d-asist"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
+<!-- NOTAS -->
+<div class="panel" id="panel-notas">
+  <div class="ph"><div class="eye">Rendimiento académico</div><div class="ttl">MIS NOTAS</div></div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Calificaciones por Materia</span></div>
+    <div id="d-notas"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
+<!-- PRÁCTICAS -->
+<div class="panel" id="panel-practicas">
+  <div class="ph"><div class="eye">Material semanal</div><div class="ttl">MIS PRÁCTICAS</div></div>
+  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei">📄</div><div class="et">Cargando...</div></div></div>
+</div>
+
+<!-- NOTIFICACIONES -->
+<div class="panel" id="panel-notificaciones">
+  <div class="ph"><div class="eye">Comunicados institucionales</div><div class="ttl">NOTIFICACIONES</div></div>
+  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei">🔔</div><div class="et">Cargando...</div></div></div>
+</div>
+
+</div></div>
 
 <script>
-const SUPABASE_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SB_URL='https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const STORAGE=SB_URL+'/storage/v1/object/public/';
 
-let currentUser = null;
-let alumnoId = null;
-let perfilData = null;
-
-// ── INIT ──
-async function init() {
+// ── SEGURIDAD: bloquear botón atrás ──
+// pageshow se dispara tanto en carga normal como cuando el navegador
+// restaura la página desde bfcache (botón atrás)
+window.addEventListener('pageshow', async (e) => {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
-  currentUser = session.user;
-
-  const { data: perfil } = await sb.from('perfiles').select('*').eq('id', currentUser.id).single();
-  perfilData = perfil;
-
-  if (perfil) {
-    const nombre = `${perfil.nombre} ${perfil.apellido}`;
-    document.getElementById('topNombre').textContent = nombre;
-    document.getElementById('welcomeTitle').textContent = perfil.nombre.toUpperCase();
+  if (!session) {
+    // No hay sesión activa — redirigir al login y limpiar historial
+    window.location.replace('login.html');
   }
+});
 
-  const { data: alumno } = await sb.from('alumnos').select('*').eq('perfil_id', currentUser.id).single();
-  if (alumno) alumnoId = alumno.id;
-
-  await Promise.all([loadNotas(), loadAsistencias(), loadNotificaciones(), loadHorario()]);
-}
-
-// ── NOTAS ──
-async function loadNotas() {
-  if (!alumnoId) { renderNotasEmpty(); return; }
-  const { data } = await sb.from('notas').select('*, materias(nombre)').eq('alumno_id', alumnoId);
-
-  // Cards resumen
-  if (data && data.length > 0) {
-    const promedios = data.map(n => n.promedio || 0).filter(p => p > 0);
-    const promGeneral = promedios.length ? (promedios.reduce((a,b)=>a+b,0)/promedios.length).toFixed(1) : '--';
-    document.getElementById('cardPromedio').textContent = promGeneral;
-    document.getElementById('cardMaterias').textContent = data.length;
+// También escuchar cambios de sesión en tiempo real
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') {
+    window.location.replace('login.html');
   }
+});
 
-  const html = renderNotasTable(data);
-  document.getElementById('notasBody').innerHTML = html;
-  document.getElementById('notasResumenBody').innerHTML = html;
-}
+let uid=null,alumnoId=null,alumnoData=null,solucionFiles={};
 
-function renderNotasTable(data) {
-  if (!data || data.length === 0) return `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin notas registradas aún</div></div>`;
-  return `<table>
-    <thead><tr>
-      <th>Materia</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Promedio</th><th>Estado</th>
-    </tr></thead>
-    <tbody>${data.map(n => {
-      const p = n.promedio || 0;
-      const cls = p >= 14 ? 'nota-alta' : p >= 11 ? 'nota-media' : 'nota-baja';
-      const estado = p >= 14 ? 'Aprobado' : p >= 11 ? 'En riesgo' : 'Desaprobado';
-      const badgeCls = p >= 14 ? 'badge-green' : p >= 11 ? 'badge-yellow' : 'badge-red';
-      return `<tr>
-        <td><strong>${n.materias?.nombre || 'Materia'}</strong></td>
-        <td>${n.nota_1 ?? '--'}</td>
-        <td>${n.nota_2 ?? '--'}</td>
-        <td>${n.nota_3 ?? '--'}</td>
-        <td class="${cls}"><strong>${p || '--'}</strong></td>
-        <td><span class="badge ${badgeCls}">${estado}</span></td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
+function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
+function todayISO(){return new Date().toISOString().split('T')[0]}
 
-function renderNotasEmpty() {
-  const msg = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin notas registradas</div></div>`;
-  document.getElementById('notasBody').innerHTML = msg;
-  document.getElementById('notasResumenBody').innerHTML = msg;
-}
-
-// ── ASISTENCIAS ──
-async function loadAsistencias() {
-  if (!alumnoId) { renderAsistenciasEmpty(); return; }
-  const { data } = await sb.from('asistencias').select('*, materias(nombre)').eq('alumno_id', alumnoId).order('fecha', { ascending: false });
-
-  const presente  = data?.filter(a => a.estado === 'presente').length  || 0;
-  const tardanza  = data?.filter(a => a.estado === 'tardanza').length  || 0;
-  const ausente   = data?.filter(a => a.estado === 'ausente').length   || 0;
-  const total     = (presente + tardanza + ausente) || 1;
-  const pct       = Math.round((presente / total) * 100);
-
-  document.getElementById('aPresente').textContent  = presente;
-  document.getElementById('aTardanza').textContent  = tardanza;
-  document.getElementById('aAusente').textContent   = ausente;
-  document.getElementById('cardAsistencia').textContent = `${pct}%`;
-
-  if (!data || data.length === 0) {
-    document.getElementById('asistenciasBody').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Sin registros de asistencia</div></div>`;
-    return;
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){location.href='login.html';return}
+  uid=session.user.id;
+  const {data:perfil}=await sb.from('perfiles').select('*').eq('id',uid).single();
+  if(perfil){
+    const nombre=`${perfil.nombre} ${perfil.apellido}`;
+    document.getElementById('tb-nombre').textContent=nombre;
+    document.getElementById('wb-name').textContent=perfil.nombre.toUpperCase();
   }
-
-  document.getElementById('asistenciasBody').innerHTML = `<table>
-    <thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Facial</th></tr></thead>
-    <tbody>${data.map(a => {
-      const badgeCls = a.estado === 'presente' ? 'badge-green' : a.estado === 'tardanza' ? 'badge-yellow' : 'badge-red';
-      const fecha = new Date(a.fecha).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
-      return `<tr>
-        <td>${fecha}</td>
-        <td>${a.materias?.nombre || '--'}</td>
-        <td>${a.hora_ingreso || '--'}</td>
-        <td><span class="badge ${badgeCls}">${a.estado}</span></td>
-        <td>${a.verificado_facial ? '<span class="badge badge-green">✓ Verificado</span>' : '<span class="badge badge-blue">Manual</span>'}</td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
+  const {data:al}=await sb.from('alumnos').select('*').eq('perfil_id',uid).single();
+  if(al){alumnoId=al.id;alumnoData=al}
+  const mon=weekStart();
+  document.getElementById('hor-semana').value=mon;
+  await Promise.all([loadNotas(),loadAsistencias(),loadNotifs(),loadPracticas(),loadHorario()]);
 }
 
-function renderAsistenciasEmpty() {
-  document.getElementById('asistenciasBody').innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Sin registros</div></div>`;
-}
-
-// ── NOTIFICACIONES ──
-async function loadNotificaciones() {
-  const { data } = await sb.from('notificaciones')
-    .select('*')
-    .or(`destinatario_id.eq.${currentUser.id},global.eq.true`)
-    .order('creado_en', { ascending: false });
-
-  const sinLeer = data?.filter(n => !n.leida).length || 0;
-  document.getElementById('cardNotifs').textContent = sinLeer;
-
-  if (!data || data.length === 0) {
-    document.getElementById('notifList').innerHTML = `<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Sin notificaciones</div></div>`;
-    return;
+async function loadNotas(){
+  if(!alumnoId)return;
+  const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
+  document.getElementById('s-mat').textContent=data?.length||0;
+  if(data?.length){
+    const proms=data.filter(n=>n.promedio).map(n=>n.promedio);
+    const gen=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--';
+    document.getElementById('s-prom').textContent=gen;
   }
+  const html=renderNotasTable(data||[]);
+  document.getElementById('d-notas').innerHTML=html;
+  document.getElementById('d-notas-res').innerHTML=html;
+}
 
-  const icons = { info: 'ℹ️', alerta: '⚠️', urgente: '🚨' };
-  document.getElementById('notifList').innerHTML = data.map(n => {
-    const fecha = new Date(n.creado_en).toLocaleDateString('es-PE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return `<div class="notif-item ${n.tipo}">
-      <div class="notif-icon">${icons[n.tipo] || '📢'}</div>
-      <div>
-        <div class="notif-title">${n.titulo}${!n.leida ? ' <span class="badge badge-yellow" style="font-size:8px">NUEVO</span>' : ''}</div>
-        <div class="notif-msg">${n.mensaje}</div>
-        <div class="notif-time">${fecha}</div>
+function renderNotasTable(data){
+  if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
+  return`<table><thead><tr><th>Materia</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th><th>Estado</th></tr></thead><tbody>${data.map(n=>{
+    const p=n.promedio||0;const c=p>=14?'nota-a':p>=11?'nota-m':'nota-b';
+    const bc=p>=14?'bg':p>=11?'by':'br';
+    const est=p>=14?'Aprobado':p>=11?'En riesgo':'Desaprobado';
+    return`<tr><td><strong>${n.materias?.nombre||'--'}</strong></td><td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td><td class="${c}"><strong>${p||'--'}</strong></td><td><span class="badge ${bc}">${est}</span></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function loadAsistencias(){
+  if(!alumnoId)return;
+  const {data}=await sb.from('asistencias').select('*,materias(nombre)').eq('alumno_id',alumnoId).order('fecha',{ascending:false});
+  const p=data?.filter(a=>a.estado==='presente').length||0;
+  const t=data?.filter(a=>a.estado==='tardanza').length||0;
+  const au=data?.filter(a=>a.estado==='ausente').length||0;
+  const tot=(p+t+au)||1;
+  document.getElementById('a-pres').textContent=p;
+  document.getElementById('a-tard').textContent=t;
+  document.getElementById('a-aus').textContent=au;
+  document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
+  if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros</div></div>`;return}
+  document.getElementById('d-asist').innerHTML=`<table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
+    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
+    const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">📍 Ver mapa</a>`:'--';
+    return`<tr><td>${fecha}</td><td>${a.materias?.nombre||'--'}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td><td>${gps}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function loadNotifs(){
+  if(!uid)return;
+  const {data}=await sb.from('notificaciones').select('*').or(`destinatario_id.eq.${uid},global.eq.true`).order('creado_en',{ascending:false});
+  const unread=data?.filter(n=>!n.leida).length||0;
+  document.getElementById('s-notif').textContent=unread;
+  if(!data?.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
+  const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
+  document.getElementById('d-notifs').innerHTML=data.map(n=>{
+    const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const adj=n.archivo_url?`<a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:inline-block;margin-top:6px">📎 Ver adjunto</a>`:'';
+    return`<div class="nitem ${n.tipo}">
+      <div class="nico">${icons[n.tipo]||'📢'}</div>
+      <div style="flex:1">
+        <div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div>
+        <div class="n-msg">${n.mensaje}</div>
+        ${adj}
+        <div class="n-time">${fecha}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── HORARIO ──
-async function loadHorario() {
-  const { data: alumno } = await sb.from('alumnos').select('seccion').eq('perfil_id', currentUser.id).single();
-  const seccion = alumno?.seccion;
-
-  const query = seccion
-    ? sb.from('horarios').select('*, materias(nombre)').eq('seccion', seccion).order('hora_inicio')
-    : sb.from('horarios').select('*, materias(nombre)').order('hora_inicio');
-
-  const { data } = await query;
-
-  const dias = ['lunes','martes','miércoles','jueves','viernes','sábado'];
-
-  if (!data || data.length === 0) {
-    document.getElementById('horarioGrid').innerHTML = dias.map(d => `
-      <div class="horario-dia">
-        <div class="horario-dia-nombre">${d.toUpperCase()}</div>
-        <div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">Sin clases</div>
-      </div>`).join('');
-    return;
-  }
-
-  document.getElementById('horarioGrid').innerHTML = dias.map(dia => {
-    const clases = data.filter(h => h.dia === dia);
-    return `<div class="horario-dia">
-      <div class="horario-dia-nombre">${dia.toUpperCase()}</div>
-      ${clases.length === 0
-        ? '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px 0">Libre</div>'
-        : clases.map(c => `<div class="horario-clase">
-            <div class="horario-clase-nombre">${c.materias?.nombre || 'Materia'}</div>
-            <div class="horario-clase-hora">${c.hora_inicio?.slice(0,5)} – ${c.hora_fin?.slice(0,5)}</div>
-            ${c.aula ? `<div class="horario-clase-hora">Aula ${c.aula}</div>` : ''}
-          </div>`).join('')
-      }
+async function loadPracticas(){
+  // Get materias of this alumno
+  const {data:mats}=alumnoId?await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId):{data:[]};
+  const matIds=mats?.map(m=>m.materia_id)||[];
+  let query=sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
+  if(matIds.length)query=query.in('materia_id',matIds);
+  const {data:practicas}=await query;
+  // Get submitted solutions
+  const {data:sols}=alumnoId?await sb.from('soluciones').select('*').eq('alumno_id',alumnoId):{data:[]};
+  const solMap={};sols?.forEach(s=>solMap[s.practica_id]=s);
+  const el=document.getElementById('d-practicas');
+  if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas disponibles</div></div>`;return}
+  el.innerHTML=practicas.map(p=>{
+    const sol=solMap[p.id];
+    const entregada=!!sol;
+    return`<div class="prac-card">
+      <div class="prac-sem">Semana: ${p.semana_inicio}</div>
+      <div class="prac-ttl">${p.titulo}</div>
+      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      ${p.descripcion?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.descripcion}</div>`:''}
+      <div class="prac-btns">
+        ${p.archivo_url?`<a href="${p.archivo_url}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 Descargar Práctica</a>`:''}
+        ${entregada
+          ?`<div class="entrega-ok">✅ Solución entregada <a href="${sol.archivo_url}" target="_blank" style="color:var(--gold);margin-left:8px">Ver</a></div>`
+          :`<div id="upzone-${p.id}" style="margin-top:4px">
+              <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
+                <input type="file" id="file-${p.id}" accept="image/*,.pdf" style="display:none" onchange="setSolFile('${p.id}',this)"/>
+                <div class="fd-icon">📤</div>
+                <div class="fd-txt">Subir solución (imagen o PDF)</div>
+                <div class="fd-name" id="fname-${p.id}"></div>
+              </div>
+              <div class="msg" id="smsg-${p.id}"></div>
+              <button class="btn btn-green" style="width:100%;margin-top:6px;font-size:11px" onclick="submitSolucion('${p.id}')">ENTREGAR SOLUCIÓN</button>
+            </div>`
+        }
+      </div>
     </div>`;
   }).join('');
 }
 
-// ── NAVEGACIÓN ──
-function showPanel(id) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+function setSolFile(pid,input){
+  solucionFiles[pid]=input.files[0];
+  if(solucionFiles[pid])document.getElementById(`fname-${pid}`).textContent=solucionFiles[pid].name;
+}
+
+async function submitSolucion(pid){
+  if(!alumnoId)return;
+  const file=solucionFiles[pid];
+  const msgEl=document.getElementById(`smsg-${pid}`);
+  if(!file){showMsg(msgEl,'Selecciona un archivo primero','err');return}
+  showMsg(msgEl,'Subiendo...','ok');
+  const ext=file.name.split('.').pop();
+  const tipo=file.type.includes('pdf')?'pdf':'imagen';
+  const path=`${alumnoId}/${pid}_${Date.now()}.${ext}`;
+  const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,file,{contentType:file.type});
+  if(upErr){showMsg(msgEl,upErr.message,'err');return}
+  // Get signed URL (private bucket)
+  const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(upData.path,60*60*24*30);
+  const url=signed?.signedUrl||'';
+  const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:url,tipo});
+  if(error){showMsg(msgEl,error.message,'err');return}
+  showMsg(msgEl,'Entregado correctamente ✅','ok');
+  setTimeout(()=>loadPracticas(),1200);
+}
+
+async function loadHorario(){
+  const semana=document.getElementById('hor-semana').value;
+  if(!semana)return;
+  const {data}=await sb.from('horario_semanal').select('*,materias(nombre),aulas(nombre)').eq('semana_inicio',semana).order('hora_inicio');
+  const dias=['lunes','martes','miércoles','jueves','viernes','sábado'];
+  document.getElementById('d-horario').innerHTML=dias.map(dia=>{
+    const clases=(data||[]).filter(h=>h.dia===dia);
+    return`<div class="hday">
+      <div class="hday-name">${dia.toUpperCase()}</div>
+      ${clases.length?clases.map(c=>`<div class="hclase">
+        <div class="hclase-mat">${c.materias?.nombre||'--'}</div>
+        <div class="hclase-inf">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)}</div>
+        <div class="hclase-inf">🏫 ${c.aulas?.nombre||'--'}</div>
+      </div>`).join(''):`<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Libre</div>`}
+    </div>`;
+  }).join('');
+}
+
+function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
+
+function showPanel(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
   document.getElementById(`panel-${id}`).classList.add('active');
-  event.currentTarget.classList.add('active');
-  closeSidebar();
+  if(btn)btn.classList.add('active');
+  closeSb();
 }
-
-// ── SIDEBAR MOBILE ──
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-}
-
-// ── LOGOUT ──
-async function doLogout() {
-  await sb.auth.signOut();
-  window.location.href = 'login.html';
-}
+function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+async function doLogout(){await sb.auth.signOut();location.href='login.html'}
 
 init();
 </script>
