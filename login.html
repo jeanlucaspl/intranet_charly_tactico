@@ -104,14 +104,10 @@ const p=new URLSearchParams(location.search).get('rol')||'alumno';
 const tabInicial=p==='admin'?'admin':p==='padre'?'padre':'alumno';
 
 // Verificar si ya hay sesión ANTES de mostrar cualquier cosa
-sb.auth.getSession().then(async({data})=>{
-  if(data.session){
-    const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.session.user.id).single();
-    redirigir(pf?.rol||'alumno');
-  } else {
-    // No hay sesión: mostrar la pestaña correcta
-    switchTab(tabInicial);
-  }
+// Siempre cerrar sesión al llegar al login
+// Esto garantiza que cada usuario empieza desde cero
+sb.auth.signOut().then(() => {
+  switchTab(tabInicial);
 });
 
 function switchTab(tab){

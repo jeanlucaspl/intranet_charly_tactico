@@ -244,7 +244,9 @@ async function checkAuth(){
   if(pf?.rol!=='alumno'){await sb.auth.signOut();location.replace('login.html');return null;}
   return session;
 }
-sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.replace('index.html');});
+let authListenerReady=false;
+setTimeout(()=>{authListenerReady=true;},2000);
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'&&authListenerReady)location.replace('index.html');});
 window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
 let uid=null,alumnoId=null,alumnoData=null,solucionFiles={};

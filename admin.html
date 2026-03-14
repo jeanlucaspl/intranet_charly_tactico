@@ -789,8 +789,12 @@ async function checkAuth() {
   }
   return true;
 }
+// Wait for page to fully load before listening to auth changes
+// This prevents false SIGNED_OUT events during initial load
+let authListenerReady = false;
+setTimeout(() => { authListenerReady = true; }, 2000);
 sb.auth.onAuthStateChange((ev) => {
-  if (ev === 'SIGNED_OUT') location.replace('index.html');
+  if (ev === 'SIGNED_OUT' && authListenerReady) location.replace('index.html');
 });
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) sb.auth.getSession().then(({data}) => { if (!data.session) location.replace('login.html'); });
@@ -957,6 +961,7 @@ async function loadContacto(){
     </div>`;
   }).join('');
 }
+async function loadHorario(){
   const semana=document.getElementById('h-semana').value;
   if(!semana)return;
   const {data}=await sb.from('horario_semanal').select('*,materias(nombre),aulas(nombre)').eq('semana_inicio',semana).order('hora_inicio');
