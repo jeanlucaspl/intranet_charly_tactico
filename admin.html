@@ -278,6 +278,8 @@
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
     <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
     <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
+    <button class="sb-link" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Usuarios</button>
+    <button class="sb-link" onclick="showPanel('contrasenas',this)"><span class="ic">🔑</span>Contraseñas</button>
   </div>
 </div>
 
@@ -526,6 +528,49 @@
   </div>
 </div>
 
+<!-- ══ GESTIÓN USUARIOS (solo dueño) ══ -->
+<div class="panel" id="panel-usuarios">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Solo acceso dueño</div><div class="ttl">GESTIÓN DE USUARIOS</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-admin')">+ Nuevo Admin</button>
+  </div>
+  <div id="d-usuarios-aviso" style="background:var(--navy2);border:1px solid var(--yellow);padding:12px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--yellow);text-transform:uppercase">
+    ⚠️ Esta sección solo es visible para el dueño de la academia
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Administradores</span></div>
+    <div id="d-admins"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
+<!-- ══ CONTRASEÑAS ══ -->
+<div class="panel" id="panel-contrasenas">
+  <div class="ph"><div class="ph-left"><div class="eye">Gestión de accesos</div><div class="ttl">CONTRASEÑAS</div></div></div>
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
+    🔑 Busca un usuario por DNI para ver o cambiar su contraseña
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+    <input type="text" id="pass-dni-search" placeholder="DNI del usuario..." maxlength="8" inputmode="numeric" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;flex:1;min-width:180px;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+    <button class="btn btn-gold" onclick="buscarUsuarioPorDNI()">Buscar</button>
+  </div>
+  <div id="pass-result" style="display:none;background:var(--navy2);border:1px solid var(--border);padding:20px">
+    <div id="pass-user-info" style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:16px"></div>
+    <div class="fg"><label>Nueva contraseña</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="pass-nueva" placeholder="Nueva contraseña..." style="flex:1"/>
+        <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAleatoria()">🔀 Generar</button>
+      </div>
+    </div>
+    <div class="msg" id="pass-msg"></div>
+    <input type="hidden" id="pass-user-id"/>
+    <button class="btn btn-gold" style="margin-top:8px" onclick="cambiarContrasena()">CAMBIAR CONTRASEÑA</button>
+  </div>
+  <div style="margin-top:24px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">Todas las contraseñas registradas</div>
+    <div id="d-contrasenas"><div class="empty"><div class="ei">🔑</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
 </div></div><!-- end layout -->
 
 <!-- ════ MODALES ════ -->
@@ -648,7 +693,15 @@
     <div class="md-bd">
       <div class="msg" id="msg-nota"></div>
       <div class="fgrid">
-        <div class="fg full"><label>Alumno</label><select id="n-alumno"><option value="">-- Selecciona --</option></select></div>
+        <div class="fg full">
+          <label>Buscar alumno por DNI</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="n-dni-search" placeholder="Ingresa el DNI..." maxlength="8" inputmode="numeric" style="flex:1"/>
+            <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('nota')">Buscar</button>
+          </div>
+          <div id="n-alumno-info" style="display:none;margin-top:8px;padding:10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
+          <input type="hidden" id="n-alumno"/>
+        </div>
         <div class="fg full"><label>Materia</label><select id="n-materia"><option value="">-- Selecciona --</option></select></div>
         <div class="fg full"><label>Periodo</label><input type="text" id="n-periodo" placeholder="2026-I"/></div>
         <div class="fg"><label>Nota 1</label><input type="number" id="n-n1" min="0" max="20" step=".5"/></div>
@@ -747,15 +800,28 @@
     <div class="md-hd"><div class="md-ttl">NUEVO PADRE / APODERADO</div><button class="md-x" onclick="closeMd('md-padre')">✕</button></div>
     <div class="md-bd">
       <div class="msg" id="msg-padre"></div>
-      <div style="background:var(--navy);border:1px solid var(--border);padding:10px 14px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
-        ℹ️ El padre ingresará al sistema con su DNI. La contraseña inicial será su mismo DNI.
-      </div>
       <div class="fgrid">
         <div class="fg"><label>Nombre</label><input type="text" id="pad-nombre" placeholder="Carlos"/></div>
         <div class="fg"><label>Apellido</label><input type="text" id="pad-apellido" placeholder="García"/></div>
-        <div class="fg full"><label>DNI</label><input type="text" id="pad-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/></div>
+        <div class="fg full"><label>DNI del padre</label><input type="text" id="pad-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/></div>
         <div class="fg full"><label>Teléfono (opcional)</label><input type="text" id="pad-tel" placeholder="+51 999 999 999"/></div>
-        <div class="fg full"><label>Alumno vinculado</label><select id="pad-alumno"><option value="">-- Selecciona alumno --</option></select></div>
+        <div class="fg full">
+          <label>Contraseña de acceso</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="pad-pass" placeholder="Mín. 6 caracteres" style="flex:1"/>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px;white-space:nowrap" onclick="generarPassPadre()">🔀 Generar</button>
+          </div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:5px">Si lo dejas vacío se usará el DNI como contraseña</div>
+        </div>
+        <div class="fg full">
+          <label>Buscar alumno vinculado por DNI</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="pad-alumno-dni" placeholder="DNI del alumno..." maxlength="8" inputmode="numeric" style="flex:1"/>
+            <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('padre')">Buscar</button>
+          </div>
+          <div id="pad-alumno-info" style="display:none;margin-top:8px;padding:10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
+          <input type="hidden" id="pad-alumno"/>
+        </div>
         <div class="fg full"><label>Parentesco</label>
           <select id="pad-parentesco">
             <option value="padre/madre">Padre / Madre</option>
@@ -772,6 +838,39 @@
   </div>
 </div>
 
+<!-- MODAL NUEVO ADMIN -->
+<div class="mo" id="md-admin">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">NUEVO ADMINISTRADOR</div><button class="md-x" onclick="closeMd('md-admin')">✕</button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-admin"></div>
+      <div class="fgrid">
+        <div class="fg"><label>Nombre</label><input type="text" id="adm-nombre" placeholder="Ana"/></div>
+        <div class="fg"><label>Apellido</label><input type="text" id="adm-apellido" placeholder="López"/></div>
+        <div class="fg full"><label>DNI</label><input type="text" id="adm-dni" placeholder="12345678" maxlength="8"/></div>
+        <div class="fg full"><label>Email (para login)</label><input type="email" id="adm-email" placeholder="admin@correo.com"/></div>
+        <div class="fg full">
+          <label>Contraseña</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="adm-pass" placeholder="Mín. 8 caracteres" style="flex:1"/>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAdmin()">🔀</button>
+          </div>
+        </div>
+        <div class="fg full"><label>Rol</label>
+          <select id="adm-rol">
+            <option value="admin">Admin</option>
+            <option value="instructor">Instructor</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-admin')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-crear-admin" onclick="saveAdmin()">CREAR ADMIN</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
@@ -782,7 +881,7 @@ async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { location.replace('login.html'); return false; }
   const { data: pf } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
-  if (!['admin','instructor'].includes(pf?.rol)) {
+  if (!['admin','instructor','dueno'].includes(pf?.rol)) {
     await sb.auth.signOut();
     location.replace('login.html');
     return false;
@@ -811,15 +910,23 @@ let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, fa
 // ── INIT ──
 async function init(){
   const ok = await checkAuth();
-  if (!ok) return; // pageshow already handles redirect
+  if (!ok) return;
+  // Get current user role to show/hide dueno-only sections
+  const {data:{session}}=await sb.auth.getSession();
+  const {data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  // Show "Usuarios" section only for dueño
+  if(pf?.rol==='dueno'){
+    const sbU=document.getElementById('sb-usuarios');
+    if(sbU) sbU.style.display='flex';
+  }
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
-  // Set default week to current monday
   const mon = weekStart();
   document.getElementById('h-semana').value = mon;
   document.getElementById('hor-semana').value = mon;
   document.getElementById('p-semana').value = mon;
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
-  await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres()]);
+  await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
+  if(pf?.rol==='dueno') loadAdmins();
   populateSelects();
 }
 
@@ -913,6 +1020,133 @@ async function loadPadres(){
     <td><strong>${p.alumnos?.codigo||'--'}</strong></td>
   </tr>`).join('')}</tbody></table>`;
 }
+// ── BÚSQUEDA POR DNI ──
+async function buscarAlumnoPorDNI(contexto){
+  const inputId = contexto==='nota' ? 'n-dni-search' : 'pad-alumno-dni';
+  const infoId  = contexto==='nota' ? 'n-alumno-info' : 'pad-alumno-info';
+  const hiddenId= contexto==='nota' ? 'n-alumno'      : 'pad-alumno';
+  const dni = document.getElementById(inputId).value.trim();
+  if(!dni) return alert('Ingresa un DNI');
+  const {data} = await sb.from('perfiles').select('id,nombre,apellido,dni')
+    .eq('dni', dni).eq('rol','alumno').single();
+  if(!data){
+    document.getElementById(infoId).style.display='block';
+    document.getElementById(infoId).style.borderColor='var(--red)';
+    document.getElementById(infoId).style.color='var(--red)';
+    document.getElementById(infoId).textContent='❌ No se encontró un alumno con ese DNI';
+    document.getElementById(hiddenId).value='';
+    return;
+  }
+  // Get alumno id
+  const {data:al} = await sb.from('alumnos').select('id,codigo').eq('perfil_id',data.id).single();
+  document.getElementById(hiddenId).value = al?.id || '';
+  document.getElementById(infoId).style.display='block';
+  document.getElementById(infoId).style.borderColor='var(--green)';
+  document.getElementById(infoId).style.color='var(--green)';
+  document.getElementById(infoId).textContent=`✅ ${data.nombre} ${data.apellido} · DNI: ${data.dni} · Código: ${al?.codigo||'--'}`;
+}
+
+// ── GENERADORES DE CONTRASEÑA ──
+function generarPass(len=8){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function generarPassPadre(){ document.getElementById('pad-pass').value=generarPass(); }
+function generarPassAdmin(){ document.getElementById('adm-pass').value=generarPass(10); }
+function generarPassAleatoria(){
+  const p=generarPass();
+  document.getElementById('pass-nueva').value=p;
+}
+
+// ── CREAR ADMIN (solo dueño) ──
+async function saveAdmin(){
+  const nombre  = document.getElementById('adm-nombre').value.trim();
+  const apellido= document.getElementById('adm-apellido').value.trim();
+  const dni     = document.getElementById('adm-dni').value.trim();
+  const email   = document.getElementById('adm-email').value.trim();
+  const pass    = document.getElementById('adm-pass').value.trim();
+  const rol     = document.getElementById('adm-rol').value;
+  const msg     = document.getElementById('msg-admin');
+  if(!nombre||!apellido||!dni||!email||!pass) return showMsg(msg,'Completa todos los campos','err');
+  if(pass.length<6) return showMsg(msg,'Contraseña mínimo 6 caracteres','err');
+  const btn=document.getElementById('btn-crear-admin');
+  btn.disabled=true; btn.textContent='CREANDO...';
+  const {data,error}=await sb.auth.signUp({email,password:pass});
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR ADMIN';return}
+  const uid=data?.user?.id;
+  if(!uid){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR ADMIN';return}
+  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol,email_ref:email});
+  // Guardar en gestión de contraseñas
+  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+  showMsg(msg,`Admin creado ✅ — Email: ${email} / Pass: ${pass}`,'ok');
+  await loadAdmins();
+  btn.disabled=false; btn.textContent='CREAR ADMIN';
+  setTimeout(()=>closeMd('md-admin'),2000);
+}
+
+// ── CARGAR ADMINS ──
+async function loadAdmins(){
+  const el=document.getElementById('d-admins');
+  if(!el) return;
+  const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol,email_ref')
+    .in('rol',['admin','instructor','dueno']).order('nombre');
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin admins registrados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+    <td><strong>${a.nombre} ${a.apellido}</strong></td>
+    <td>${a.dni||'--'}</td>
+    <td>${a.email_ref||'--'}</td>
+    <td><span class="badge ${a.rol==='dueno'?'bgold':a.rol==='admin'?'bg':'bb'}">${a.rol}</span></td>
+    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAdmin('${a.id}')">Dar de baja</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+async function deleteAdmin(id){
+  if(!confirm('¿Dar de baja a este administrador?'))return;
+  await sb.from('perfiles').update({rol:'alumno'}).eq('id',id);
+  await loadAdmins();
+}
+
+// ── GESTIÓN DE CONTRASEÑAS ──
+async function buscarUsuarioPorDNI(){
+  const dni=document.getElementById('pass-dni-search').value.trim();
+  if(!dni)return;
+  const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol').eq('dni',dni).single();
+  if(!data){alert('No se encontró usuario con ese DNI');return}
+  const {data:gc}=await sb.from('gestion_contrasenas').select('contrasena_actual').eq('perfil_id',data.id).single();
+  document.getElementById('pass-result').style.display='block';
+  document.getElementById('pass-user-id').value=data.id;
+  document.getElementById('pass-user-info').innerHTML=
+    `${data.nombre} ${data.apellido} <span class="badge ${data.rol==='padre'?'bb':'bg'}" style="font-size:11px">${data.rol}</span><br>
+     <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">
+     Contraseña registrada: <strong style="color:var(--gold)">${gc?.contrasena_actual||'No registrada'}</strong></span>`;
+}
+async function cambiarContrasena(){
+  const uid=document.getElementById('pass-user-id').value;
+  const pass=document.getElementById('pass-nueva').value.trim();
+  const msg=document.getElementById('pass-msg');
+  if(!pass||pass.length<6)return showMsg(msg,'Mínimo 6 caracteres','err');
+  // Update in gestion_contrasenas table
+  await sb.from('gestion_contrasenas').upsert({perfil_id:uid,contrasena_actual:pass,actualizado_en:new Date().toISOString()},{onConflict:'perfil_id'});
+  // Note: changing Supabase auth password requires admin API key (service_role)
+  // With anon key we can only store the new password for reference
+  showMsg(msg,'✅ Contraseña actualizada en registros. Para aplicarla en el sistema de auth, usa el panel de Supabase → Authentication → Users','ok');
+}
+async function loadContrasenas(){
+  const el=document.getElementById('d-contrasenas');
+  if(!el)return;
+  const {data}=await sb.from('gestion_contrasenas').select('*,perfiles(nombre,apellido,dni,rol)').order('actualizado_en',{ascending:false});
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🔑</div><div class="et">Sin registros</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Usuario</th><th>DNI</th><th>Rol</th><th>Contraseña</th><th>Actualizado</th></tr></thead><tbody>${data.map(c=>{
+    const fecha=new Date(c.actualizado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+    return`<tr>
+      <td>${c.perfiles?.nombre||'--'} ${c.perfiles?.apellido||''}</td>
+      <td>${c.perfiles?.dni||'--'}</td>
+      <td><span class="badge ${c.perfiles?.rol==='padre'?'bb':c.perfiles?.rol==='admin'?'bg':'by'}">${c.perfiles?.rol||'--'}</span></td>
+      <td><span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--gold);letter-spacing:.05em">${c.contrasena_actual}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${fecha}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
 async function savePadre(){
   const nombre=document.getElementById('pad-nombre').value.trim();
   const apellido=document.getElementById('pad-apellido').value.trim();
@@ -920,42 +1154,57 @@ async function savePadre(){
   const tel=document.getElementById('pad-tel').value.trim();
   const alumnoId=document.getElementById('pad-alumno').value;
   const parentesco=document.getElementById('pad-parentesco').value;
+  const passInput=document.getElementById('pad-pass').value.trim();
+  const pass=passInput||dni; // use DNI as default password
   const msg=document.getElementById('msg-padre');
   if(!nombre||!apellido||!dni)return showMsg(msg,'Ingresa nombre, apellido y DNI','err');
-  if(dni.length<7||dni.length>8)return showMsg(msg,'El DNI debe tener 7 u 8 dígitos','err');
+  if(dni.length<7)return showMsg(msg,'DNI inválido','err');
   const btn=document.getElementById('btn-crear-padre');
   btn.disabled=true;btn.textContent='CREANDO...';
   const email=`${dni}@charlytactico.pe`;
-  const {data,error}=await sb.auth.signUp({email,password:dni});
+  const {data,error}=await sb.auth.signUp({email,password:pass});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
   const userId=data?.user?.id;
-  if(!userId){showMsg(msg,'Error al crear — el DNI puede ya estar registrado','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-  await sb.from('perfiles').insert({id:userId,nombre,apellido,dni,rol:'padre',telefono:tel||null});
+  if(!userId){showMsg(msg,'Error al crear — DNI puede ya estar registrado','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+  await sb.from('perfiles').insert({id:userId,nombre,apellido,dni,rol:'padre',telefono:tel||null,email_ref:email});
   if(alumnoId)await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
-  showMsg(msg,`✅ Padre creado — DNI: ${dni} / Contraseña inicial: ${dni}`,'ok');
+  // Save password in management table
+  await sb.from('gestion_contrasenas').insert({perfil_id:userId,contrasena_actual:pass});
+  showMsg(msg,`✅ Padre creado — DNI: ${dni} / Contraseña: ${pass}`,'ok');
   await loadPadres();
   btn.disabled=false;btn.textContent='CREAR PADRE';
   setTimeout(()=>closeMd('md-padre'),2200);
 }
 async function loadContacto(){
-  const {data}=await sb.from('contacto_mensajes').select('*,perfiles!padre_id(nombre,apellido,dni),alumnos(codigo,perfiles(nombre,apellido,dni))').order('creado_en',{ascending:false});
+  const {data}=await sb.from('contacto_mensajes')
+    .select('*,perfiles!padre_id(nombre,apellido,dni)')
+    .order('creado_en',{ascending:false});
   const el=document.getElementById('d-contacto');
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
-  el.innerHTML=data.map(m=>{
+  // Enrich each message with the alumno linked to that padre
+  const enriched=await Promise.all(data.map(async m=>{
+    const {data:link}=await sb.from('padres_alumnos')
+      .select('alumnos(id,codigo,perfiles(nombre,apellido,dni))')
+      .eq('padre_id',m.padre_id).maybeSingle();
+    return{...m,al:link?.alumnos};
+  }));
+  el.innerHTML=enriched.map(m=>{
     const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const al=m.al;
     return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'Padre'} ${m.perfiles?.apellido||''}</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI: ${m.perfiles?.dni||'--'}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI padre: ${m.perfiles?.dni||'--'}</span>
         </div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Marcar leído</button>`:'<span class="badge bg">Leído</span>'}
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Leído</button>`:'<span class="badge bg">Leído</span>'}
       </div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px">
-        Alumno: ${m.alumnos?.perfiles?.nombre||'--'} ${m.alumnos?.perfiles?.apellido||''} · DNI: ${m.alumnos?.perfiles?.dni||'--'} · Código: ${m.alumnos?.codigo||'--'}
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.08em">
+        Alumno: <strong style="color:var(--white)">${al?.perfiles?.nombre||'No vinculado'} ${al?.perfiles?.apellido||''}</strong>
+        ${al?`· DNI: <strong style="color:var(--gold)">${al.perfiles?.dni||'--'}</strong> · Código: <strong style="color:var(--gold)">${al.codigo||'--'}</strong>`:''}
       </div>
-      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje de texto)'}</div>
+      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje)'}</div>
       ${adj}
       <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div>
     </div>`;
@@ -1135,9 +1384,11 @@ async function saveAlumno(){
   const ext=capturedPhotoBlob?'jpg':(fotoFile?.name.split('.').pop()||'jpg');
   const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(`${uid}.${ext}`,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
   if(!upErr)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno'});
+  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email});
   const {error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,activo:true,foto_url:fotoUrl});
   if(alErr){showMsg(msg,alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+  // Guardar contraseña en tabla de gestión
+  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
   showMsg(msg,'Alumno creado correctamente ✅','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
@@ -1374,7 +1625,7 @@ function populateSelects(){
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
-  ['n-alumno','man-alumno','pad-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
+  ['man-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
@@ -1389,13 +1640,17 @@ function closeMd(id){document.getElementById(id).classList.remove('show')}
 function showPanel(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
-  document.getElementById(`panel-${id}`).classList.add('active');
+  const panel=document.getElementById(`panel-${id}`);
+  if(!panel)return;
+  panel.classList.add('active');
   if(btn)btn.classList.add('active');
   closeSb();
-  if(id==='reportes')loadReportes();
-  if(id==='horario')loadHorario();
-  if(id==='contacto')loadContacto();
-  if(id==='padres')loadPadres();
+  if(id==='reportes')   loadReportes();
+  if(id==='horario')    loadHorario();
+  if(id==='contacto')   loadContacto();
+  if(id==='padres')     loadPadres();
+  if(id==='usuarios')   loadAdmins();
+  if(id==='contrasenas')loadContrasenas();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
