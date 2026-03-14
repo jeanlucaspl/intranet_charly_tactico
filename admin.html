@@ -546,8 +546,6 @@
         <div class="fg"><label>Apellido</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
         <div class="fg"><label>DNI</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
         <div class="fg"><label>Código</label><input type="text" id="al-codigo" placeholder="CAD-2026-001"/></div>
-        <div class="fg"><label>Aula</label><select id="al-aula"><option value="">-- Sin aula --</option></select></div>
-        <div class="fg"><label>Turno</label><select id="al-turno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option><option value="noche">Noche</option></select></div>
         <div class="fg full"><label>Email (acceso al sistema)</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
         <div class="fg full"><label>Contraseña inicial</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
       </div>
@@ -592,9 +590,7 @@
       <div class="msg" id="msg-materia"></div>
       <div class="fgrid">
         <div class="fg full"><label>Nombre</label><input type="text" id="m-nombre" placeholder="Razonamiento Verbal"/></div>
-        <div class="fg"><label>Código</label><input type="text" id="m-codigo" placeholder="RV-01"/></div>
-        <div class="fg"><label>Créditos</label><input type="number" id="m-creditos" value="3" min="1"/></div>
-        <div class="fg full"><label>Instructor</label><select id="m-instructor"><option value="">-- Sin asignar --</option></select></div>
+        <div class="fg full"><label>Código (opcional)</label><input type="text" id="m-codigo" placeholder="RV-01"/></div>
       </div>
     </div>
     <div class="md-ft">
@@ -678,6 +674,35 @@
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-practica')">Cancelar</button>
       <button class="btn btn-gold" id="btn-subir-prac" onclick="savePractica()">SUBIR PRÁCTICA</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR HORARIO -->
+<div class="mo" id="md-edit-horario">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">EDITAR CLASE</div><button class="md-x" onclick="closeMd('md-edit-horario')">✕</button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-edit-horario"></div>
+      <input type="hidden" id="edit-hor-id"/>
+      <div class="fgrid">
+        <div class="fg"><label>Día</label>
+          <select id="edit-hor-dia">
+            <option value="lunes">Lunes</option><option value="martes">Martes</option>
+            <option value="miércoles">Miércoles</option><option value="jueves">Jueves</option>
+            <option value="viernes">Viernes</option><option value="sábado">Sábado</option>
+          </select>
+        </div>
+        <div class="fg"><label>Aula</label><select id="edit-hor-aula"><option value="">-- Aula --</option></select></div>
+        <div class="fg full"><label>Materia</label><select id="edit-hor-materia"><option value="">-- Materia --</option></select></div>
+        <div class="fg"><label>Hora inicio</label><input type="time" id="edit-hor-inicio"/></div>
+        <div class="fg"><label>Hora fin</label><input type="time" id="edit-hor-fin"/></div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-red" onclick="deleteHorario()">🗑️ Eliminar</button>
+      <button class="btn btn-outline" onclick="closeMd('md-edit-horario')">Cancelar</button>
+      <button class="btn btn-gold" onclick="updateHorario()">GUARDAR CAMBIOS</button>
     </div>
   </div>
 </div>
@@ -839,10 +864,67 @@ async function loadHorario(){
     const clases=(data||[]).filter(h=>h.dia===dia);
     return`<div class="hday">
       <div class="hday-name">${dia.toUpperCase()}</div>
-      ${clases.length?clases.map(c=>`<div class="hclase">
+      ${clases.length?clases.map(c=>`<div class="hclase" onclick='openEditHorario(${JSON.stringify({id:c.id,dia:c.dia,aula_id:c.aula_id,materia_id:c.materia_id,hora_inicio:c.hora_inicio,hora_fin:c.hora_fin})})' title="Click para editar/eliminar" style="cursor:pointer">
         <div class="hclase-mat">${c.materias?.nombre||'--'}</div>
-        <div class="hclase-info">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)} · ${c.aulas?.nombre||'--'}</div>
+        <div class="hclase-info">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)} · ${c.aulas?.nombre||'--'} <span style="color:var(--gold)">✏️</span></div>
       </div>`).join(''):`<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Libre</div>`}
+    </div>`;
+  }).join('');
+}
+
+function openEditHorario(c){
+  document.getElementById('edit-hor-id').value=c.id;
+  document.getElementById('edit-hor-dia').value=c.dia;
+  document.getElementById('edit-hor-aula').value=c.aula_id||'';
+  document.getElementById('edit-hor-materia').value=c.materia_id||'';
+  document.getElementById('edit-hor-inicio').value=c.hora_inicio?.slice(0,5)||'';
+  document.getElementById('edit-hor-fin').value=c.hora_fin?.slice(0,5)||'';
+  document.getElementById('msg-edit-horario').className='msg';
+  openMd('md-edit-horario');
+}
+async function updateHorario(){
+  const id=document.getElementById('edit-hor-id').value;
+  const dia=document.getElementById('edit-hor-dia').value;
+  const aulaId=document.getElementById('edit-hor-aula').value||null;
+  const materiaId=document.getElementById('edit-hor-materia').value;
+  const inicio=document.getElementById('edit-hor-inicio').value;
+  const fin=document.getElementById('edit-hor-fin').value;
+  const msg=document.getElementById('msg-edit-horario');
+  if(!materiaId||!inicio||!fin)return showMsg(msg,'Completa materia y horario','err');
+  const {error}=await sb.from('horario_semanal').update({dia,aula_id:aulaId,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin}).eq('id',id);
+  if(error)return showMsg(msg,error.message,'err');
+  showMsg(msg,'Clase actualizada ✅','ok');
+  await loadHorario();
+  setTimeout(()=>closeMd('md-edit-horario'),900);
+}
+async function deleteHorario(){
+  const id=document.getElementById('edit-hor-id').value;
+  if(!confirm('¿Eliminar esta clase del horario?'))return;
+  await sb.from('horario_semanal').delete().eq('id',id);
+  closeMd('md-edit-horario');
+  await loadHorario();
+}
+async function deleteMateria(id){
+  if(!confirm('¿Eliminar esta materia? Esta acción no se puede deshacer.'))return;
+  const {error}=await sb.from('materias').delete().eq('id',id);
+  if(error)return alert('No se puede eliminar: '+error.message);
+  await loadMaterias(); populateSelects();
+}
+async function loadContacto(){
+  const {data}=await sb.from('contacto_mensajes').select('*,perfiles(nombre,apellido),alumnos(perfiles(nombre,apellido))').order('creado_en',{ascending:false});
+  const el=document.getElementById('d-contacto');
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
+  el.innerHTML=data.map(m=>{
+    const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
+    const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'Padre'} ${m.perfiles?.apellido||''}</span> <span style="font-size:12px;color:var(--muted)">· sobre ${m.alumnos?.perfiles?.nombre||'alumno'}</span></div>
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Marcar leído</button>`:'<span class="badge bg">Leído</span>'}
+      </div>
+      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje de texto)'}</div>
+      ${adj}
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div>
     </div>`;
   }).join('');
 }
@@ -864,31 +946,29 @@ async function loadSoluciones(){
 
 // ── RENDERERS ──
 function renderAlumnos(data){
-  if(!data.length){document.getElementById('d-alumnos').innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos</div></div>`;return}
-  document.getElementById('d-alumnos').innerHTML=`<table><thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Aula</th><th>Turno</th><th>Estado</th><th></th></tr></thead><tbody>${data.map(a=>`<tr>
+  if(!data.length){document.getElementById('d-alumnos').innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos registrados</div></div>`;return}
+  document.getElementById('d-alumnos').innerHTML=`<table><thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td><strong>${a.codigo}</strong></td>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
-    <td>${a.alumno_aula?.[0]?.aulas?.nombre||'--'}</td>
-    <td>${a.turno||'--'}</td>
     <td><span class="badge ${a.activo?'bg':'br'}">${a.activo?'Activo':'Inactivo'}</span></td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAlumno('${a.id}')">Eliminar</button></td>
+    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAlumno('${a.id}')">Dar de baja</button></td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderAulas(){
-  if(!allAulas.length){document.getElementById('d-aulas').innerHTML=`<div class="empty"><div class="ei">🏫</div><div class="et">Sin aulas</div></div>`;return}
-  document.getElementById('d-aulas').innerHTML=`<table><thead><tr><th>Nombre</th><th>Capacidad</th><th>Estado</th><th></th></tr></thead><tbody>${allAulas.map(a=>`<tr>
+  if(!allAulas.length){document.getElementById('d-aulas').innerHTML=`<div class="empty"><div class="ei">🏫</div><div class="et">Sin aulas registradas</div></div>`;return}
+  document.getElementById('d-aulas').innerHTML=`<table><thead><tr><th>Nombre</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${allAulas.map(a=>`<tr>
     <td><strong>${a.nombre}</strong></td><td>${a.capacidad}</td>
     <td><span class="badge ${a.activa?'bg':'br'}">${a.activa?'Activa':'Inactiva'}</span></td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAula('${a.id}')">Eliminar</button></td>
+    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAula('${a.id}')">Dar de baja</button></td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderMaterias(){
-  if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin materias</div></div>`;return}
-  document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Instructor</th><th>Créditos</th></tr></thead><tbody>${allMaterias.map(m=>`<tr>
-    <td><strong>${m.nombre}</strong></td><td>${m.codigo||'--'}</td>
-    <td>${m.perfiles?.nombre||'Sin asignar'} ${m.perfiles?.apellido||''}</td>
-    <td>${m.creditos}</td>
+  if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin materias registradas</div></div>`;return}
+  document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>`<tr>
+    <td><strong>${m.nombre}</strong></td>
+    <td>${m.codigo||'--'}</td>
+    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteMateria('${m.id}')">Eliminar</button></td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderNotas(data){
@@ -952,8 +1032,6 @@ async function saveAlumno(){
   const apellido=document.getElementById('al-apellido').value.trim();
   const dni=document.getElementById('al-dni').value.trim();
   const codigo=document.getElementById('al-codigo').value.trim();
-  const aulaId=document.getElementById('al-aula').value;
-  const turno=document.getElementById('al-turno').value;
   const email=document.getElementById('al-email').value.trim();
   const pass=document.getElementById('al-pass').value;
   const msg=document.getElementById('msg-alumno');
@@ -961,26 +1039,17 @@ async function saveAlumno(){
   if(!capturedPhotoBlob&&!fotoFile)return showMsg(msg,'Captura o sube una foto del alumno','err');
   const btn=document.getElementById('btn-crear-alumno');
   btn.disabled=true; btn.textContent='CREANDO...';
-  // Create auth user
   const {data,error}=await sb.auth.signUp({email,password:pass});
   if(error||!data.user){showMsg(msg,error?.message||'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
   const uid=data.user.id;
-  // Upload photo
   let fotoUrl=null;
   const fotoBlob=capturedPhotoBlob||fotoFile;
   const ext=capturedPhotoBlob?'jpg':(fotoFile?.name.split('.').pop()||'jpg');
   const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(`${uid}.${ext}`,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
   if(!upErr)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-  // Insert profile
   await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno'});
-  // Insert alumno
-  const {data:alData,error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,turno,activo:true,foto_url:fotoUrl});
+  const {error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,activo:true,foto_url:fotoUrl});
   if(alErr){showMsg(msg,alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-  // Assign aula if selected
-  if(aulaId){
-    const {data:newAl}=await sb.from('alumnos').select('id').eq('perfil_id',uid).single();
-    if(newAl)await sb.from('alumno_aula').insert({alumno_id:newAl.id,aula_id:aulaId});
-  }
   showMsg(msg,'Alumno creado correctamente ✅','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
@@ -995,11 +1064,9 @@ async function deleteAlumno(id){
 async function saveMateria(){
   const nombre=document.getElementById('m-nombre').value.trim();
   const codigo=document.getElementById('m-codigo').value.trim();
-  const creditos=parseInt(document.getElementById('m-creditos').value)||3;
-  const instructor=document.getElementById('m-instructor').value||null;
   const msg=document.getElementById('msg-materia');
-  if(!nombre)return showMsg(msg,'Ingresa el nombre','err');
-  const {error}=await sb.from('materias').insert({nombre,codigo,creditos,instructor_id:instructor||null});
+  if(!nombre)return showMsg(msg,'Ingresa el nombre de la materia','err');
+  const {error}=await sb.from('materias').insert({nombre,codigo:codigo||null,creditos:3});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Materia creada ✅','ok');
   await loadMaterias(); populateSelects();
@@ -1216,12 +1283,10 @@ function populateSelects(){
   const aulaOpts=allAulas.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
   const matOpts=allMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
   const alOpts=allAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
-  ['al-aula','hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=(id==='al-aula'?'<option value="">-- Sin aula --</option>':'')+aulaOpts});
-  ['f-materia','a-materia','hor-materia','p-materia','n-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
+  ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
+  ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
   ['n-alumno','man-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
-  const instOpts='<option value="">-- Sin asignar --</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
-  document.getElementById('m-instructor').innerHTML=instOpts;
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
