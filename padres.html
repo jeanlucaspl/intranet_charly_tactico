@@ -264,37 +264,24 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const STORAGE=SB_URL+'/storage/v1/object/public/';
 
-// ── SEGURIDAD: ocultar hasta verificar ──
-document.documentElement.style.visibility='hidden';
-
-sb.auth.onAuthStateChange((ev)=>{
-  if(ev==='SIGNED_OUT'){
-    document.documentElement.style.visibility='hidden';
-    location.replace('index.html');
-  }
-});
-
-window.addEventListener('pageshow', async()=>{
+// ── SEGURIDAD ──
+async function checkAuth(){
   const{data:{session}}=await sb.auth.getSession();
-  if(!session){ location.replace('login.html'); return; }
+  if(!session){location.replace('login.html');return null;}
   const{data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
-  if(pf?.rol!=='padre'){
-    await sb.auth.signOut();
-    location.replace('login.html');
-    return;
-  }
-  document.documentElement.style.visibility='visible';
-  // Only run init once (not on every bfcache restore)
-  if(!window._initialized){ window._initialized=true; init(); }
-});
+  if(pf?.rol!=='padre'){await sb.auth.signOut();location.replace('login.html');return null;}
+  return session;
+}
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.replace('index.html');});
+window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
 let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null;
 
 function todayISO(){return new Date().toISOString().split('T')[0]}
 
 async function init(){
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session) return;
+  const session=await checkAuth();
+  if(!session)return;
   uid=session.user.id;
   const {data:perfil}=await sb.from('perfiles').select('*').eq('id',uid).single();
   padreData=perfil;
@@ -455,9 +442,9 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
-async function doLogout(){await sb.auth.signOut();}
+async function doLogout(){ await sb.auth.signOut(); }
 
-// init() is called from pageshow after role verification
+init();
 </script>
 </body>
 </html>

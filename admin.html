@@ -777,33 +777,27 @@ const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const STORAGE = SB_URL + '/storage/v1/object/public/';
-
-// ── SEGURIDAD: ocultar hasta verificar ──
-document.documentElement.style.visibility='hidden';
-
-// Cierre de sesión en tiempo real → índice
-sb.auth.onAuthStateChange((ev)=>{
-  if(ev==='SIGNED_OUT'){
-    document.documentElement.style.visibility='hidden';
-    location.replace('index.html');
-  }
-});
-
-// Verificar sesión Y ROL cada vez que la página se muestra
-// (incluye restauración desde bfcache al presionar "atrás")
-window.addEventListener('pageshow', async()=>{
-  const{data:{session}}=await sb.auth.getSession();
-  if(!session){ location.replace('login.html'); return; }
-  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
-  if(!['admin','instructor'].includes(pf?.rol)){
+// ── SEGURIDAD ──
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.replace('login.html'); return false; }
+  const { data: pf } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
+  if (!['admin','instructor'].includes(pf?.rol)) {
     await sb.auth.signOut();
     location.replace('login.html');
-    return;
+    return false;
   }
-  document.documentElement.style.visibility='visible';
-  // Only run init once (not on every bfcache restore)
-  if(!window._initialized){ window._initialized=true; init(); }
+  return true;
+}
+sb.auth.onAuthStateChange((ev) => {
+  if (ev === 'SIGNED_OUT') location.replace('index.html');
 });
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) sb.auth.getSession().then(({data}) => { if (!data.session) location.replace('login.html'); });
+});
+
+
+
 
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
@@ -812,8 +806,8 @@ let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, fa
 
 // ── INIT ──
 async function init(){
-  const {data:{session}} = await sb.auth.getSession();
-  if(!session) return; // pageshow already handles redirect
+  const ok = await checkAuth();
+  if (!ok) return; // pageshow already handles redirect
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   // Set default week to current monday
   const mon = weekStart();
@@ -1401,9 +1395,9 @@ function showPanel(id,btn){
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
-async function doLogout(){await sb.auth.signOut();}
+async function doLogout(){ await sb.auth.signOut(); }
 
-// init() is called from pageshow after role verification
+init();
 </script>
 </body>
 </html>
