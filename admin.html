@@ -804,6 +804,7 @@
         <div class="fg"><label>Nombre</label><input type="text" id="pad-nombre" placeholder="Carlos"/></div>
         <div class="fg"><label>Apellido</label><input type="text" id="pad-apellido" placeholder="García"/></div>
         <div class="fg full"><label>DNI del padre</label><input type="text" id="pad-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/></div>
+        <div class="fg full"><label>Email (para acceso al sistema)</label><input type="email" id="pad-email" placeholder="correo@ejemplo.com"/></div>
         <div class="fg full"><label>Teléfono (opcional)</label><input type="text" id="pad-tel" placeholder="+51 999 999 999"/></div>
         <div class="fg full">
           <label>Contraseña de acceso</label>
@@ -1148,32 +1149,36 @@ async function loadContrasenas(){
 }
 
 async function savePadre(){
-  const nombre=document.getElementById('pad-nombre').value.trim();
-  const apellido=document.getElementById('pad-apellido').value.trim();
-  const dni=document.getElementById('pad-dni').value.trim();
-  const tel=document.getElementById('pad-tel').value.trim();
-  const alumnoId=document.getElementById('pad-alumno').value;
-  const parentesco=document.getElementById('pad-parentesco').value;
-  const passInput=document.getElementById('pad-pass').value.trim();
-  const pass=passInput||dni; // use DNI as default password
-  const msg=document.getElementById('msg-padre');
-  if(!nombre||!apellido||!dni)return showMsg(msg,'Ingresa nombre, apellido y DNI','err');
-  if(dni.length<7)return showMsg(msg,'DNI inválido','err');
-  const btn=document.getElementById('btn-crear-padre');
-  btn.disabled=true;btn.textContent='CREANDO...';
-  const email=`${dni}@charlytactico.pe`;
-  const {data,error}=await sb.auth.signUp({email,password:pass});
-  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-  const userId=data?.user?.id;
-  if(!userId){showMsg(msg,'Error al crear — DNI puede ya estar registrado','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-  await sb.from('perfiles').insert({id:userId,nombre,apellido,dni,rol:'padre',telefono:tel||null,email_ref:email});
-  if(alumnoId)await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
-  // Save password in management table
-  await sb.from('gestion_contrasenas').insert({perfil_id:userId,contrasena_actual:pass});
-  showMsg(msg,`✅ Padre creado — DNI: ${dni} / Contraseña: ${pass}`,'ok');
+  const nombre    = document.getElementById('pad-nombre').value.trim();
+  const apellido  = document.getElementById('pad-apellido').value.trim();
+  const dni       = document.getElementById('pad-dni').value.trim();
+  const email     = document.getElementById('pad-email').value.trim();
+  const tel       = document.getElementById('pad-tel').value.trim();
+  const alumnoId  = document.getElementById('pad-alumno').value;
+  const parentesco= document.getElementById('pad-parentesco').value;
+  const passInput = document.getElementById('pad-pass').value.trim();
+  const pass      = passInput || dni;
+  const msg       = document.getElementById('msg-padre');
+
+  if(!nombre||!apellido||!dni||!email) return showMsg(msg,'Nombre, apellido, DNI y email son obligatorios','err');
+  if(dni.length < 7) return showMsg(msg,'DNI inválido','err');
+
+  const btn = document.getElementById('btn-crear-padre');
+  btn.disabled=true; btn.textContent='CREANDO...';
+
+  const {data,error} = await sb.auth.signUp({email, password:pass});
+  if(error){ showMsg(msg,error.message,'err'); btn.disabled=false; btn.textContent='CREAR PADRE'; return; }
+  const userId = data?.user?.id;
+  if(!userId){ showMsg(msg,'Error al crear usuario','err'); btn.disabled=false; btn.textContent='CREAR PADRE'; return; }
+
+  await sb.from('perfiles').insert({id:userId, nombre, apellido, dni, rol:'padre', telefono:tel||null, email_ref:email});
+  if(alumnoId) await sb.from('padres_alumnos').insert({padre_id:userId, alumno_id:alumnoId, parentesco});
+  await sb.from('gestion_contrasenas').insert({perfil_id:userId, contrasena_actual:pass});
+
+  showMsg(msg, `✅ Padre creado — Email: ${email} / Contraseña: ${pass}`, 'ok');
   await loadPadres();
-  btn.disabled=false;btn.textContent='CREAR PADRE';
-  setTimeout(()=>closeMd('md-padre'),2200);
+  btn.disabled=false; btn.textContent='CREAR PADRE';
+  setTimeout(()=>closeMd('md-padre'), 2500);
 }
 async function loadContacto(){
   const {data}=await sb.from('contacto_mensajes')
