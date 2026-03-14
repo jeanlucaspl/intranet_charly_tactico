@@ -264,15 +264,29 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const STORAGE=SB_URL+'/storage/v1/object/public/';
 
-// ── SEGURIDAD ──
+// ── SEGURIDAD: ocultar hasta verificar ──
 document.documentElement.style.visibility='hidden';
-async function verificarSesion(){
+
+sb.auth.onAuthStateChange((ev)=>{
+  if(ev==='SIGNED_OUT'){
+    document.documentElement.style.visibility='hidden';
+    location.replace('index.html');
+  }
+});
+
+window.addEventListener('pageshow', async()=>{
   const{data:{session}}=await sb.auth.getSession();
-  if(!session){location.replace('login.html');return false}
-  document.documentElement.style.visibility='visible';return true;
-}
-window.addEventListener('pageshow',()=>verificarSesion());
-sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'){document.documentElement.style.visibility='hidden';location.replace('index.html')}});
+  if(!session){ location.replace('login.html'); return; }
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  if(pf?.rol!=='padre'){
+    await sb.auth.signOut();
+    location.replace('login.html');
+    return;
+  }
+  document.documentElement.style.visibility='visible';
+  // Only run init once (not on every bfcache restore)
+  if(!window._initialized){ window._initialized=true; init(); }
+});
 
 let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null;
 
@@ -280,7 +294,7 @@ function todayISO(){return new Date().toISOString().split('T')[0]}
 
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){location.href='login.html';return}
+  if(!session) return;
   uid=session.user.id;
   const {data:perfil}=await sb.from('perfiles').select('*').eq('id',uid).single();
   padreData=perfil;
@@ -443,7 +457,7 @@ function toggleSb(){document.getElementById('sidebar').classList.toggle('open');
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
 async function doLogout(){await sb.auth.signOut();}
 
-init();
+// init() is called from pageshow after role verification
 </script>
 </body>
 </html>

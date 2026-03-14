@@ -778,15 +778,32 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const STORAGE = SB_URL + '/storage/v1/object/public/';
 
-// ── SEGURIDAD ──
+// ── SEGURIDAD: ocultar hasta verificar ──
 document.documentElement.style.visibility='hidden';
-async function verificarSesion(){
+
+// Cierre de sesión en tiempo real → índice
+sb.auth.onAuthStateChange((ev)=>{
+  if(ev==='SIGNED_OUT'){
+    document.documentElement.style.visibility='hidden';
+    location.replace('index.html');
+  }
+});
+
+// Verificar sesión Y ROL cada vez que la página se muestra
+// (incluye restauración desde bfcache al presionar "atrás")
+window.addEventListener('pageshow', async()=>{
   const{data:{session}}=await sb.auth.getSession();
-  if(!session){location.replace('login.html');return false}
-  document.documentElement.style.visibility='visible';return true;
-}
-window.addEventListener('pageshow',()=>verificarSesion());
-sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'){document.documentElement.style.visibility='hidden';location.replace('index.html')}});
+  if(!session){ location.replace('login.html'); return; }
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  if(!['admin','instructor'].includes(pf?.rol)){
+    await sb.auth.signOut();
+    location.replace('login.html');
+    return;
+  }
+  document.documentElement.style.visibility='visible';
+  // Only run init once (not on every bfcache restore)
+  if(!window._initialized){ window._initialized=true; init(); }
+});
 
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
@@ -796,7 +813,7 @@ let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, fa
 // ── INIT ──
 async function init(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session){location.href='login.html';return}
+  if(!session) return; // pageshow already handles redirect
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   // Set default week to current monday
   const mon = weekStart();
@@ -1386,7 +1403,7 @@ function closeSb(){document.getElementById('sidebar').classList.remove('open');d
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 async function doLogout(){await sb.auth.signOut();}
 
-init();
+// init() is called from pageshow after role verification
 </script>
 </body>
 </html>
