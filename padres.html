@@ -264,14 +264,15 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const STORAGE=SB_URL+'/storage/v1/object/public/';
 
-// ── SEGURIDAD: bloquear botón atrás ──
-window.addEventListener('pageshow', async (e) => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) window.location.replace('login.html');
-});
-sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT') window.location.replace('login.html');
-});
+// ── SEGURIDAD ──
+document.documentElement.style.visibility='hidden';
+async function verificarSesion(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){location.replace('login.html');return false}
+  document.documentElement.style.visibility='visible';return true;
+}
+window.addEventListener('pageshow',()=>verificarSesion());
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'){document.documentElement.style.visibility='hidden';location.replace('index.html')}});
 
 let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null;
 
@@ -440,7 +441,7 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
-async function doLogout(){await sb.auth.signOut();location.href='login.html'}
+async function doLogout(){await sb.auth.signOut();}
 
 init();
 </script>

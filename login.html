@@ -3,409 +3,183 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- CRITICAL: no-cache so back button never shows stale login page -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Charly Táctico · Acceso</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --navy:   #0b1120;
-      --navy2:  #111a2e;
-      --navy3:  #162038;
-      --gold:   #c9a84c;
-      --white:  #f0f4ff;
-      --muted:  #7a90b0;
-      --border: rgba(201,168,76,0.25);
-      --red:    #e05555;
-      --green:  #4caf7d;
-    }
-    html, body {
-      height: 100%;
-      background: var(--navy);
-      color: var(--white);
-      font-family: 'Barlow', sans-serif;
-      overflow: hidden;
-    }
-
-    /* grid background */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none;
-    }
-
-    .page {
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .card {
-      background: var(--navy2);
-      border: 1px solid var(--border);
-      width: 100%;
-      max-width: 420px;
-      padding: 48px 40px;
-      position: relative;
-      animation: fadeUp 0.6s ease both;
-    }
-
-    /* gold corner accents */
-    .card::before, .card::after {
-      content: '';
-      position: absolute;
-      width: 20px; height: 20px;
-    }
-    .card::before { top: -1px; left: -1px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
-    .card::after  { bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
-
-    .card-header { text-align: center; margin-bottom: 36px; }
-
-    .card-eyebrow {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.3em;
-      color: var(--gold);
-      text-transform: uppercase;
-      border: 1px solid var(--border);
-      display: inline-block;
-      padding: 4px 14px;
-      margin-bottom: 16px;
-    }
-
-    .card-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 52px;
-      line-height: 0.9;
-      letter-spacing: 0.02em;
-    }
-    .card-title .gold { color: var(--gold); }
-
-    .card-sub {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-top: 8px;
-    }
-
-    .divider {
-      width: 48px; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      margin: 20px auto;
-    }
-
-    /* TABS */
-    .tabs {
-      display: flex;
-      border: 1px solid var(--border);
-      margin-bottom: 28px;
-    }
-    .tab {
-      flex: 1;
-      padding: 10px;
-      text-align: center;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px; font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      transition: all 0.2s;
-    }
-    .tab.active {
-      background: var(--gold);
-      color: var(--navy);
-    }
-
-    /* FORM */
-    .form-group { margin-bottom: 18px; }
-
-    label {
-      display: block;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.2em;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    input {
-      width: 100%;
-      background: var(--navy);
-      border: 1px solid var(--border);
-      color: var(--white);
-      font-family: 'Barlow', sans-serif;
-      font-size: 14px;
-      padding: 12px 16px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input:focus { border-color: var(--gold); }
-    input::placeholder { color: var(--muted); font-size: 13px; }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      background: var(--gold);
-      color: var(--navy);
-      border: none;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 8px;
-    }
-    .btn:hover { background: #e8c96a; }
-    .btn:active { transform: scale(0.99); }
-    .btn:disabled { background: var(--muted); cursor: not-allowed; }
-
-    .msg {
-      margin-top: 16px;
-      padding: 12px 16px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px; font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      display: none;
-    }
-    .msg.error  { border: 1px solid var(--red);   color: var(--red);   background: rgba(224,85,85,0.08); }
-    .msg.success{ border: 1px solid var(--green);  color: var(--green); background: rgba(76,175,125,0.08); }
-    .msg.show   { display: block; }
-
-    .back-link {
-      display: block;
-      text-align: center;
-      margin-top: 20px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px;
-      letter-spacing: 0.15em;
-      color: var(--muted);
-      text-decoration: none;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-    .back-link:hover { color: var(--gold); }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* responsive */
-    @media (max-width: 480px) {
-      .card { padding: 36px 24px; }
-      .card-title { font-size: 42px; }
-    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0b1120;--navy2:#111a2e;--gold:#c9a84c;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--red:#e05555;--green:#4caf7d}
+    html,body{height:100%;background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;pointer-events:none}
+    .page{height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:var(--navy2);border:1px solid var(--border);width:100%;max-width:420px;padding:44px 38px;position:relative;animation:fadeUp .5s ease both}
+    .card::before,.card::after{content:'';position:absolute;width:20px;height:20px}
+    .card::before{top:-1px;left:-1px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+    .card::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+    .card-header{text-align:center;margin-bottom:28px}
+    .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;border:1px solid var(--border);display:inline-block;padding:4px 14px;margin-bottom:14px}
+    .brand{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:.9;letter-spacing:.02em}
+    .brand .g{color:var(--gold)}
+    .sub{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-top:8px}
+    .divider{width:48px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:18px auto}
+    .tabs{display:flex;border:1px solid var(--border);margin-bottom:24px}
+    .tab{flex:1;padding:9px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);cursor:pointer;border:none;background:transparent;transition:all .2s}
+    .tab.active{background:var(--gold);color:var(--navy)}
+    .fg{margin-bottom:16px}
+    label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+    input{width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s}
+    input:focus{border-color:var(--gold)}
+    input::placeholder{color:var(--muted);font-size:13px}
+    .hint{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;padding:8px 12px;border:1px solid var(--border);background:rgba(201,168,76,.05)}
+    .btn{width:100%;padding:13px;background:var(--gold);color:var(--navy);border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.1em;cursor:pointer;transition:background .2s;margin-top:6px}
+    .btn:hover{background:#e8c96a}
+    .btn:disabled{background:var(--muted);cursor:not-allowed}
+    .msg{margin-top:14px;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;display:none}
+    .msg.error{border:1px solid var(--red);color:var(--red);background:rgba(224,85,85,.08);display:block}
+    .msg.success{border:1px solid var(--green);color:var(--green);background:rgba(76,175,125,.08);display:block}
+    .back{display:block;text-align:center;margin-top:18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-decoration:none;text-transform:uppercase;transition:color .2s}
+    .back:hover{color:var(--gold)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:480px){.card{padding:32px 22px}.brand{font-size:42px}}
   </style>
 </head>
 <body>
 <div class="page">
   <div class="card">
     <div class="card-header">
-      <div class="card-eyebrow">Sistema de Acceso</div>
-      <div class="card-title">CHARLY<br><span class="gold">TÁCTICO</span></div>
-      <div class="card-sub">Academia Pre-Cadetes</div>
+      <div class="eyebrow">Sistema de Acceso</div>
+      <div class="brand">CHARLY<br><span class="g">TÁCTICO</span></div>
+      <div class="sub">Academia Pre-Cadetes</div>
       <div class="divider"></div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
-      <button class="tab" data-tab="alumno" onclick="switchTab('alumno')">Alumno</button>
-      <button class="tab" data-tab="padre"  onclick="switchTab('padre')">Padre</button>
-      <button class="tab" data-tab="admin"  onclick="switchTab('admin')">Admin</button>
+      <button class="tab active" data-tab="alumno" onclick="switchTab('alumno')">Alumno</button>
+      <button class="tab" data-tab="padre" onclick="switchTab('padre')">Padre</button>
+      <button class="tab" data-tab="admin" onclick="switchTab('admin')">Admin</button>
     </div>
 
-    <!-- FORM ALUMNO -->
-    <div id="formAlumno" style="display:none">
-      <div class="form-group">
-        <label>Correo electrónico</label>
-        <input type="email" id="al-email" placeholder="tu@correo.com"/>
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="al-pass-email" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginAlumnoEmail()"/>
-      </div>
-      <button class="btn" id="btn-al-email" onclick="loginAlumnoEmail()">INGRESAR</button>
+    <!-- ALUMNO -->
+    <div id="f-alumno">
+      <div class="fg"><label>Correo electrónico</label><input type="email" id="al-email" placeholder="tu@correo.com" autocomplete="username"/></div>
+      <div class="fg"><label>Contraseña</label><input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAlumno()"/></div>
+      <button class="btn" id="btn-al" onclick="loginAlumno()">INGRESAR</button>
     </div>
 
-    <!-- FORM PADRE -->
-    <div id="formPadre" style="display:none">
-      <div class="form-group">
-        <label>DNI del padre / apoderado</label>
-        <input type="text" id="p-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/>
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="p-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginPadre()"/>
-      </div>
-      <p style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">
-        Tu contraseña inicial es tu DNI. El administrador puede cambiarla.
-      </p>
+    <!-- PADRE -->
+    <div id="f-padre" style="display:none">
+      <div class="hint">Ingresa tu DNI como usuario y contraseña</div>
+      <div class="fg"><label>DNI</label><input type="text" id="p-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="username"/></div>
+      <div class="fg"><label>Contraseña</label><input type="password" id="p-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPadre()"/></div>
       <button class="btn" id="btn-padre" onclick="loginPadre()">INGRESAR</button>
     </div>
 
-    <!-- FORM ADMIN -->
-    <div id="formAdmin" style="display:none">
-      <div class="form-group">
-        <label>Correo electrónico</label>
-        <input type="email" id="adm-email" placeholder="admin@correo.com"/>
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="adm-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginAdmin()"/>
-      </div>
+    <!-- ADMIN -->
+    <div id="f-admin" style="display:none">
+      <div class="fg"><label>Correo electrónico</label><input type="email" id="adm-email" placeholder="admin@correo.com" autocomplete="username"/></div>
+      <div class="fg"><label>Contraseña</label><input type="password" id="adm-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAdmin()"/></div>
       <button class="btn" id="btn-adm" onclick="loginAdmin()">INGRESAR</button>
     </div>
 
     <div class="msg" id="msg"></div>
-    <a class="back-link" href="index.html">← Volver al inicio</a>
+    <a class="back" href="index.html">← Volver al inicio</a>
   </div>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SB_URL='https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb=supabase.createClient(SB_URL,SB_KEY);
 
-  // Prevent back button after logout
-  history.replaceState(null, '', window.location.href);
+// Reemplaza la entrada actual del historial para que "atrás" desde los
+// dashboards nunca regrese a esta página mostrando la sesión anterior
+history.replaceState(null,'',location.href);
 
-  // Read ?rol= param to pre-select tab
-  const urlRol = new URLSearchParams(window.location.search).get('rol') || 'alumno';
-  let currentTab = urlRol === 'admin' ? 'admin' : urlRol === 'padre' ? 'padre' : 'alumno';
+// Lee ?rol= del URL para mostrar la pestaña correcta
+const p=new URLSearchParams(location.search).get('rol')||'alumno';
+const tabInicial=p==='admin'?'admin':p==='padre'?'padre':'alumno';
 
-  window.addEventListener('DOMContentLoaded', () => switchTab(currentTab));
-
-  function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-    document.getElementById('formAlumno').style.display = tab === 'alumno' ? 'block' : 'none';
-    document.getElementById('formPadre').style.display  = tab === 'padre'  ? 'block' : 'none';
-    document.getElementById('formAdmin').style.display  = tab === 'admin'  ? 'block' : 'none';
-    hideMsg();
+// Verificar si ya hay sesión ANTES de mostrar cualquier cosa
+sb.auth.getSession().then(async({data})=>{
+  if(data.session){
+    const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.session.user.id).single();
+    redirigir(pf?.rol||'alumno');
+  } else {
+    // No hay sesión: mostrar la pestaña correcta
+    switchTab(tabInicial);
   }
+});
 
-  function showMsg(text, type) {
-    const el = document.getElementById('msg');
-    el.textContent = text;
-    el.className = `msg ${type} show`;
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.getElementById('f-alumno').style.display=tab==='alumno'?'block':'none';
+  document.getElementById('f-padre').style.display =tab==='padre' ?'block':'none';
+  document.getElementById('f-admin').style.display =tab==='admin' ?'block':'none';
+  document.getElementById('msg').className='msg';
+}
+
+function redirigir(rol){
+  if(rol==='admin'||rol==='instructor') location.replace('admin.html');
+  else if(rol==='padre') location.replace('padres.html');
+  else location.replace('dashboard.html');
+}
+
+function showMsg(txt,tipo){const el=document.getElementById('msg');el.textContent=txt;el.className='msg '+tipo}
+
+async function loginAlumno(){
+  const email=document.getElementById('al-email').value.trim();
+  const pass=document.getElementById('al-pass').value;
+  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  const btn=document.getElementById('btn-al');
+  btn.disabled=true;btn.textContent='VERIFICANDO...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
+  if(pf?.rol!=='alumno'){
+    await sb.auth.signOut();
+    showMsg('Esta cuenta no es de alumno','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
-  function hideMsg() { document.getElementById('msg').className = 'msg'; }
+  showMsg('Acceso concedido ✅','success');
+  setTimeout(()=>location.replace('dashboard.html'),600);
+}
 
-  function redirectByRol(rol) {
-    if (rol === 'admin' || rol === 'instructor') window.location.replace('admin.html');
-    else if (rol === 'padre') window.location.replace('padres.html');
-    else window.location.replace('dashboard.html');
+async function loginPadre(){
+  const dni=document.getElementById('p-dni').value.trim();
+  const pass=document.getElementById('p-pass').value;
+  if(!dni||!pass)return showMsg('Ingresa tu DNI y contraseña','error');
+  const btn=document.getElementById('btn-padre');
+  btn.disabled=true;btn.textContent='VERIFICANDO...';
+  const{data,error}=await sb.auth.signInWithPassword({email:`${dni}@charlytactico.pe`,password:pass});
+  if(error){showMsg('DNI o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
+  if(pf?.rol!=='padre'){
+    await sb.auth.signOut();
+    showMsg('Este DNI no corresponde a un padre registrado','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
+  showMsg('Acceso concedido ✅','success');
+  setTimeout(()=>location.replace('padres.html'),600);
+}
 
-  // ── LOGIN ALUMNO (código + contraseña) ──
-  async function loginAlumno() {
-    const codigo = document.getElementById('al-codigo').value.trim().toUpperCase();
-    const pass   = document.getElementById('al-pass').value;
-    if (!codigo || !pass) return showMsg('Ingresa tu código y contraseña', 'error');
-    const btn = document.getElementById('btn-al');
-    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
-    // Find email from alumno codigo
-    const { data: alData } = await sb.from('alumnos')
-      .select('perfil_id, perfiles(dni)')
-      .eq('codigo', codigo).single();
-    if (!alData) {
-      showMsg('Código de alumno no encontrado', 'error');
-      btn.disabled = false; btn.textContent = 'INGRESAR';
-      return;
-    }
-    // email stored as codigo@charlytactico.pe or real email — try both
-    // First get the auth user email from perfiles
-    const { data: perfil } = await sb.from('perfiles').select('id').eq('id', alData.perfil_id).single();
-    // We need the email — stored when admin created the alumno
-    // Try logging in with codigo@charlytactico.pe as fallback
-    // The real email was set by admin so we use the perfil_id to get it via signIn
-    // Actually: we stored real email when created. Let alumno enter email OR codigo.
-    // Best approach: use codigo to look up the real email via a stored mapping
-    // For now: alumno uses their real email. Show message.
-    showMsg('Usa tu correo electrónico en el campo de abajo', 'error');
-    btn.disabled = false; btn.textContent = 'INGRESAR';
+async function loginAdmin(){
+  const email=document.getElementById('adm-email').value.trim();
+  const pass=document.getElementById('adm-pass').value;
+  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  const btn=document.getElementById('btn-adm');
+  btn.disabled=true;btn.textContent='VERIFICANDO...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
+  if(!['admin','instructor'].includes(pf?.rol)){
+    await sb.auth.signOut();
+    showMsg('Sin permisos de administrador','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
-
-  async function loginAlumnoEmail() {
-    const email = document.getElementById('al-email').value.trim();
-    const pass  = document.getElementById('al-pass-email').value;
-    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
-    const btn = document.getElementById('btn-al-email');
-    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) { showMsg('Correo o contraseña incorrectos', 'error'); btn.disabled = false; btn.textContent = 'INGRESAR'; return; }
-    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
-    showMsg('Acceso concedido ✅', 'success');
-    setTimeout(() => redirectByRol(perfil?.rol || 'alumno'), 700);
-  }
-
-  // ── LOGIN PADRE (DNI + DNI como contraseña) ──
-  async function loginPadre() {
-    const dni  = document.getElementById('p-dni').value.trim();
-    const pass = document.getElementById('p-pass').value.trim();
-    if (!dni || !pass) return showMsg('Ingresa tu DNI y contraseña', 'error');
-    const btn = document.getElementById('btn-padre');
-    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
-    // Parents log in with email: {dni}@charlytactico.pe
-    const email = `${dni}@charlytactico.pe`;
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) {
-      showMsg('DNI no registrado o contraseña incorrecta', 'error');
-      btn.disabled = false; btn.textContent = 'INGRESAR';
-      return;
-    }
-    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
-    if (perfil?.rol !== 'padre') {
-      await sb.auth.signOut();
-      showMsg('Este DNI no corresponde a un padre registrado', 'error');
-      btn.disabled = false; btn.textContent = 'INGRESAR';
-      return;
-    }
-    showMsg('Acceso concedido ✅', 'success');
-    setTimeout(() => window.location.replace('padres.html'), 700);
-  }
-
-  // ── LOGIN ADMIN (email + contraseña) ──
-  async function loginAdmin() {
-    const email = document.getElementById('adm-email').value.trim();
-    const pass  = document.getElementById('adm-pass').value;
-    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
-    const btn = document.getElementById('btn-adm');
-    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) { showMsg('Credenciales incorrectas', 'error'); btn.disabled = false; btn.textContent = 'INGRESAR'; return; }
-    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
-    if (!['admin','instructor'].includes(perfil?.rol)) {
-      await sb.auth.signOut();
-      showMsg('No tienes permisos de administrador', 'error');
-      btn.disabled = false; btn.textContent = 'INGRESAR';
-      return;
-    }
-    showMsg('Acceso concedido ✅', 'success');
-    setTimeout(() => window.location.replace('admin.html'), 700);
-  }
-
-  // If already logged in redirect
-  sb.auth.getSession().then(async ({ data }) => {
-    if (data.session) {
-      const { data: p } = await sb.from('perfiles').select('rol').eq('id', data.session.user.id).single();
-      redirectByRol(p?.rol || 'alumno');
-    }
-  });
+  showMsg('Acceso concedido ✅','success');
+  setTimeout(()=>location.replace('admin.html'),600);
+}
 </script>
 </body>
 </html>
