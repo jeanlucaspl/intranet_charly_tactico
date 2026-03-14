@@ -222,42 +222,51 @@
 
     <!-- TABS -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('login')">Ingresar</button>
-      <button class="tab" onclick="switchTab('register')">Registrarse</button>
+      <button class="tab" data-tab="alumno" onclick="switchTab('alumno')">Alumno</button>
+      <button class="tab" data-tab="padre"  onclick="switchTab('padre')">Padre</button>
+      <button class="tab" data-tab="admin"  onclick="switchTab('admin')">Admin</button>
     </div>
 
-    <!-- LOGIN FORM -->
-    <div id="formLogin">
+    <!-- FORM ALUMNO -->
+    <div id="formAlumno" style="display:none">
       <div class="form-group">
         <label>Correo electrónico</label>
-        <input type="email" id="loginEmail" placeholder="tu@correo.com"/>
+        <input type="email" id="al-email" placeholder="tu@correo.com"/>
       </div>
       <div class="form-group">
         <label>Contraseña</label>
-        <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()"/>
+        <input type="password" id="al-pass-email" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginAlumnoEmail()"/>
       </div>
-      <button class="btn" id="btnLogin" onclick="doLogin()">INGRESAR</button>
+      <button class="btn" id="btn-al-email" onclick="loginAlumnoEmail()">INGRESAR</button>
     </div>
 
-    <!-- REGISTER FORM -->
-    <div id="formRegister" style="display:none">
+    <!-- FORM PADRE -->
+    <div id="formPadre" style="display:none">
       <div class="form-group">
-        <label>Nombre completo</label>
-        <input type="text" id="regNombre" placeholder="Juan Pérez"/>
-      </div>
-      <div class="form-group">
-        <label>DNI</label>
-        <input type="text" id="regDni" placeholder="12345678" maxlength="8"/>
-      </div>
-      <div class="form-group">
-        <label>Correo electrónico</label>
-        <input type="email" id="regEmail" placeholder="tu@correo.com"/>
+        <label>DNI del padre / apoderado</label>
+        <input type="text" id="p-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/>
       </div>
       <div class="form-group">
         <label>Contraseña</label>
-        <input type="password" id="regPass" placeholder="Mínimo 6 caracteres"/>
+        <input type="password" id="p-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginPadre()"/>
       </div>
-      <button class="btn" id="btnRegister" onclick="doRegister()">CREAR CUENTA</button>
+      <p style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">
+        Tu contraseña inicial es tu DNI. El administrador puede cambiarla.
+      </p>
+      <button class="btn" id="btn-padre" onclick="loginPadre()">INGRESAR</button>
+    </div>
+
+    <!-- FORM ADMIN -->
+    <div id="formAdmin" style="display:none">
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="adm-email" placeholder="admin@correo.com"/>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="adm-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') loginAdmin()"/>
+      </div>
+      <button class="btn" id="btn-adm" onclick="loginAdmin()">INGRESAR</button>
     </div>
 
     <div class="msg" id="msg"></div>
@@ -270,15 +279,22 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ── ANTI-BACK-BUTTON ──
-  // Replace the current history entry so "back" from dashboard
-  // never returns here showing cached content
+  // Prevent back button after logout
   history.replaceState(null, '', window.location.href);
 
+  // Read ?rol= param to pre-select tab
+  const urlRol = new URLSearchParams(window.location.search).get('rol') || 'alumno';
+  let currentTab = urlRol === 'admin' ? 'admin' : urlRol === 'padre' ? 'padre' : 'alumno';
+
+  window.addEventListener('DOMContentLoaded', () => switchTab(currentTab));
+
   function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0) === (tab==='login')));
-    document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
-    document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById('formAlumno').style.display = tab === 'alumno' ? 'block' : 'none';
+    document.getElementById('formPadre').style.display  = tab === 'padre'  ? 'block' : 'none';
+    document.getElementById('formAdmin').style.display  = tab === 'admin'  ? 'block' : 'none';
     hideMsg();
   }
 
@@ -287,82 +303,107 @@
     el.textContent = text;
     el.className = `msg ${type} show`;
   }
-  function hideMsg() {
-    document.getElementById('msg').className = 'msg';
-  }
+  function hideMsg() { document.getElementById('msg').className = 'msg'; }
 
   function redirectByRol(rol) {
-    // Use replace() so login is NOT in the back-history from dashboard
-    if (rol === 'admin' || rol === 'instructor') {
-      window.location.replace('admin.html');
-    } else if (rol === 'padre') {
-      window.location.replace('padres.html');
-    } else {
-      window.location.replace('dashboard.html');
-    }
+    if (rol === 'admin' || rol === 'instructor') window.location.replace('admin.html');
+    else if (rol === 'padre') window.location.replace('padres.html');
+    else window.location.replace('dashboard.html');
   }
 
-  async function doLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass  = document.getElementById('loginPass').value;
-    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
-
-    const btn = document.getElementById('btnLogin');
+  // ── LOGIN ALUMNO (código + contraseña) ──
+  async function loginAlumno() {
+    const codigo = document.getElementById('al-codigo').value.trim().toUpperCase();
+    const pass   = document.getElementById('al-pass').value;
+    if (!codigo || !pass) return showMsg('Ingresa tu código y contraseña', 'error');
+    const btn = document.getElementById('btn-al');
     btn.disabled = true; btn.textContent = 'VERIFICANDO...';
-
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-
-    if (error) {
-      showMsg('Correo o contraseña incorrectos', 'error');
+    // Find email from alumno codigo
+    const { data: alData } = await sb.from('alumnos')
+      .select('perfil_id, perfiles(dni)')
+      .eq('codigo', codigo).single();
+    if (!alData) {
+      showMsg('Código de alumno no encontrado', 'error');
       btn.disabled = false; btn.textContent = 'INGRESAR';
       return;
     }
-
-    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
-    const rol = perfil?.rol || 'alumno';
-    showMsg('Acceso concedido. Redirigiendo...', 'success');
-    setTimeout(() => redirectByRol(rol), 700);
+    // email stored as codigo@charlytactico.pe or real email — try both
+    // First get the auth user email from perfiles
+    const { data: perfil } = await sb.from('perfiles').select('id').eq('id', alData.perfil_id).single();
+    // We need the email — stored when admin created the alumno
+    // Try logging in with codigo@charlytactico.pe as fallback
+    // The real email was set by admin so we use the perfil_id to get it via signIn
+    // Actually: we stored real email when created. Let alumno enter email OR codigo.
+    // Best approach: use codigo to look up the real email via a stored mapping
+    // For now: alumno uses their real email. Show message.
+    showMsg('Usa tu correo electrónico en el campo de abajo', 'error');
+    btn.disabled = false; btn.textContent = 'INGRESAR';
   }
 
-  async function doRegister() {
-    const nombre = document.getElementById('regNombre').value.trim();
-    const dni    = document.getElementById('regDni').value.trim();
-    const email  = document.getElementById('regEmail').value.trim();
-    const pass   = document.getElementById('regPass').value;
+  async function loginAlumnoEmail() {
+    const email = document.getElementById('al-email').value.trim();
+    const pass  = document.getElementById('al-pass-email').value;
+    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
+    const btn = document.getElementById('btn-al-email');
+    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { showMsg('Correo o contraseña incorrectos', 'error'); btn.disabled = false; btn.textContent = 'INGRESAR'; return; }
+    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
+    showMsg('Acceso concedido ✅', 'success');
+    setTimeout(() => redirectByRol(perfil?.rol || 'alumno'), 700);
+  }
 
-    if (!nombre || !dni || !email || !pass) return showMsg('Completa todos los campos', 'error');
-    if (pass.length < 6) return showMsg('La contraseña debe tener al menos 6 caracteres', 'error');
-
-    const btn = document.getElementById('btnRegister');
-    btn.disabled = true; btn.textContent = 'CREANDO CUENTA...';
-
-    const { data, error } = await sb.auth.signUp({ email, password: pass });
-
+  // ── LOGIN PADRE (DNI + DNI como contraseña) ──
+  async function loginPadre() {
+    const dni  = document.getElementById('p-dni').value.trim();
+    const pass = document.getElementById('p-pass').value.trim();
+    if (!dni || !pass) return showMsg('Ingresa tu DNI y contraseña', 'error');
+    const btn = document.getElementById('btn-padre');
+    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
+    // Parents log in with email: {dni}@charlytactico.pe
+    const email = `${dni}@charlytactico.pe`;
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if (error) {
-      showMsg(error.message, 'error');
-      btn.disabled = false; btn.textContent = 'CREAR CUENTA';
+      showMsg('DNI no registrado o contraseña incorrecta', 'error');
+      btn.disabled = false; btn.textContent = 'INGRESAR';
       return;
     }
-
-    const partes = nombre.split(' ');
-    const apellido = partes.length > 1 ? partes.slice(1).join(' ') : '-';
-    await sb.from('perfiles').insert({
-      id: data.user.id,
-      nombre: partes[0],
-      apellido,
-      dni,
-      rol: 'alumno'
-    });
-
-    showMsg('Cuenta creada. Revisa tu correo para confirmar.', 'success');
-    btn.disabled = false; btn.textContent = 'CREAR CUENTA';
+    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
+    if (perfil?.rol !== 'padre') {
+      await sb.auth.signOut();
+      showMsg('Este DNI no corresponde a un padre registrado', 'error');
+      btn.disabled = false; btn.textContent = 'INGRESAR';
+      return;
+    }
+    showMsg('Acceso concedido ✅', 'success');
+    setTimeout(() => window.location.replace('padres.html'), 700);
   }
 
-  // If already logged in redirect — use replace() so they can't go back to login either
+  // ── LOGIN ADMIN (email + contraseña) ──
+  async function loginAdmin() {
+    const email = document.getElementById('adm-email').value.trim();
+    const pass  = document.getElementById('adm-pass').value;
+    if (!email || !pass) return showMsg('Completa todos los campos', 'error');
+    const btn = document.getElementById('btn-adm');
+    btn.disabled = true; btn.textContent = 'VERIFICANDO...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { showMsg('Credenciales incorrectas', 'error'); btn.disabled = false; btn.textContent = 'INGRESAR'; return; }
+    const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.user.id).single();
+    if (!['admin','instructor'].includes(perfil?.rol)) {
+      await sb.auth.signOut();
+      showMsg('No tienes permisos de administrador', 'error');
+      btn.disabled = false; btn.textContent = 'INGRESAR';
+      return;
+    }
+    showMsg('Acceso concedido ✅', 'success');
+    setTimeout(() => window.location.replace('admin.html'), 700);
+  }
+
+  // If already logged in redirect
   sb.auth.getSession().then(async ({ data }) => {
     if (data.session) {
-      const { data: perfil } = await sb.from('perfiles').select('rol').eq('id', data.session.user.id).single();
-      redirectByRol(perfil?.rol || 'alumno');
+      const { data: p } = await sb.from('perfiles').select('rol').eq('id', data.session.user.id).single();
+      redirectByRol(p?.rol || 'alumno');
     }
   });
 </script>

@@ -277,6 +277,7 @@
     <div class="sb-label">Comunicación</div>
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
     <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
+    <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
   </div>
 </div>
 
@@ -513,6 +514,18 @@
   <div id="d-contacto"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
 </div>
 
+<!-- ══ GESTIÓN PADRES ══ -->
+<div class="panel" id="panel-padres">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN DE PADRES</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Padres Registrados</span></div>
+    <div id="d-padres"><div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
 </div></div><!-- end layout -->
 
 <!-- ════ MODALES ════ -->
@@ -728,6 +741,37 @@
   </div>
 </div>
 
+<!-- MODAL PADRE -->
+<div class="mo" id="md-padre">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">NUEVO PADRE / APODERADO</div><button class="md-x" onclick="closeMd('md-padre')">✕</button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-padre"></div>
+      <div style="background:var(--navy);border:1px solid var(--border);padding:10px 14px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
+        ℹ️ El padre ingresará al sistema con su DNI. La contraseña inicial será su mismo DNI.
+      </div>
+      <div class="fgrid">
+        <div class="fg"><label>Nombre</label><input type="text" id="pad-nombre" placeholder="Carlos"/></div>
+        <div class="fg"><label>Apellido</label><input type="text" id="pad-apellido" placeholder="García"/></div>
+        <div class="fg full"><label>DNI</label><input type="text" id="pad-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/></div>
+        <div class="fg full"><label>Teléfono (opcional)</label><input type="text" id="pad-tel" placeholder="+51 999 999 999"/></div>
+        <div class="fg full"><label>Alumno vinculado</label><select id="pad-alumno"><option value="">-- Selecciona alumno --</option></select></div>
+        <div class="fg full"><label>Parentesco</label>
+          <select id="pad-parentesco">
+            <option value="padre/madre">Padre / Madre</option>
+            <option value="apoderado">Apoderado</option>
+            <option value="tutor">Tutor legal</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-padre')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-crear-padre" onclick="savePadre()">CREAR PADRE</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
@@ -759,7 +803,7 @@ async function init(){
   document.getElementById('hor-semana').value = mon;
   document.getElementById('p-semana').value = mon;
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
-  await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto()]);
+  await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres()]);
   populateSelects();
 }
 
@@ -838,24 +882,69 @@ async function loadNotifHist(){
     return`<div style="border-left:3px solid ${clr};padding:10px 14px;background:var(--navy);margin-bottom:3px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase">${icons[n.tipo]} ${n.titulo}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${n.mensaje}</div>${adj}<div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div></div>`;
   }).join('');
 }
+async function loadPadres(){
+  const {data}=await sb.from('padres_alumnos').select('*,perfiles!padre_id(nombre,apellido,dni,telefono),alumnos(codigo,perfiles(nombre,apellido,dni))');
+  const el=document.getElementById('d-padres');
+  if(!el)return;
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre Padre</th><th>DNI Padre</th><th>Teléfono</th><th>Parentesco</th><th>Alumno</th><th>DNI Alumno</th><th>Código</th></tr></thead><tbody>${data.map(p=>`<tr>
+    <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
+    <td><span class="badge bb">${p.perfiles?.dni||'--'}</span></td>
+    <td>${p.perfiles?.telefono||'--'}</td>
+    <td>${p.parentesco||'--'}</td>
+    <td>${p.alumnos?.perfiles?.nombre||'--'} ${p.alumnos?.perfiles?.apellido||''}</td>
+    <td><span class="badge by">${p.alumnos?.perfiles?.dni||'--'}</span></td>
+    <td><strong>${p.alumnos?.codigo||'--'}</strong></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+async function savePadre(){
+  const nombre=document.getElementById('pad-nombre').value.trim();
+  const apellido=document.getElementById('pad-apellido').value.trim();
+  const dni=document.getElementById('pad-dni').value.trim();
+  const tel=document.getElementById('pad-tel').value.trim();
+  const alumnoId=document.getElementById('pad-alumno').value;
+  const parentesco=document.getElementById('pad-parentesco').value;
+  const msg=document.getElementById('msg-padre');
+  if(!nombre||!apellido||!dni)return showMsg(msg,'Ingresa nombre, apellido y DNI','err');
+  if(dni.length<7||dni.length>8)return showMsg(msg,'El DNI debe tener 7 u 8 dígitos','err');
+  const btn=document.getElementById('btn-crear-padre');
+  btn.disabled=true;btn.textContent='CREANDO...';
+  const email=`${dni}@charlytactico.pe`;
+  const {data,error}=await sb.auth.signUp({email,password:dni});
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+  const userId=data?.user?.id;
+  if(!userId){showMsg(msg,'Error al crear — el DNI puede ya estar registrado','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+  await sb.from('perfiles').insert({id:userId,nombre,apellido,dni,rol:'padre',telefono:tel||null});
+  if(alumnoId)await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
+  showMsg(msg,`✅ Padre creado — DNI: ${dni} / Contraseña inicial: ${dni}`,'ok');
+  await loadPadres();
+  btn.disabled=false;btn.textContent='CREAR PADRE';
+  setTimeout(()=>closeMd('md-padre'),2200);
+}
 async function loadContacto(){
-  const {data}=await sb.from('contacto_mensajes').select('*,perfiles(nombre,apellido),alumnos(perfiles(nombre,apellido))').order('creado_en',{ascending:false});
-  if(!data?.length){return}
-  document.getElementById('d-contacto').innerHTML=data.map(m=>{
+  const {data}=await sb.from('contacto_mensajes').select('*,perfiles!padre_id(nombre,apellido,dni),alumnos(codigo,perfiles(nombre,apellido,dni))').order('creado_en',{ascending:false});
+  const el=document.getElementById('d-contacto');
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
+  el.innerHTML=data.map(m=>{
     const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'Padre'} ${m.perfiles?.apellido||''}</span> <span style="font-size:12px;color:var(--muted)">sobre ${m.alumnos?.perfiles?.nombre||'--'}</span></div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">Marcar leído</button>`:'<span class="badge bg">Leído</span>'}
+        <div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'Padre'} ${m.perfiles?.apellido||''}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI: ${m.perfiles?.dni||'--'}</span>
+        </div>
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Marcar leído</button>`:'<span class="badge bg">Leído</span>'}
       </div>
-      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje)'}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px">
+        Alumno: ${m.alumnos?.perfiles?.nombre||'--'} ${m.alumnos?.perfiles?.apellido||''} · DNI: ${m.alumnos?.perfiles?.dni||'--'} · Código: ${m.alumnos?.codigo||'--'}
+      </div>
+      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje de texto)'}</div>
       ${adj}
       <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div>
     </div>`;
   }).join('');
 }
-async function loadHorario(){
   const semana=document.getElementById('h-semana').value;
   if(!semana)return;
   const {data}=await sb.from('horario_semanal').select('*,materias(nombre),aulas(nombre)').eq('semana_inicio',semana).order('hora_inicio');
@@ -909,24 +998,6 @@ async function deleteMateria(id){
   const {error}=await sb.from('materias').delete().eq('id',id);
   if(error)return alert('No se puede eliminar: '+error.message);
   await loadMaterias(); populateSelects();
-}
-async function loadContacto(){
-  const {data}=await sb.from('contacto_mensajes').select('*,perfiles(nombre,apellido),alumnos(perfiles(nombre,apellido))').order('creado_en',{ascending:false});
-  const el=document.getElementById('d-contacto');
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
-  el.innerHTML=data.map(m=>{
-    const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
-    const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'Padre'} ${m.perfiles?.apellido||''}</span> <span style="font-size:12px;color:var(--muted)">· sobre ${m.alumnos?.perfiles?.nombre||'alumno'}</span></div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Marcar leído</button>`:'<span class="badge bg">Leído</span>'}
-      </div>
-      <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje de texto)'}</div>
-      ${adj}
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div>
-    </div>`;
-  }).join('');
 }
 async function loadSoluciones(){
   const pid=document.getElementById('q-sol-practica').value;
@@ -1286,7 +1357,7 @@ function populateSelects(){
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
-  ['n-alumno','man-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
+  ['n-alumno','man-alumno','pad-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
@@ -1307,6 +1378,7 @@ function showPanel(id,btn){
   if(id==='reportes')loadReportes();
   if(id==='horario')loadHorario();
   if(id==='contacto')loadContacto();
+  if(id==='padres')loadPadres();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
