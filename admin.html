@@ -2006,6 +2006,11 @@ function closeMd(id){document.getElementById(id).classList.remove('show')}
 
 // ── NAV ──
 function showPanel(id,btn){
+  // Liberar streams de cámara al cambiar de sección
+  if(id!=='facial'&&facialStream){stopCam();}
+  if(facialStream){facialStream.getTracks().forEach(t=>t.stop());facialStream=null;}
+  if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
+  if(prStream){prStream.getTracks().forEach(t=>t.stop());prStream=null;}
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
   const panel=document.getElementById(`panel-${id}`);
