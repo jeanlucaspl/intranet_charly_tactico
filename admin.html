@@ -278,6 +278,7 @@
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
     <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
     <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
+    <button class="sb-link" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none"><span class="ic">📚</span>Gestión Profesores</button>
     <button class="sb-link" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Usuarios</button>
     <button class="sb-link" onclick="showPanel('contrasenas',this)"><span class="ic">🔑</span>Contraseñas</button>
   </div>
@@ -571,6 +572,18 @@
   </div>
 </div>
 
+<!-- ══ GESTIÓN PROFESORES ══ -->
+<div class="panel" id="panel-profesores">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN DE PROFESORES</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Profesores Activos</span></div>
+    <div id="d-profesores"><div class="empty"><div class="ei">📚</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
 </div></div><!-- end layout -->
 
 <!-- ════ MODALES ════ -->
@@ -839,6 +852,60 @@
   </div>
 </div>
 
+<!-- MODAL NUEVO PROFESOR -->
+<div class="mo" id="md-profesor">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">NUEVO PROFESOR</div><button class="md-x" onclick="closeMd('md-profesor')">✕</button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-profesor"></div>
+      <div class="fgrid">
+        <div class="fg"><label>Nombre</label><input type="text" id="pr-nombre" placeholder="Ana"/></div>
+        <div class="fg"><label>Apellido</label><input type="text" id="pr-apellido" placeholder="López"/></div>
+        <div class="fg full"><label>DNI</label><input type="text" id="pr-dni" placeholder="12345678" maxlength="8"/></div>
+        <div class="fg full"><label>Email (para login)</label><input type="email" id="pr-email" placeholder="profesor@correo.com"/></div>
+        <div class="fg full">
+          <label>Contraseña</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="pr-pass" placeholder="Mín. 6 caracteres" style="flex:1"/>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="document.getElementById('pr-pass').value=generarPass()">🔀</button>
+          </div>
+        </div>
+        <div class="fg full"><label>Especialidad (opcional)</label><input type="text" id="pr-especialidad" placeholder="Ej: Matemáticas, Razonamiento Verbal"/></div>
+        <div class="fg full"><label>Materia que dicta (opcional)</label><select id="pr-materia"><option value="">-- Sin asignar --</option></select></div>
+      </div>
+      <div class="fg" style="margin-top:8px">
+        <label>📸 Foto para reconocimiento facial (opcional)</label>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="cam-wrap" style="max-width:200px;min-height:150px;display:flex;align-items:center;justify-content:center">
+              <video id="pr-video" autoplay muted playsinline style="width:100%;display:none"></video>
+              <canvas id="pr-canvas" style="display:none;width:100%"></canvas>
+              <span id="pr-placeholder" style="color:var(--muted);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startProfesorCam()">📷</button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="pr-snap-btn" onclick="snapProfesor()" disabled>📸</button>
+            </div>
+          </div>
+          <div class="fg" style="flex:1;min-width:120px">
+            <label>O subir imagen</label>
+            <div class="file-drop" style="padding:14px">
+              <input type="file" accept="image/*" onchange="setProfesorFoto(this)"/>
+              <div class="fd-icon">🖼️</div>
+              <div class="fd-txt">Subir foto</div>
+              <div class="fd-name" id="pr-foto-name"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-profesor')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-crear-profesor" onclick="saveProfesor()">CREAR PROFESOR</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUEVO ADMIN -->
 <div class="mo" id="md-admin">
   <div class="md">
@@ -915,10 +982,12 @@ async function init(){
   // Get current user role to show/hide dueno-only sections
   const {data:{session}}=await sb.auth.getSession();
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
-  // Show "Usuarios" section only for dueño
+  // Show dueno-only sections
   if(pf?.rol==='dueno'){
     const sbU=document.getElementById('sb-usuarios');
     if(sbU) sbU.style.display='flex';
+    const sbP=document.getElementById('sb-profesores');
+    if(sbP) sbP.style.display='flex';
   }
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   const mon = weekStart();
@@ -927,7 +996,7 @@ async function init(){
   document.getElementById('p-semana').value = mon;
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
   await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
-  if(pf?.rol==='dueno') loadAdmins();
+  if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
   populateSelects();
 }
 
@@ -1677,12 +1746,89 @@ let nTypeCur='info';
 function setNType(tipo,btn){nTypeCur=tipo;document.querySelectorAll('.ntype').forEach(b=>b.className='ntype');btn.classList.add(`a${tipo[0]}`+tipo.slice(1))}
 
 // ── POPULATE SELECTS ──
+async function loadProfesores(){
+  const el=document.getElementById('d-profesores');
+  if(!el)return;
+  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref),materias(nombre)').eq('activo',true).order('creado_en');
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin profesores</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`<tr>
+    <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
+    <td><span class="badge bb">${p.perfiles?.dni||'--'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${p.perfiles?.email_ref||'--'}</td>
+    <td>${p.especialidad||'--'}</td>
+    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteProfesor('${p.id}','${p.perfil_id}')">Dar de baja</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+async function deleteProfesor(id,perfilId){
+  if(!confirm('¿Dar de baja a este profesor?'))return;
+  await sb.from('profesores').update({activo:false}).eq('id',id);
+  await sb.from('perfiles').update({rol:'alumno'}).eq('id',perfilId);
+  await loadProfesores();
+}
+
+let prStream=null,prPhotoBlob=null,prFotoFile=null;
+async function startProfesorCam(){
+  try{
+    prStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    const v=document.getElementById('pr-video');v.srcObject=prStream;await v.play();
+    v.style.display='block';document.getElementById('pr-canvas').style.display='none';document.getElementById('pr-placeholder').style.display='none';
+    document.getElementById('pr-snap-btn').disabled=false;
+  }catch(e){alert('No se pudo acceder a la cámara: '+e.message)}
+}
+function snapProfesor(){
+  const v=document.getElementById('pr-video'),c=document.getElementById('pr-canvas');
+  c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(blob=>{prPhotoBlob=blob},'image/jpeg',0.85);
+  c.style.display='block';v.style.display='none';
+  if(prStream){prStream.getTracks().forEach(t=>t.stop());prStream=null}
+}
+function setProfesorFoto(input){prFotoFile=input.files[0];if(prFotoFile)document.getElementById('pr-foto-name').textContent=prFotoFile.name}
+
+async function saveProfesor(){
+  const nombre=document.getElementById('pr-nombre').value.trim();
+  const apellido=document.getElementById('pr-apellido').value.trim();
+  const dni=document.getElementById('pr-dni').value.trim();
+  const email=document.getElementById('pr-email').value.trim();
+  const pass=document.getElementById('pr-pass').value.trim();
+  const especialidad=document.getElementById('pr-especialidad').value.trim();
+  const materiaId=document.getElementById('pr-materia').value;
+  const msg=document.getElementById('msg-profesor');
+  if(!nombre||!apellido||!dni||!email||!pass)return showMsg(msg,'Todos los campos marcados son obligatorios','err');
+  const btn=document.getElementById('btn-crear-profesor');
+  btn.disabled=true;btn.textContent='CREANDO...';
+  const{data,error}=await sb.auth.signUp({email,password:pass});
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
+  const uid=data?.user?.id;
+  if(!uid){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
+  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'profesor',email_ref:email});
+  // Upload foto if provided
+  let fotoUrl=null;
+  const blob=prPhotoBlob||prFotoFile;
+  if(blob){
+    const ext=prPhotoBlob?'jpg':(prFotoFile?.name.split('.').pop()||'jpg');
+    const{data:upData}=await sb.storage.from('fotos-alumnos').upload(`prof_${uid}.${ext}`,blob,{upsert:true,contentType:prPhotoBlob?'image/jpeg':prFotoFile?.type});
+    if(upData)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+  }
+  const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,especialidad:especialidad||null,activo:true,foto_url:fotoUrl});
+  if(prErr){showMsg(msg,prErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
+  // Assign materia if selected
+  if(materiaId){
+    await sb.from('materias').update({profesor_id:uid}).eq('id',materiaId);
+  }
+  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+  showMsg(msg,`✅ Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
+  await loadProfesores(); populateSelects();
+  btn.disabled=false;btn.textContent='CREAR PROFESOR';
+  prPhotoBlob=null;prFotoFile=null;
+  setTimeout(()=>closeMd('md-profesor'),2000);
+}
+
 function populateSelects(){
   const aulaOpts=allAulas.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
   const matOpts=allMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
   const alOpts=allAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
-  ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
+  ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
   ['man-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
@@ -1710,6 +1856,7 @@ function showPanel(id,btn){
   if(id==='padres')     loadPadres();
   if(id==='usuarios')   loadAdmins();
   if(id==='contrasenas')loadContrasenas();
+  if(id==='profesores')loadProfesores();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charly Táctico · Profesor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- face-api.js para reconocimiento facial en el navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
+    html{scroll-behavior:smooth}
+    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+
+    .topbar{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(11,17,32,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
+    .tb-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;flex-shrink:0}
+    .tb-brand span{color:var(--white)}
+    .tb-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--navy);background:var(--blue);padding:3px 10px;text-transform:uppercase;flex-shrink:0}
+    .tb-sep{flex:1}
+    .tb-user{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+    .tb-user strong{color:var(--blue)}
+    .btn-sm{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;background:transparent;border:1px solid var(--border);padding:6px 14px;cursor:pointer;color:var(--muted);transition:all .2s;flex-shrink:0}
+    .btn-sm:hover{color:var(--red);border-color:var(--red)}
+
+    .sidebar{width:220px;flex-shrink:0;background:var(--navy2);border-right:1px solid var(--border);position:fixed;top:60px;bottom:0;overflow-y:auto;z-index:50;transition:transform .3s ease}
+    .sb-sec{padding:16px 0 4px}
+    .sb-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;padding:0 18px 6px}
+    .sb-link{display:flex;align-items:center;gap:10px;padding:11px 18px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-left:2px solid transparent;width:100%;text-align:left;cursor:pointer;transition:all .2s}
+    .sb-link:hover{color:var(--white);background:var(--navy3)}
+    .sb-link.active{color:var(--blue);border-left-color:var(--blue);background:var(--navy3)}
+    .sb-link .ic{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+
+    .layout{display:flex;padding-top:60px;min-height:100vh}
+    .main{flex:1;margin-left:220px;padding:28px 24px;position:relative;z-index:1}
+
+    .panel{display:none;animation:fi .25s ease}
+    .panel.active{display:block}
+    @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    .ph{margin-bottom:22px}
+    .eye{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.3em;color:var(--blue);text-transform:uppercase;margin-bottom:4px}
+    .ttl{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1}
+
+    .btn{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:9px 18px;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+    .btn-gold{background:var(--gold);color:var(--navy)}.btn-gold:hover{background:var(--gold2)}
+    .btn-blue{background:var(--blue);color:var(--navy)}.btn-blue:hover{filter:brightness(1.1)}
+    .btn-green{background:var(--green);color:var(--white)}.btn-green:hover{filter:brightness(1.1)}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-outline:hover{border-color:var(--blue);color:var(--blue)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+
+    .cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:2px;margin-bottom:22px}
+    .sc{background:var(--navy2);border:1px solid var(--border);padding:20px 16px;position:relative;overflow:hidden}
+    .sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue)}
+    .sc-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+    .sc-val{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--blue);line-height:1}
+    .sc-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+    .tw{background:var(--navy2);border:1px solid var(--border);overflow-x:auto;margin-bottom:20px;-webkit-overflow-scrolling:touch}
+    .th{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .th-ttl{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em}
+    table{width:100%;border-collapse:collapse;min-width:380px}
+    thead th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:10px 18px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody td{padding:12px 18px;font-size:13px;border-bottom:1px solid rgba(201,168,76,.07)}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--navy3)}
+
+    .badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border:1px solid}
+    .bg{color:var(--green);border-color:var(--green);background:rgba(76,175,125,.1)}
+    .br{color:var(--red);border-color:var(--red);background:rgba(224,85,85,.1)}
+    .by{color:var(--yellow);border-color:var(--yellow);background:rgba(232,201,106,.1)}
+    .bb{color:var(--blue);border-color:var(--blue);background:rgba(106,176,232,.1)}
+
+    /* HORARIO */
+    .hgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+    .hday{background:var(--navy2);border:1px solid var(--border);padding:12px}
+    .hday-name{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--blue);border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:8px}
+    .hclase{background:var(--navy3);border-left:2px solid var(--blue);padding:8px 10px;margin-bottom:4px}
+    .hclase-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+    .hclase-inf{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* ASISTENCIA FACIAL */
+    .facial-box{background:var(--navy2);border:1px solid var(--border);padding:24px;margin-bottom:20px}
+    .facial-title{font-family:'Bebas Neue',sans-serif;font-size:24px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px}
+    .facial-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .cam-wrap{position:relative;background:#000;border:2px solid var(--border);overflow:hidden;width:100%;max-width:360px}
+    .cam-wrap video{width:100%;display:block;min-height:200px}
+    .cam-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+    .cam-status{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:8px 14px;border:1px solid;text-align:center;margin-top:8px}
+    .cs-idle{color:var(--muted);border-color:var(--border)}
+    .cs-scan{color:var(--yellow);border-color:var(--yellow);background:rgba(232,201,106,.07);animation:pulse 1.2s ease infinite}
+    .cs-ok{color:var(--green);border-color:var(--green);background:rgba(76,175,125,.07)}
+    .cs-fail{color:var(--red);border-color:var(--red);background:rgba(224,85,85,.07)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+    /* RESULTADO FACIAL */
+    .result-box{background:var(--navy);border:1px solid var(--border);padding:20px;text-align:center;display:none}
+    .result-icon{font-size:48px;margin-bottom:8px}
+    .result-text{font-family:'Bebas Neue',sans-serif;font-size:28px;margin-bottom:4px}
+    .result-sub{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+
+    /* GPS */
+    .gps-box{background:var(--navy2);border:1px solid var(--border);padding:20px;margin-bottom:16px}
+    .gps-coords{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--gold);letter-spacing:.05em;margin-top:8px}
+
+    .msg{padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:10px 0;display:none}
+    .msg.show{display:block}
+    .msg.err{border:1px solid var(--red);color:var(--red);background:rgba(224,85,85,.08)}
+    .msg.ok{border:1px solid var(--green);color:var(--green);background:rgba(76,175,125,.08)}
+
+    .empty{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty .ei{font-size:36px;margin-bottom:10px}
+    .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+
+    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--blue);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+    .overlay.show{display:block}
+
+    @media(max-width:767px){
+      .sidebar{transform:translateX(-100%);width:250px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
+      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
+      .tb-user{display:none}.cg{grid-template-columns:repeat(2,1fr)}.ttl{font-size:28px}
+      .hgrid{grid-template-columns:repeat(2,1fr)}.facial-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:479px){.cg{grid-template-columns:1fr 1fr}.ttl{font-size:24px}.hgrid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="tb-brand"><span>CHARLY</span> TÁCTICO</div>
+  <div class="tb-badge">Profesor</div>
+  <div class="tb-sep"></div>
+  <div class="tb-user">Prof. <strong id="tb-nombre">--</strong></div>
+  <button class="btn-sm" onclick="doLogout()">Salir</button>
+</div>
+
+<div class="sidebar" id="sidebar">
+  <div class="sb-sec">
+    <div class="sb-lbl">Mi cuenta</div>
+    <button class="sb-link active" onclick="showPanel('inicio',this)"><span class="ic">🏠</span>Inicio</button>
+    <button class="sb-link" onclick="showPanel('asistencia',this)"><span class="ic">📸</span>Marcar Asistencia</button>
+    <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Mi Horario</button>
+    <button class="sb-link" onclick="showPanel('historial',this)"><span class="ic">📅</span>Mi Historial</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeSb()"></div>
+<button class="sb-tog" onclick="toggleSb()">☰</button>
+
+<div class="layout"><div class="main">
+
+<!-- INICIO -->
+<div class="panel active" id="panel-inicio">
+  <div class="ph"><div class="eye">Bienvenido</div><div class="ttl" id="wb-name">PROFESOR</div></div>
+  <div class="cg">
+    <div class="sc"><div class="sc-lbl">Asistencia</div><div class="sc-val" id="s-asist">--%</div><div class="sc-sub">Este mes</div></div>
+    <div class="sc"><div class="sc-lbl">Clases Hoy</div><div class="sc-val" id="s-clases">--</div><div class="sc-sub">Programadas</div></div>
+    <div class="sc"><div class="sc-lbl">Estado Hoy</div><div class="sc-val" id="s-hoy" style="font-size:28px">--</div><div class="sc-sub" id="s-hoy-txt">Sin registro</div></div>
+  </div>
+  <!-- Botón rápido para marcar asistencia -->
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:24px;text-align:center;margin-bottom:20px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:8px">¿Ya llegaste hoy?</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">Registra tu asistencia con reconocimiento facial o GPS</div>
+    <button class="btn btn-blue" style="font-size:14px;padding:12px 28px" onclick="showPanel('asistencia',document.querySelector('[onclick*=asistencia]'))">📸 MARCAR ASISTENCIA AHORA</button>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Últimas Asistencias</span></div>
+    <div id="d-ultimas"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
+<!-- MARCAR ASISTENCIA -->
+<div class="panel" id="panel-asistencia">
+  <div class="ph"><div class="eye">Control de presencia</div><div class="ttl">MARCAR ASISTENCIA</div></div>
+
+  <!-- Ya marcó hoy -->
+  <div id="ya-marcado" style="display:none;background:var(--navy2);border:1px solid var(--green);padding:24px;text-align:center;margin-bottom:20px">
+    <div style="font-size:48px;margin-bottom:10px">✅</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)">ASISTENCIA REGISTRADA HOY</div>
+    <div id="ya-marcado-info" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:8px"></div>
+  </div>
+
+  <!-- Formulario de asistencia -->
+  <div id="form-asistencia">
+    <!-- OPCIÓN 1: Facial -->
+    <div class="facial-box">
+      <div class="facial-title">📸 Opción 1 — Reconocimiento Facial</div>
+      <div id="facial-loading" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">
+        ⏳ Cargando modelos de reconocimiento...
+      </div>
+      <div class="facial-grid">
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+          <div class="cam-wrap">
+            <video id="cam-video" autoplay muted playsinline></video>
+            <canvas id="cam-canvas"></canvas>
+          </div>
+          <div class="cam-status cs-idle" id="cam-status">Cámara detenida</div>
+          <div style="display:flex;gap:8px;width:100%;max-width:360px">
+            <button class="btn btn-blue" style="flex:1" id="btn-start-cam" onclick="startCam()">📷 Activar Cámara</button>
+            <button class="btn btn-outline" onclick="stopCam()">⏹</button>
+          </div>
+          <button class="btn btn-green" style="width:100%;max-width:360px" id="btn-verificar" onclick="verificarFacial()" disabled>
+            📸 Verificar y Registrar
+          </button>
+        </div>
+        <div>
+          <div id="facial-result" class="result-box"></div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:16px;line-height:1.8">
+            ℹ️ El sistema compara tu rostro con la foto registrada al momento de tu alta.<br><br>
+            No se guarda ninguna imagen — solo se registra que fuiste verificado.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPCIÓN 2: GPS -->
+    <div class="facial-box">
+      <div class="facial-title">📍 Opción 2 — Registrar con GPS</div>
+      <div class="gps-box">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tu ubicación actual</div>
+        <div class="gps-coords" id="gps-coords">Click en "Obtener ubicación"</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="getGPS()">📍 Obtener Ubicación</button>
+        <button class="btn btn-gold" id="btn-registrar-gps" onclick="registrarGPS()" disabled>✅ Registrar Presente</button>
+      </div>
+      <div class="msg" id="gps-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HORARIO -->
+<div class="panel" id="panel-horario">
+  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div><div class="eye">Semana académica</div><div class="ttl">MI HORARIO</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="date" id="hor-semana" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:7px 10px;font-family:'Barlow',sans-serif;font-size:12px;outline:none"/>
+      <button class="btn btn-outline" onclick="loadHorario()">Ver</button>
+    </div>
+  </div>
+  <div class="hgrid" id="d-horario">
+    <div class="empty" style="grid-column:1/-1"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="panel" id="panel-historial">
+  <div class="ph"><div class="eye">Registro de presencia</div><div class="ttl">MI HISTORIAL</div></div>
+  <div class="cg" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc"><div class="sc-lbl">Presentes</div><div class="sc-val" style="color:var(--green)" id="h-pres">--</div></div>
+    <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" style="color:var(--yellow)" id="h-tard">--</div></div>
+    <div class="sc"><div class="sc-lbl">Ausencias</div><div class="sc-val" style="color:var(--red)" id="h-aus">--</div></div>
+  </div>
+  <div class="tw">
+    <div class="th"><span class="th-ttl">Historial Completo</span></div>
+    <div id="d-historial"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
+  </div>
+</div>
+
+</div></div>
+
+<script>
+const SB_URL='https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const STORAGE=SB_URL+'/storage/v1/object/public/';
+
+// ── SEGURIDAD ──
+async function checkAuth(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){location.replace('login.html');return null;}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  if(pf?.rol!=='profesor'){await sb.auth.signOut();location.replace('login.html');return null;}
+  return session;
+}
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.replace('index.html');});
+window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
+
+let uid=null, profesorId=null, profesorData=null;
+let camStream=null, gpsCoords=null;
+let faceApiLoaded=false, myDescriptor=null;
+
+function todayISO(){return new Date().toISOString().split('T')[0]}
+function nowTime(){return new Date().toTimeString().slice(0,8)}
+function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
+
+async function init(){
+  const session=await checkAuth();
+  if(!session)return;
+  uid=session.user.id;
+
+  const{data:pf}=await sb.from('perfiles').select('*').eq('id',uid).single();
+  if(pf){
+    document.getElementById('tb-nombre').textContent=`${pf.nombre} ${pf.apellido}`;
+    document.getElementById('wb-name').textContent=pf.nombre.toUpperCase();
+  }
+
+  const{data:prof}=await sb.from('profesores').select('*').eq('perfil_id',uid).single();
+  if(prof){profesorId=prof.id;profesorData=prof;}
+
+  const mon=weekStart();
+  document.getElementById('hor-semana').value=mon;
+
+  await Promise.all([loadDashboard(),loadHorario(),loadHistorial()]);
+  loadFaceApi();
+  checkYaMarcado();
+}
+
+// ── DASHBOARD ──
+async function loadDashboard(){
+  if(!profesorId)return;
+  const{data}=await sb.from('asistencias_profesores').select('*').eq('profesor_id',profesorId);
+  const p=data?.filter(a=>a.estado==='presente').length||0;
+  const t=data?.filter(a=>a.estado==='tardanza').length||0;
+  const au=data?.filter(a=>a.estado==='ausente').length||0;
+  const tot=(p+t+au)||1;
+  document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
+
+  // Clases hoy
+  const semana=weekStart();
+  const hoy=new Date().toLocaleDateString('es-PE',{weekday:'long'}).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const diasMap={'lunes':'lunes','martes':'martes','miercoles':'miércoles','jueves':'jueves','viernes':'viernes','sabado':'sábado'};
+  const{data:clases}=await sb.from('horario_semanal').select('*,materias(nombre)').eq('semana_inicio',semana);
+  const hoyClases=clases?.filter(c=>c.dia===hoy)||[];
+  document.getElementById('s-clases').textContent=hoyClases.length;
+
+  // Estado hoy
+  const hoyReg=data?.find(a=>a.fecha===todayISO());
+  document.getElementById('s-hoy').textContent=hoyReg?.estado==='presente'?'✅':hoyReg?.estado==='tardanza'?'⏰':hoyReg?'❌':'❓';
+  document.getElementById('s-hoy-txt').textContent=hoyReg?.estado||'Sin registro';
+
+  // Últimas 5
+  const{data:ult}=await sb.from('asistencias_profesores').select('*').eq('profesor_id',profesorId).order('fecha',{ascending:false}).limit(5);
+  if(!ult?.length){document.getElementById('d-ultimas').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros aún</div></div>`;return}
+  document.getElementById('d-ultimas').innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora</th><th>Estado</th><th>Método</th></tr></thead><tbody>${ult.map(a=>{
+    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
+    const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+    const metodo=a.verificado_facial?'<span class="badge bb">Facial</span>':(a.latitud?'<span class="badge">GPS</span>':'<span class="badge">Manual</span>');
+    return`<tr><td>${fecha}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${metodo}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ── VERIFICAR SI YA MARCÓ HOY ──
+async function checkYaMarcado(){
+  if(!profesorId)return;
+  const{data}=await sb.from('asistencias_profesores').select('*').eq('profesor_id',profesorId).eq('fecha',todayISO()).maybeSingle();
+  if(data){
+    document.getElementById('ya-marcado').style.display='block';
+    document.getElementById('form-asistencia').style.display='none';
+    const metodo=data.verificado_facial?'Verificado por reconocimiento facial':(data.latitud?'Registrado con GPS':'Registro manual');
+    document.getElementById('ya-marcado-info').textContent=`${data.estado.toUpperCase()} · ${data.hora_ingreso?.slice(0,5)||'--'} · ${metodo}`;
+  }
+}
+
+// ── FACE API ──
+async function loadFaceApi(){
+  const loadingEl=document.getElementById('facial-loading');
+  try{
+    // Cargar modelos desde CDN de jsDelivr
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
+    faceApiLoaded=true;
+    loadingEl.textContent='✅ Reconocimiento facial listo';
+    loadingEl.style.color='var(--green)';
+
+    // Cargar descriptor del profesor
+    if(profesorData?.foto_descriptor){
+      myDescriptor=new Float32Array(Object.values(profesorData.foto_descriptor));
+    }
+  }catch(e){
+    loadingEl.textContent='⚠️ Facial no disponible — usa GPS';
+    loadingEl.style.color='var(--yellow)';
+    console.warn('face-api error:',e);
+  }
+}
+
+// ── CÁMARA ──
+async function startCam(){
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});
+    const v=document.getElementById('cam-video');
+    v.srcObject=camStream; await v.play();
+    v.addEventListener('loadedmetadata',()=>{
+      const c=document.getElementById('cam-canvas');
+      c.width=v.videoWidth;c.height=v.videoHeight;
+    });
+    setCamStatus('✅ Cámara activa','cs-ok');
+    document.getElementById('btn-verificar').disabled=false;
+  }catch(e){
+    setCamStatus('❌ Error: '+e.message,'cs-fail');
+  }
+}
+function stopCam(){
+  if(camStream)camStream.getTracks().forEach(t=>t.stop());
+  camStream=null;
+  document.getElementById('cam-video').srcObject=null;
+  setCamStatus('Cámara detenida','cs-idle');
+  document.getElementById('btn-verificar').disabled=true;
+}
+function setCamStatus(txt,cls){
+  const el=document.getElementById('cam-status');
+  el.textContent=txt; el.className='cam-status '+cls;
+}
+
+// ── VERIFICACIÓN FACIAL ──
+async function verificarFacial(){
+  if(!camStream)return;
+  if(!faceApiLoaded){
+    showResultado(false,'Modelos no cargados','Usa la opción GPS');return;
+  }
+
+  setCamStatus('🔍 Analizando rostro...','cs-scan');
+
+  const video=document.getElementById('cam-video');
+  const canvas=document.getElementById('cam-canvas');
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+
+  try{
+    // Detectar rostro en el frame actual
+    const detections=await faceapi
+      .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if(!detections){
+      setCamStatus('❌ No se detectó ningún rostro','cs-fail');
+      showResultado(false,'Sin rostro detectado','Asegúrate de estar frente a la cámara');
+      return;
+    }
+
+    // Si no hay descriptor guardado, registrar automáticamente (primera vez)
+    if(!myDescriptor){
+      // Guardar el descriptor para futuras verificaciones
+      const descriptorObj=Array.from(detections.descriptor);
+      await sb.from('profesores').update({foto_descriptor:descriptorObj}).eq('id',profesorId);
+      myDescriptor=detections.descriptor;
+      // Registrar presente
+      await registrarAsistencia('presente',true);
+      setCamStatus('✅ Rostro registrado y asistencia marcada','cs-ok');
+      showResultado(true,'PRESENTE','Primera verificación — rostro guardado');
+      return;
+    }
+
+    // Comparar con descriptor guardado
+    const distancia=faceapi.euclideanDistance(detections.descriptor,myDescriptor);
+    const UMBRAL=0.5; // Menor = más estricto. 0.4-0.6 es estándar
+
+    if(distancia<UMBRAL){
+      // Coincide — es el profesor
+      const estado=esTardanza()?'tardanza':'presente';
+      await registrarAsistencia(estado,true);
+      setCamStatus(`✅ Verificado — ${estado.toUpperCase()}`,'cs-ok');
+      showResultado(true,estado.toUpperCase(),`Distancia facial: ${distancia.toFixed(3)} (umbral ${UMBRAL})`);
+    }else{
+      // No coincide
+      setCamStatus('❌ Rostro no reconocido','cs-fail');
+      showResultado(false,'NO RECONOCIDO',`Distancia: ${distancia.toFixed(3)} — umbral: ${UMBRAL}`);
+    }
+  }catch(e){
+    setCamStatus('❌ Error en verificación','cs-fail');
+    console.error(e);
+  }
+}
+
+function esTardanza(){
+  // Tardanza si llega después de las 8:15 AM (ajustar según la academia)
+  const ahora=new Date();
+  return ahora.getHours()>8||(ahora.getHours()===8&&ahora.getMinutes()>15);
+}
+
+function showResultado(ok,titulo,sub){
+  const el=document.getElementById('facial-result');
+  el.style.display='block';
+  el.innerHTML=`
+    <div class="result-icon">${ok?'✅':'❌'}</div>
+    <div class="result-text" style="color:${ok?'var(--green)':'var(--red)'}">${titulo}</div>
+    <div class="result-sub">${sub}</div>
+    ${ok?`<button class="btn btn-outline" style="margin-top:12px" onclick="document.getElementById('facial-result').style.display='none'">Cerrar</button>`:''}
+  `;
+  if(ok){
+    setTimeout(()=>location.reload(),3000);
+  }
+}
+
+// ── GPS ──
+function getGPS(){
+  if(!navigator.geolocation)return alert('Tu dispositivo no soporta GPS');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      gpsCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      document.getElementById('gps-coords').textContent=
+        `Lat: ${gpsCoords.lat.toFixed(6)} · Lng: ${gpsCoords.lng.toFixed(6)}`;
+      document.getElementById('btn-registrar-gps').disabled=false;
+    },
+    err=>{
+      document.getElementById('gps-coords').textContent='❌ No se pudo obtener la ubicación';
+      alert('Error GPS: '+err.message);
+    },
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
+
+async function registrarGPS(){
+  if(!gpsCoords)return;
+  const estado=esTardanza()?'tardanza':'presente';
+  await registrarAsistencia(estado,false,gpsCoords.lat,gpsCoords.lng);
+  const msg=document.getElementById('gps-msg');
+  msg.textContent=`✅ ${estado.toUpperCase()} registrado con GPS`;
+  msg.className='msg ok show';
+  document.getElementById('btn-registrar-gps').disabled=true;
+  setTimeout(()=>location.reload(),2000);
+}
+
+async function registrarAsistencia(estado,facial,lat=null,lng=null){
+  if(!profesorId)return;
+  const{error}=await sb.from('asistencias_profesores').upsert({
+    profesor_id:profesorId,
+    fecha:todayISO(),
+    hora_ingreso:nowTime(),
+    estado,
+    verificado_facial:facial,
+    latitud:lat,
+    longitud:lng
+  },{onConflict:'profesor_id,fecha'});
+  if(error)console.error('Error registrando asistencia:',error);
+  await loadDashboard();
+}
+
+// ── HORARIO ──
+async function loadHorario(){
+  const semana=document.getElementById('hor-semana').value;
+  if(!semana)return;
+  // Mostrar horario de materias asignadas a este profesor
+  const{data}=await sb.from('horario_semanal')
+    .select('*,materias(nombre,profesor_id),aulas(nombre)')
+    .eq('semana_inicio',semana)
+    .order('hora_inicio');
+
+  // Filtrar solo las materias de este profesor
+  const misClases=data?.filter(h=>h.materias?.profesor_id===uid)||[];
+  // Si no tiene materias asignadas, mostrar todas (para ver el horario general)
+  const clases=misClases.length>0?misClases:(data||[]);
+
+  const dias=['lunes','martes','miércoles','jueves','viernes','sábado'];
+  document.getElementById('d-horario').innerHTML=dias.map(dia=>{
+    const dc=clases.filter(h=>h.dia===dia);
+    return`<div class="hday">
+      <div class="hday-name">${dia.toUpperCase()}</div>
+      ${dc.length?dc.map(c=>`<div class="hclase">
+        <div class="hclase-mat">${c.materias?.nombre||'--'}</div>
+        <div class="hclase-inf">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)}</div>
+        <div class="hclase-inf">🏫 ${c.aulas?.nombre||'--'}</div>
+      </div>`).join(''):`<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Libre</div>`}
+    </div>`;
+  }).join('');
+}
+
+// ── HISTORIAL ──
+async function loadHistorial(){
+  if(!profesorId)return;
+  const{data}=await sb.from('asistencias_profesores').select('*').eq('profesor_id',profesorId).order('fecha',{ascending:false});
+  const p=data?.filter(a=>a.estado==='presente').length||0;
+  const t=data?.filter(a=>a.estado==='tardanza').length||0;
+  const au=data?.filter(a=>a.estado==='ausente').length||0;
+  document.getElementById('h-pres').textContent=p;
+  document.getElementById('h-tard').textContent=t;
+  document.getElementById('h-aus').textContent=au;
+  if(!data?.length){document.getElementById('d-historial').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros aún</div></div>`;return}
+  document.getElementById('d-historial').innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora ingreso</th><th>Hora salida</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
+    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
+    const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+    const metodo=a.verificado_facial?'<span class="badge bb">Facial</span>':(a.latitud?'<span class="badge">GPS</span>':'<span class="badge">Manual</span>');
+    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">📍 Ver</a>`:'--';
+    return`<tr><td>${fecha}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td>${a.hora_salida?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${metodo}</td><td>${gps}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function showPanel(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+  const panel=document.getElementById(`panel-${id}`);
+  if(panel)panel.classList.add('active');
+  if(btn)btn.classList.add('active');
+  closeSb();
+  if(id==='horario')loadHorario();
+  if(id==='historial')loadHistorial();
+  if(id==='asistencia')checkYaMarcado();
+}
+function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+async function doLogout(){await sb.auth.signOut();}
+
+init();
+</script>
+</body>
+</html>

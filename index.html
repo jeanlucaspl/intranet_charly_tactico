@@ -578,11 +578,9 @@
 
   <!-- NAV -->
   <nav>
-    <div class="nav-badge">Academia Pre-Cadetes · Charly Táctico5</div>
+    <div class="nav-badge">Academia Pre-Cadetes · Charly Táctico</div>
     <ul class="nav-links">
       <li><a href="#portales">Portales</a></li>
-      <li><a href="#sistema">Sistema</a></li>
-      <li><a href="#tecnologia">Tecnología</a></li>
     </ul>
     <button class="nav-hamburger" id="hamburger" aria-label="Menú">
       <span></span><span></span><span></span>
@@ -592,18 +590,16 @@
   <!-- MOBILE MENU -->
   <div class="mobile-menu" id="mobileMenu">
     <a href="#portales" onclick="closeMobileMenu()">◆ Portales</a>
-    <a href="#sistema"  onclick="closeMobileMenu()">◆ Sistema</a>
-    <a href="#tecnologia" onclick="closeMobileMenu()">◆ Tecnología</a>
   </div>
 
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-eyebrow">Academia PNP · Sistema de Gestión Institucional</div>
+    <div class="hero-eyebrow">Academia Pre-Cadetes · Sistema de Gestión Institucional</div>
     <h1 class="hero-title">
       <span class="line-white">CHARLY</span>
       <span class="line-gold">TÁCTICO</span>
     </h1>
-    <p class="hero-sub">Formando los efectivos del mañana · Disciplina · Honor · Servicio</p>
+    <p class="hero-sub">Disciplina · Honor · Servicio</p>
     <div class="hero-divider"></div>
 
     <!-- PORTAL CARDS -->
@@ -613,7 +609,7 @@
         <div class="portal-icon">🎓</div>
         <span class="portal-tag">Acceso Cadete</span>
         <div class="portal-title">Intranet Alumno</div>
-        <p class="portal-desc">Consulta tus notas, asistencias, horarios y comunicados de la institución.</p>
+        <p class="portal-desc">Consulta tus notas, asistencias, horarios y prácticas semanales.</p>
         <span class="portal-arrow">Ingresar</span>
       </a>
 
@@ -621,7 +617,15 @@
         <div class="portal-icon">👨‍👩‍👧</div>
         <span class="portal-tag">Acceso Familiar</span>
         <div class="portal-title">Portal Padres</div>
-        <p class="portal-desc">Seguimiento en tiempo real de asistencia y rendimiento académico de su hijo.</p>
+        <p class="portal-desc">Seguimiento en tiempo real de asistencia y rendimiento de su hijo.</p>
+        <span class="portal-arrow">Ingresar</span>
+      </a>
+
+      <a class="portal-card" href="login.html?rol=profesor">
+        <div class="portal-icon">📚</div>
+        <span class="portal-tag">Acceso Docente</span>
+        <div class="portal-title">Portal Profesor</div>
+        <p class="portal-desc">Consulta tu horario semanal y registra tu asistencia.</p>
         <span class="portal-arrow">Ingresar</span>
       </a>
 
@@ -629,74 +633,10 @@
         <div class="portal-icon">🏛️</div>
         <span class="portal-tag">Acceso Institucional</span>
         <div class="portal-title">Panel Admin</div>
-        <p class="portal-desc">Gestión de alumnos, notas, asistencia, notificaciones y reportes oficiales.</p>
+        <p class="portal-desc">Gestión completa de la academia — alumnos, notas, horarios y más.</p>
         <span class="portal-arrow">Ingresar</span>
       </a>
 
-      <a class="portal-card" href="#sistema">
-        <div class="portal-icon">📋</div>
-        <span class="portal-tag">Información</span>
-        <div class="portal-title">La Academia</div>
-        <p class="portal-desc">Conoce nuestra misión, currícula, cuerpo docente y proceso de admisión.</p>
-        <span class="portal-arrow">Ver más</span>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- STATS -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-num">300+</div>
-      <div class="stat-label">Cadetes activos</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">98%</div>
-      <div class="stat-label">Tasa de aprobación</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">24/7</div>
-      <div class="stat-label">Monitoreo en línea</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">15+</div>
-      <div class="stat-label">Años de formación</div>
-    </div>
-  </div>
-
-  <!-- INFO -->
-  <section class="info" id="sistema">
-    <div>
-      <div class="info-label">Sistema integrado</div>
-      <h2 class="info-heading">CONTROL TOTAL DE LA INSTITUCIÓN</h2>
-      <p class="info-text">Plataforma digital diseñada para academias policiales. Gestión de asistencia, notas y comunicación institucional en un solo lugar.</p>
-      <p class="info-text">Los padres reciben notificaciones automáticas al inicio de cada clase, con verificación facial y registro GPS.</p>
-    </div>
-    <ul class="feature-list">
-      <li>Verificación facial al ingreso de clases</li>
-      <li>Alertas automáticas a padres de familia</li>
-      <li>Registro GPS de asistencia en tiempo real</li>
-      <li>Notas y evaluaciones por materia</li>
-      <li>Panel de control para instructores</li>
-      <li>Notificaciones institucionales masivas</li>
-      <li>Reportes exportables en PDF / Excel</li>
-      <li>Acceso desde celular y computadora</li>
-    </ul>
-  </section>
-
-  <!-- TECH -->
-  <section class="tech-section" id="tecnologia">
-    <div class="section-eyebrow">Stack tecnológico</div>
-    <h2 class="section-title">CONSTRUIDO PARA ESCALAR</h2>
-    <div class="tech-grid">
-      <div class="tech-item">React · Frontend</div>
-      <div class="tech-item">Supabase · Base de datos</div>
-      <div class="tech-item">Vercel · Hosting</div>
-      <div class="tech-item">Face-api.js · Reconocimiento facial</div>
-      <div class="tech-item">PostgreSQL · SQL</div>
-      <div class="tech-item">GitHub · Control de versiones</div>
-      <div class="tech-item">JWT · Autenticación</div>
-      <div class="tech-item">PWA · App móvil</div>
     </div>
   </section>
 

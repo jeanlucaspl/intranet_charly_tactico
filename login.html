@@ -9,7 +9,24 @@
   <meta http-equiv="Expires" content="0"/>
   <title>Charly Táctico · Acceso</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+async function loginProfesor(){
+  const email=document.getElementById('prof-email').value.trim();
+  const pass=document.getElementById('prof-pass').value;
+  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  const btn=document.getElementById('btn-prof');
+  btn.disabled=true;btn.textContent='VERIFICANDO...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
+  if(pf?.rol!=='profesor'){
+    await sb.auth.signOut();
+    showMsg('Esta cuenta no es de profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return;
+  }
+  showMsg('Acceso concedido ✅','success');
+  setTimeout(()=>location.replace('profesor.html'),600);
+}
+</script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--gold:#c9a84c;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--red:#e05555;--green:#4caf7d}
@@ -61,6 +78,7 @@
       <button class="tab active" data-tab="alumno" onclick="switchTab('alumno')">Alumno</button>
       <button class="tab" data-tab="padre" onclick="switchTab('padre')">Padre</button>
       <button class="tab" data-tab="admin" onclick="switchTab('admin')">Admin</button>
+      <button class="tab" data-tab="profesor" onclick="switchTab('profesor')">Profesor</button>
     </div>
 
     <!-- ALUMNO -->
@@ -85,6 +103,13 @@
       <button class="btn" id="btn-adm" onclick="loginAdmin()">INGRESAR</button>
     </div>
 
+    <!-- PROFESOR -->
+    <div id="f-profesor" style="display:none">
+      <div class="fg"><label>Correo electrónico</label><input type="email" id="prof-email" placeholder="profesor@correo.com" autocomplete="username"/></div>
+      <div class="fg"><label>Contraseña</label><input type="password" id="prof-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginProfesor()"/></div>
+      <button class="btn" id="btn-prof" onclick="loginProfesor()">INGRESAR</button>
+    </div>
+
     <div class="msg" id="msg"></div>
     <a class="back" href="index.html">← Volver al inicio</a>
   </div>
@@ -101,7 +126,7 @@ history.replaceState(null,'',location.href);
 
 // Lee ?rol= del URL para mostrar la pestaña correcta
 const p=new URLSearchParams(location.search).get('rol')||'alumno';
-const tabInicial=p==='admin'?'admin':p==='padre'?'padre':'alumno';
+const tabInicial=p==='admin'?'admin':p==='padre'?'padre':p==='profesor'?'profesor':'alumno';
 
 // Verificar si ya hay sesión ANTES de mostrar cualquier cosa
 // Siempre cerrar sesión al llegar al login
@@ -112,15 +137,17 @@ sb.auth.signOut().then(() => {
 
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
-  document.getElementById('f-alumno').style.display=tab==='alumno'?'block':'none';
-  document.getElementById('f-padre').style.display =tab==='padre' ?'block':'none';
-  document.getElementById('f-admin').style.display =tab==='admin' ?'block':'none';
+  document.getElementById('f-alumno').style.display  =tab==='alumno'  ?'block':'none';
+  document.getElementById('f-padre').style.display   =tab==='padre'   ?'block':'none';
+  document.getElementById('f-admin').style.display   =tab==='admin'   ?'block':'none';
+  document.getElementById('f-profesor').style.display=tab==='profesor'?'block':'none';
   document.getElementById('msg').className='msg';
 }
 
 function redirigir(rol){
   if(rol==='admin'||rol==='instructor'||rol==='dueno') location.replace('admin.html');
   else if(rol==='padre') location.replace('padres.html');
+  else if(rol==='profesor') location.replace('profesor.html');
   else location.replace('dashboard.html');
 }
 
@@ -191,6 +218,23 @@ async function loginAdmin(){
   }
   showMsg('Acceso concedido ✅','success');
   setTimeout(()=>location.replace('admin.html'),600);
+}
+
+async function loginProfesor(){
+  const email=document.getElementById('prof-email').value.trim();
+  const pass=document.getElementById('prof-pass').value;
+  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  const btn=document.getElementById('btn-prof');
+  btn.disabled=true;btn.textContent='VERIFICANDO...';
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
+  if(pf?.rol!=='profesor'){
+    await sb.auth.signOut();
+    showMsg('Esta cuenta no es de profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return;
+  }
+  showMsg('Acceso concedido ✅','success');
+  setTimeout(()=>location.replace('profesor.html'),600);
 }
 </script>
 </body>
