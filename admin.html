@@ -804,7 +804,7 @@
         <div class="fg"><label>Nombre</label><input type="text" id="pad-nombre" placeholder="Carlos"/></div>
         <div class="fg"><label>Apellido</label><input type="text" id="pad-apellido" placeholder="García"/></div>
         <div class="fg full"><label>DNI del padre</label><input type="text" id="pad-dni" placeholder="12345678" maxlength="8" inputmode="numeric"/></div>
-        <div class="fg full"><label>Email (para acceso al sistema)</label><input type="email" id="pad-email" placeholder="correo@ejemplo.com"/></div>
+        <div class="fg full"><label>Email (opcional, para acceso al sistema)</label><input type="email" id="pad-email" placeholder="correo@ejemplo.com (opcional)"/></div>
         <div class="fg full"><label>Teléfono (opcional)</label><input type="text" id="pad-tel" placeholder="+51 999 999 999"/></div>
         <div class="fg full">
           <label>Contraseña de acceso</label>
@@ -1007,19 +1007,40 @@ async function loadNotifHist(){
   }).join('');
 }
 async function loadPadres(){
-  const {data}=await sb.from('padres_alumnos').select('*,perfiles!padre_id(nombre,apellido,dni,telefono),alumnos(codigo,perfiles(nombre,apellido,dni))');
   const el=document.getElementById('d-padres');
   if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre Padre</th><th>DNI Padre</th><th>Teléfono</th><th>Parentesco</th><th>Alumno</th><th>DNI Alumno</th><th>Código</th></tr></thead><tbody>${data.map(p=>`<tr>
-    <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
-    <td><span class="badge bb">${p.perfiles?.dni||'--'}</span></td>
-    <td>${p.perfiles?.telefono||'--'}</td>
-    <td>${p.parentesco||'--'}</td>
-    <td>${p.alumnos?.perfiles?.nombre||'--'} ${p.alumnos?.perfiles?.apellido||''}</td>
-    <td><span class="badge by">${p.alumnos?.perfiles?.dni||'--'}</span></td>
-    <td><strong>${p.alumnos?.codigo||'--'}</strong></td>
-  </tr>`).join('')}</tbody></table>`;
+  // Query all padres from perfiles first
+  const {data:padres}=await sb.from('perfiles')
+    .select('id,nombre,apellido,dni,telefono,email_ref')
+    .eq('rol','padre').order('nombre');
+  if(!padres?.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
+  // Get all links
+  const {data:links}=await sb.from('padres_alumnos')
+    .select('padre_id,parentesco,alumnos(id,codigo,perfiles(nombre,apellido,dni))');
+  const linkMap={};
+  links?.forEach(l=>{ if(!linkMap[l.padre_id]) linkMap[l.padre_id]=[]; linkMap[l.padre_id].push(l); });
+  el.innerHTML=`<table><thead><tr><th>Nombre Padre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${padres.map(p=>{
+    const hijos=linkMap[p.id]||[];
+    const hijosHtml=hijos.length
+      ? hijos.map(l=>`<div>${l.alumnos?.perfiles?.nombre||'--'} ${l.alumnos?.perfiles?.apellido||''} · <span class="badge by">${l.alumnos?.perfiles?.dni||'--'}</span> · <strong>${l.alumnos?.codigo||'--'}</strong></div>`).join('')
+      : '<span style="color:var(--muted);font-size:11px">Sin alumno vinculado</span>';
+    return`<tr>
+      <td><strong>${p.nombre} ${p.apellido}</strong></td>
+      <td><span class="badge bb">${p.dni||'--'}</span></td>
+      <td>${p.telefono||'--'}</td>
+      <td style="font-size:12px;color:var(--muted)">${p.email_ref||'--'}</td>
+      <td>${hijosHtml}</td>
+      <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deletePadre('${p.id}')">Dar de baja</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+async function deletePadre(id){
+  if(!confirm('¿Dar de baja a este padre?'))return;
+  // Remove links first
+  await sb.from('padres_alumnos').delete().eq('padre_id',id);
+  // Deactivate by changing role (keep record)
+  await sb.from('perfiles').update({rol:'alumno'}).eq('id',id);
+  await loadPadres();
 }
 // ── BÚSQUEDA POR DNI ──
 async function buscarAlumnoPorDNI(contexto){
@@ -1029,7 +1050,7 @@ async function buscarAlumnoPorDNI(contexto){
   const dni = document.getElementById(inputId).value.trim();
   if(!dni) return alert('Ingresa un DNI');
   const {data} = await sb.from('perfiles').select('id,nombre,apellido,dni')
-    .eq('dni', dni).eq('rol','alumno').single();
+    .eq('dni', dni).eq('rol','alumno').maybeSingle();
   if(!data){
     document.getElementById(infoId).style.display='block';
     document.getElementById(infoId).style.borderColor='var(--red)';
@@ -1152,7 +1173,7 @@ async function savePadre(){
   const nombre    = document.getElementById('pad-nombre').value.trim();
   const apellido  = document.getElementById('pad-apellido').value.trim();
   const dni       = document.getElementById('pad-dni').value.trim();
-  const email     = document.getElementById('pad-email').value.trim();
+  const emailInput= document.getElementById('pad-email').value.trim();
   const tel       = document.getElementById('pad-tel').value.trim();
   const alumnoId  = document.getElementById('pad-alumno').value;
   const parentesco= document.getElementById('pad-parentesco').value;
@@ -1160,25 +1181,35 @@ async function savePadre(){
   const pass      = passInput || dni;
   const msg       = document.getElementById('msg-padre');
 
-  if(!nombre||!apellido||!dni||!email) return showMsg(msg,'Nombre, apellido, DNI y email son obligatorios','err');
+  if(!nombre||!apellido||!dni) return showMsg(msg,'Nombre, apellido y DNI son obligatorios','err');
   if(dni.length < 7) return showMsg(msg,'DNI inválido','err');
 
-  const btn = document.getElementById('btn-crear-padre');
+  // Email es opcional — si no hay, usamos placeholder interno
+  const email = emailInput || `${dni}@charlytactico.interno`;
+
+  const btn=document.getElementById('btn-crear-padre');
   btn.disabled=true; btn.textContent='CREANDO...';
 
-  const {data,error} = await sb.auth.signUp({email, password:pass});
-  if(error){ showMsg(msg,error.message,'err'); btn.disabled=false; btn.textContent='CREAR PADRE'; return; }
-  const userId = data?.user?.id;
-  if(!userId){ showMsg(msg,'Error al crear usuario','err'); btn.disabled=false; btn.textContent='CREAR PADRE'; return; }
+  const {data,error}=await sb.auth.signUp({email,password:pass});
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+  const userId=data?.user?.id;
+  if(!userId){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
 
-  await sb.from('perfiles').insert({id:userId, nombre, apellido, dni, rol:'padre', telefono:tel||null, email_ref:email});
-  if(alumnoId) await sb.from('padres_alumnos').insert({padre_id:userId, alumno_id:alumnoId, parentesco});
-  await sb.from('gestion_contrasenas').insert({perfil_id:userId, contrasena_actual:pass});
+  await sb.from('perfiles').insert({
+    id:userId, nombre, apellido, dni, rol:'padre',
+    telefono:tel||null,
+    email_ref:email
+  });
+  if(alumnoId) await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
+  await sb.from('gestion_contrasenas').insert({perfil_id:userId,contrasena_actual:pass});
 
-  showMsg(msg, `✅ Padre creado — Email: ${email} / Contraseña: ${pass}`, 'ok');
+  const acceso=emailInput
+    ? `Email: ${email} / Contraseña: ${pass}`
+    : `Login por DNI: ${dni} / Contraseña: ${pass}`;
+  showMsg(msg,`✅ Padre creado — ${acceso}`,'ok');
   await loadPadres();
   btn.disabled=false; btn.textContent='CREAR PADRE';
-  setTimeout(()=>closeMd('md-padre'), 2500);
+  setTimeout(()=>closeMd('md-padre'),2500);
 }
 async function loadContacto(){
   const {data}=await sb.from('contacto_mensajes')
@@ -1370,35 +1401,58 @@ async function deleteAula(id){
   await loadAulas();
 }
 async function saveAlumno(){
-  const nombre=document.getElementById('al-nombre').value.trim();
-  const apellido=document.getElementById('al-apellido').value.trim();
-  const dni=document.getElementById('al-dni').value.trim();
-  const codigo=document.getElementById('al-codigo').value.trim();
-  const email=document.getElementById('al-email').value.trim();
-  const pass=document.getElementById('al-pass').value;
-  const msg=document.getElementById('msg-alumno');
-  if(!nombre||!apellido||!dni||!codigo||!email||!pass)return showMsg(msg,'Completa todos los campos obligatorios','err');
-  if(!capturedPhotoBlob&&!fotoFile)return showMsg(msg,'Captura o sube una foto del alumno','err');
+  const nombre  = document.getElementById('al-nombre').value.trim();
+  const apellido= document.getElementById('al-apellido').value.trim();
+  const dni     = document.getElementById('al-dni').value.trim();
+  const codigo  = document.getElementById('al-codigo').value.trim();
+  const email   = document.getElementById('al-email').value.trim();
+  const pass    = document.getElementById('al-pass').value;
+  const msg     = document.getElementById('msg-alumno');
+
+  if(!nombre||!apellido||!dni||!codigo||!email||!pass)
+    return showMsg(msg,'Completa todos los campos obligatorios','err');
+
   const btn=document.getElementById('btn-crear-alumno');
   btn.disabled=true; btn.textContent='CREANDO...';
+
+  // 1. Crear usuario en Auth
   const {data,error}=await sb.auth.signUp({email,password:pass});
-  if(error||!data.user){showMsg(msg,error?.message||'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+  if(!data.user){showMsg(msg,'Error: no se pudo crear el usuario en Auth','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
   const uid=data.user.id;
-  let fotoUrl=null;
-  const fotoBlob=capturedPhotoBlob||fotoFile;
-  const ext=capturedPhotoBlob?'jpg':(fotoFile?.name.split('.').pop()||'jpg');
-  const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(`${uid}.${ext}`,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
-  if(!upErr)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email});
-  const {error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,activo:true,foto_url:fotoUrl});
-  if(alErr){showMsg(msg,alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-  // Guardar contraseña en tabla de gestión
+
+  // 2. Insertar perfil
+  const {error:pfErr}=await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email});
+  if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+
+  // 3. Insertar alumno (sin foto por ahora)
+  const {data:alData,error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,activo:true}).select('id').single();
+  if(alErr){showMsg(msg,'Error en alumno: '+alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+
+  // 4. Subir foto si existe (opcional)
+  if(capturedPhotoBlob||fotoFile){
+    const fotoBlob=capturedPhotoBlob||fotoFile;
+    const ext=capturedPhotoBlob?'jpg':(fotoFile?.name.split('.').pop()||'jpg');
+    const path=`${uid}.${ext}`;
+    const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
+    if(!upErr){
+      const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+      await sb.from('alumnos').update({foto_url:fotoUrl}).eq('id',alData.id);
+    }
+  }
+
+  // 5. Guardar contraseña
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+
   showMsg(msg,'Alumno creado correctamente ✅','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
-  setTimeout(()=>closeMd('md-alumno'),1400);
+  // Reset form
+  ['al-nombre','al-apellido','al-dni','al-codigo','al-email','al-pass'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  setTimeout(()=>closeMd('md-alumno'),1600);
 }
 async function deleteAlumno(id){
   if(!confirm('¿Dar de baja a este alumno?'))return;

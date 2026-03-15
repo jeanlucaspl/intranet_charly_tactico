@@ -150,24 +150,23 @@ async function loginPadre(){
   const btn=document.getElementById('btn-padre');
   btn.disabled=true;btn.textContent='VERIFICANDO...';
 
-  // Buscar el email_ref del padre por DNI en la tabla perfiles
+  // Buscar padre por DNI
   const{data:pf,error:pfErr}=await sb.from('perfiles')
     .select('id,rol,email_ref')
     .eq('dni',dni)
     .eq('rol','padre')
-    .single();
+    .maybeSingle();
 
-  if(pfErr||!pf){
+  if(!pf){
     showMsg('DNI no registrado como padre','error');
     btn.disabled=false;btn.textContent='INGRESAR';return;
   }
 
   if(!pf.email_ref){
-    showMsg('Este padre no tiene email de acceso configurado. Contacta al administrador.','error');
+    showMsg('Cuenta sin email configurado. Contacta al administrador.','error');
     btn.disabled=false;btn.textContent='INGRESAR';return;
   }
 
-  // Login con el email real registrado
   const{data,error}=await sb.auth.signInWithPassword({email:pf.email_ref,password:pass});
   if(error){
     showMsg('Contraseña incorrecta','error');
