@@ -11,18 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 async function loginProfesor(){
-  const email=document.getElementById('prof-email').value.trim();
+  const dni=document.getElementById('prof-dni').value.trim();
   const pass=document.getElementById('prof-pass').value;
-  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  if(!dni||!pass)return showMsg('Ingresa tu DNI y contraseña','error');
   const btn=document.getElementById('btn-prof');
   btn.disabled=true;btn.textContent='VERIFICANDO...';
-  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
-  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
-  if(pf?.rol!=='profesor'){
-    await sb.auth.signOut();
-    showMsg('Esta cuenta no es de profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return;
-  }
+  const{data:pf}=await sb.from('perfiles').select('id,rol,email_ref').eq('dni',dni).eq('rol','profesor').maybeSingle();
+  if(!pf){showMsg('DNI no registrado como profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  if(!pf.email_ref){showMsg('Cuenta sin email. Contacta al administrador.','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data,error}=await sb.auth.signInWithPassword({email:pf.email_ref,password:pass});
+  if(error){showMsg('Contraseña incorrecta','error');btn.disabled=false;btn.textContent='INGRESAR';return}
   showMsg('Acceso concedido ✅','success');
   setTimeout(()=>location.replace('profesor.html'),600);
 }
@@ -105,7 +103,8 @@ async function loginProfesor(){
 
     <!-- PROFESOR -->
     <div id="f-profesor" style="display:none">
-      <div class="fg"><label>Correo electrónico</label><input type="email" id="prof-email" placeholder="profesor@correo.com" autocomplete="username"/></div>
+      <div class="hint">Ingresa tu DNI y la contraseña que te asignó la academia</div>
+      <div class="fg"><label>DNI</label><input type="text" id="prof-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="username"/></div>
       <div class="fg"><label>Contraseña</label><input type="password" id="prof-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginProfesor()"/></div>
       <button class="btn" id="btn-prof" onclick="loginProfesor()">INGRESAR</button>
     </div>
@@ -221,18 +220,16 @@ async function loginAdmin(){
 }
 
 async function loginProfesor(){
-  const email=document.getElementById('prof-email').value.trim();
+  const dni=document.getElementById('prof-dni').value.trim();
   const pass=document.getElementById('prof-pass').value;
-  if(!email||!pass)return showMsg('Completa todos los campos','error');
+  if(!dni||!pass)return showMsg('Ingresa tu DNI y contraseña','error');
   const btn=document.getElementById('btn-prof');
   btn.disabled=true;btn.textContent='VERIFICANDO...';
-  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
-  const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
-  if(pf?.rol!=='profesor'){
-    await sb.auth.signOut();
-    showMsg('Esta cuenta no es de profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return;
-  }
+  const{data:pf}=await sb.from('perfiles').select('id,rol,email_ref').eq('dni',dni).eq('rol','profesor').maybeSingle();
+  if(!pf){showMsg('DNI no registrado como profesor','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  if(!pf.email_ref){showMsg('Cuenta sin email. Contacta al administrador.','error');btn.disabled=false;btn.textContent='INGRESAR';return}
+  const{data,error}=await sb.auth.signInWithPassword({email:pf.email_ref,password:pass});
+  if(error){showMsg('Contraseña incorrecta','error');btn.disabled=false;btn.textContent='INGRESAR';return}
   showMsg('Acceso concedido ✅','success');
   setTimeout(()=>location.replace('profesor.html'),600);
 }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, viewport-fit=cover"/>
   <title>Charly Táctico · Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -209,7 +209,7 @@
     .sol-info{font-size:11px;color:var(--muted);margin-top:2px}
 
     /* SIDEBAR TOGGLE */
-    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--gold);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
@@ -541,6 +541,25 @@
   <div class="tw">
     <div class="th"><span class="th-ttl">Administradores</span></div>
     <div id="d-admins"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
+  </div>
+  <!-- CONFIG UBICACIÓN ACADEMIA -->
+  <div style="margin-top:28px;background:var(--navy2);border:1px solid var(--border);padding:20px 22px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:10px">📍 Ubicación de la Academia</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:14px">
+      Los admins solo pueden tomar asistencia dentro de <strong id="acad-radio-lbl">200</strong>m de la academia.<br>
+      Dirección actual: <strong id="acad-dir-lbl">Cargando...</strong>
+    </div>
+    <div class="fgrid" style="max-width:520px">
+      <div class="fg full"><label>Dirección de referencia</label><input type="text" id="acad-dir-input" placeholder="Jr. Túpac Amaru 187, Tarapoto 22201"/></div>
+      <div class="fg"><label>Latitud</label><input type="number" id="acad-lat-input" step="0.000001" placeholder="-6.485600"/></div>
+      <div class="fg"><label>Longitud</label><input type="number" id="acad-lng-input" step="0.000001" placeholder="-76.360600"/></div>
+      <div class="fg full"><label>Radio máximo (metros)</label><input type="number" id="acad-radio-input" value="200" min="50" max="2000"/></div>
+    </div>
+    <div class="msg" id="msg-acad"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-outline" onclick="usarMiUbicacion()">📍 Usar mi ubicación actual</button>
+      <button class="btn btn-gold" onclick="saveAcademiaConfig()">GUARDAR UBICACIÓN</button>
+    </div>
   </div>
 </div>
 
@@ -975,6 +994,84 @@ let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFile=null;
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null;
 
+// ── UBICACIÓN ACADEMIA ──
+let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'Jr. Túpac Amaru 187, Tarapoto 22201'};
+let academiaConfigId=null;
+
+async function loadAcademiaConfig(){
+  const{data}=await sb.from('config_academia').select('*').limit(1).maybeSingle();
+  if(data){
+    academiaLoc=data;academiaConfigId=data.id;
+    const dir=data.direccion||`${data.latitud}, ${data.longitud}`;
+    const lbl=document.getElementById('acad-dir-lbl');if(lbl)lbl.textContent=dir;
+    const rlbl=document.getElementById('acad-radio-lbl');if(rlbl)rlbl.textContent=data.radio_metros||200;
+    const ri=document.getElementById('acad-radio-input');if(ri)ri.value=data.radio_metros||200;
+    const la=document.getElementById('acad-lat-input');if(la)la.value=data.latitud;
+    const lo=document.getElementById('acad-lng-input');if(lo)lo.value=data.longitud;
+    const di=document.getElementById('acad-dir-input');if(di)di.value=data.direccion||'';
+  }else{
+    const lbl=document.getElementById('acad-dir-lbl');if(lbl)lbl.textContent=academiaLoc.direccion;
+    const la=document.getElementById('acad-lat-input');if(la)la.value=academiaLoc.latitud;
+    const lo=document.getElementById('acad-lng-input');if(lo)lo.value=academiaLoc.longitud;
+    const di=document.getElementById('acad-dir-input');if(di)di.value=academiaLoc.direccion;
+  }
+}
+async function saveAcademiaConfig(){
+  const lat=parseFloat(document.getElementById('acad-lat-input').value);
+  const lng=parseFloat(document.getElementById('acad-lng-input').value);
+  const radio=parseInt(document.getElementById('acad-radio-input').value)||200;
+  const dir=document.getElementById('acad-dir-input').value.trim();
+  const msg=document.getElementById('msg-acad');
+  if(isNaN(lat)||isNaN(lng))return showMsg(msg,'Ingresa latitud y longitud válidas','err');
+  const payload={latitud:lat,longitud:lng,radio_metros:radio,direccion:dir,actualizado_en:new Date().toISOString()};
+  let error;
+  if(academiaConfigId){({error}=await sb.from('config_academia').update(payload).eq('id',academiaConfigId));}
+  else{const{data:d,error:e}=await sb.from('config_academia').insert(payload).select().single();if(d)academiaConfigId=d.id;error=e;}
+  if(error)return showMsg(msg,error.message,'err');
+  academiaLoc={...payload};
+  document.getElementById('acad-dir-lbl').textContent=dir||`${lat}, ${lng}`;
+  document.getElementById('acad-radio-lbl').textContent=radio;
+  showMsg(msg,'✅ Ubicación de la academia actualizada','ok');
+}
+function usarMiUbicacion(){
+  if(!navigator.geolocation)return alert('Tu dispositivo no soporta geolocalización');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('acad-lat-input').value=pos.coords.latitude.toFixed(6);
+    document.getElementById('acad-lng-input').value=pos.coords.longitude.toFixed(6);
+  },err=>alert('No se pudo obtener ubicación: '+err.message),{enableHighAccuracy:true,timeout:10000});
+}
+function calcDistanciaMetros(lat1,lng1,lat2,lng2){
+  const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+async function verificarUbicacionAdmin(){
+  // Verificaciones nativas anti-fraude (siempre disponibles en la app Android)
+  if(window.AndroidNative){
+    if(window.AndroidNative.isDeveloperOptionsEnabled())
+      return{ok:false,msg:'Tienes las opciones de desarrollador activadas. Desactívalas para tomar asistencia.'};
+    if(window.AndroidNative.isMockLocationEnabled())
+      return{ok:false,msg:'Se detectó GPS falso (mock location) activo en tu dispositivo.'};
+    if(window.AndroidNative.hasMockLocationApps())
+      return{ok:false,msg:'Tienes una aplicación de GPS falso instalada en tu dispositivo.'};
+  }
+  return new Promise(resolve=>{
+    if(!navigator.geolocation)return resolve({ok:false,msg:'Tu dispositivo no soporta geolocalización'});
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        const dist=Math.round(calcDistanciaMetros(pos.coords.latitude,pos.coords.longitude,academiaLoc.latitud,academiaLoc.longitud));
+        if(dist>(academiaLoc.radio_metros||200)){
+          resolve({ok:false,msg:`Estás a ${dist}m de la academia (límite: ${academiaLoc.radio_metros||200}m). Debes estar físicamente en la academia para tomar asistencia.`});
+        }else{
+          resolve({ok:true,lat:pos.coords.latitude,lng:pos.coords.longitude,dist});
+        }
+      },
+      err=>resolve({ok:false,msg:'No se pudo obtener tu ubicación: '+err.message}),
+      {timeout:10000,enableHighAccuracy:true,maximumAge:0}
+    );
+  });
+}
+
 // ── INIT ──
 async function init(){
   const ok = await checkAuth();
@@ -994,6 +1091,7 @@ async function init(){
   document.getElementById('h-semana').value = mon;
   document.getElementById('hor-semana').value = mon;
   document.getElementById('p-semana').value = mon;
+  await loadAcademiaConfig();
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
   await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
@@ -1645,8 +1743,10 @@ function markAtt(id,estado){
   st.textContent=estado.toUpperCase();
 }
 async function saveAllAtt(){
+  const geo=await verificarUbicacionAdmin();
+  if(!geo.ok){alert('⛔ No puedes tomar asistencia\n\n'+geo.msg);return}
   const materiaId=document.getElementById('a-materia').value||null;
-  const rows=Object.entries(attState).filter(([,v])=>v!==null).map(([alumno_id,estado])=>({alumno_id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:materiaId,verificado_facial:false}));
+  const rows=Object.entries(attState).filter(([,v])=>v!==null).map(([alumno_id,estado])=>({alumno_id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:materiaId,verificado_facial:false,latitud:geo.lat,longitud:geo.lng}));
   if(!rows.length)return alert('No has marcado ningún alumno.');
   const {error}=await sb.from('asistencias').upsert(rows,{onConflict:'alumno_id,fecha,materia_id'});
   if(error)alert('Error: '+error.message);
@@ -1655,6 +1755,16 @@ async function saveAllAtt(){
 
 // ── FACIAL ──
 async function startCam(){
+  setCamSt('📍 Verificando ubicación...','cs-scan');
+  document.getElementById('f-status-top').textContent='Verificando GPS...';
+  const geo=await verificarUbicacionAdmin();
+  if(!geo.ok){
+    setCamSt('⛔ Fuera de rango — '+geo.msg,'cs-fail');
+    document.getElementById('f-status-top').textContent='';
+    alert('⛔ No puedes tomar asistencia\n\n'+geo.msg);
+    return;
+  }
+  document.getElementById('f-status-top').textContent=`✅ Ubicación OK (${geo.dist}m de la academia)`;
   try{
     facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
@@ -1860,6 +1970,8 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+// Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
+(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 async function doLogout(){ await sb.auth.signOut(); }
 

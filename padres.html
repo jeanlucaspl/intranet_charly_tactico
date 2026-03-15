@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, viewport-fit=cover"/>
   <title>Charly Táctico · Portal Padres</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -128,7 +128,7 @@
     .nota-m{color:var(--yellow);font-weight:600}
     .nota-b{color:var(--red);font-weight:600}
 
-    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--blue);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--blue);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
@@ -201,8 +201,19 @@
 <!-- UBICACIÓN -->
 <div class="panel" id="panel-ubicacion">
   <div class="ph"><div class="eye">Última ubicación registrada</div><div class="ttl">UBICACIÓN</div></div>
+
+  <!-- SOLICITAR UBICACIÓN EN TIEMPO REAL -->
+  <div style="background:var(--navy2);border:1px solid var(--border);border-left:4px solid var(--blue);padding:18px 20px;margin-bottom:16px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-bottom:8px">📡 Solicitar Ubicación en Tiempo Real</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px">
+      Al hacer clic, tu hijo/a recibirá una solicitud para compartir su ubicación. Si la rechaza o no responde, la academia será notificada.
+    </div>
+    <div id="sol-status" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;min-height:18px"></div>
+    <button class="btn btn-blue" id="btn-solicitar-ub" onclick="solicitarUbicacion()">📡 SOLICITAR UBICACIÓN AHORA</button>
+  </div>
+
   <div style="background:var(--navy2);border:1px solid var(--border);padding:20px;margin-bottom:16px">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">ℹ️ La ubicación se registra automáticamente cuando el alumno marca asistencia</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">ℹ️ La ubicación también se registra automáticamente cuando el alumno marca asistencia</div>
     <div id="ub-info" style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white)">Cargando...</div>
   </div>
   <div class="map-container" id="map-container">
@@ -277,7 +288,7 @@ setTimeout(()=>{authListenerReady=true;},2000);
 sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'&&authListenerReady)location.replace('index.html');});
 window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
-let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null;
+let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null,solicitudChannel=null;
 
 function todayISO(){return new Date().toISOString().split('T')[0]}
 
@@ -410,6 +421,38 @@ async function loadContactoHist(){
   }).join('');
 }
 
+// ── SOLICITUD UBICACIÓN TIEMPO REAL ──
+async function solicitarUbicacion(){
+  if(!alumnoId)return alert('No hay alumno vinculado a tu cuenta');
+  const btn=document.getElementById('btn-solicitar-ub');
+  const st=document.getElementById('sol-status');
+  btn.disabled=true;st.textContent='Enviando solicitud...';st.style.color='var(--muted)';
+  const{data:sol,error}=await sb.from('solicitudes_ubicacion').insert({padre_id:uid,alumno_id:alumnoId,estado:'pendiente'}).select().single();
+  if(error){st.textContent='Error: '+error.message;st.style.color='var(--red)';btn.disabled=false;return}
+  st.textContent='⏳ Solicitud enviada. Esperando respuesta del alumno (máx. 2 min)...';st.style.color='var(--yellow)';
+  if(solicitudChannel){sb.removeChannel(solicitudChannel);solicitudChannel=null;}
+  solicitudChannel=sb.channel(`sol-padre-${sol.id}`)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'solicitudes_ubicacion',filter:`id=eq.${sol.id}`},payload=>{
+      const s=payload.new;
+      if(s.estado==='aceptada'){
+        st.textContent=`✅ Ubicación recibida a las ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
+        st.style.color='var(--green)';
+        document.getElementById('map-container').innerHTML=`<iframe src="https://maps.google.com/maps?q=${s.latitud},${s.longitud}&z=16&output=embed" allowfullscreen loading="lazy"></iframe>`;
+        document.getElementById('ub-info').textContent=`Ubicación en tiempo real — ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
+        btn.disabled=false;sb.removeChannel(solicitudChannel);solicitudChannel=null;
+      }else if(s.estado==='rechazada'||s.estado==='timeout'){
+        const motivo=s.notas?` (${s.notas})`:'';
+        st.textContent=`⚠️ El alumno no compartió su ubicación${motivo}. La academia ha sido notificada.`;
+        st.style.color='var(--red)';btn.disabled=false;sb.removeChannel(solicitudChannel);solicitudChannel=null;
+      }
+    }).subscribe();
+  setTimeout(()=>{
+    if(!solicitudChannel)return;
+    sb.removeChannel(solicitudChannel);solicitudChannel=null;
+    st.textContent='⏰ Sin respuesta después de 2 minutos.';st.style.color='var(--red)';btn.disabled=false;
+  },120000);
+}
+
 function setContactoFile(input){contactoFile=input.files[0];if(contactoFile)document.getElementById('c-fname').textContent=contactoFile.name}
 
 async function sendContacto(){
@@ -444,6 +487,8 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+// Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
+(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 async function doLogout(){ await sb.auth.signOut(); }
 
 init();

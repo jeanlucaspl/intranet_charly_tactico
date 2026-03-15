@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, viewport-fit=cover"/>
   <title>Charly Táctico · Intranet Alumno</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -126,7 +126,7 @@
     .empty .ei{font-size:36px;margin-bottom:10px}
     .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
-    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--gold);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
@@ -163,6 +163,24 @@
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
 <button class="sb-tog" onclick="toggleSb()">☰</button>
+
+<!-- DIÁLOGO SOLICITUD UBICACIÓN -->
+<div id="dlg-ubicacion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--navy2);border:2px solid var(--gold);width:100%;max-width:360px;padding:28px 24px;text-align:center;animation:fi .3s ease">
+    <div style="font-size:44px;margin-bottom:12px">📍</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-bottom:8px;color:var(--gold)">SOLICITUD DE UBICACIÓN</div>
+    <div style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--muted);margin-bottom:8px;line-height:1.6">
+      Tu padre / apoderado quiere conocer tu ubicación actual.
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--yellow);text-transform:uppercase;margin-bottom:20px">
+      Esta solicitud expira en <span id="dlg-countdown">60</span>s
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" style="flex:1;background:var(--red);color:var(--white);border:none" onclick="denegarUbicacion('rechazado')">✗ DENEGAR</button>
+      <button class="btn btn-gold" style="flex:1" onclick="aceptarUbicacion()">✓ COMPARTIR</button>
+    </div>
+  </div>
+</div>
 
 <div class="layout"><div class="main">
 
@@ -249,7 +267,8 @@ setTimeout(()=>{authListenerReady=true;},2000);
 sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'&&authListenerReady)location.replace('index.html');});
 window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
-let uid=null,alumnoId=null,alumnoData=null,solucionFiles={};
+let uid=null,alumnoId=null,alumnoData=null,perfilData=null,solucionFiles={};
+let pendingSolicitudId=null,dlgCountdownTimer=null,dlgCountdownSec=60;
 
 function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
 function todayISO(){return new Date().toISOString().split('T')[0]}
@@ -260,6 +279,7 @@ async function init(){
   uid=session.user.id;
   const {data:perfil}=await sb.from('perfiles').select('*').eq('id',uid).single();
   if(perfil){
+    perfilData=perfil;
     const nombre=`${perfil.nombre} ${perfil.apellido}`;
     document.getElementById('tb-nombre').textContent=nombre;
     document.getElementById('wb-name').textContent=perfil.nombre.toUpperCase();
@@ -269,6 +289,7 @@ async function init(){
   const mon=weekStart();
   document.getElementById('hor-semana').value=mon;
   await Promise.all([loadNotas(),loadAsistencias(),loadNotifs(),loadPracticas(),loadHorario()]);
+  setupLocationRequestListener();
 }
 
 async function loadNotas(){
@@ -431,7 +452,79 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+// Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
+(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 async function doLogout(){ await sb.auth.signOut(); }
+
+// ── SOLICITUD UBICACIÓN (recibida del padre) ──
+function setupLocationRequestListener(){
+  if(!alumnoId)return;
+  sb.channel('loc-req-alumno-'+alumnoId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'solicitudes_ubicacion',filter:`alumno_id=eq.${alumnoId}`},
+      payload=>{if(payload.new.estado==='pendiente')mostrarDialogoUbicacion(payload.new.id);}
+    ).subscribe();
+}
+function mostrarDialogoUbicacion(solicitudId){
+  pendingSolicitudId=solicitudId;
+  dlgCountdownSec=60;
+  document.getElementById('dlg-countdown').textContent=dlgCountdownSec;
+  document.getElementById('dlg-ubicacion').style.display='flex';
+  if(dlgCountdownTimer)clearInterval(dlgCountdownTimer);
+  dlgCountdownTimer=setInterval(()=>{
+    dlgCountdownSec--;
+    const el=document.getElementById('dlg-countdown');
+    if(el)el.textContent=dlgCountdownSec;
+    if(dlgCountdownSec<=0){clearInterval(dlgCountdownTimer);denegarUbicacion('timeout_alumno');}
+  },1000);
+}
+async function aceptarUbicacion(){
+  clearInterval(dlgCountdownTimer);
+  document.getElementById('dlg-ubicacion').style.display='none';
+  if(!pendingSolicitudId)return;
+  // Verificaciones nativas anti-fraude (app Android siempre disponible para alumnos)
+  if(window.AndroidNative?.isDeveloperOptionsEnabled()) return denegarUbicacion('developer_options_activas');
+  if(window.AndroidNative?.isMockLocationEnabled())    return denegarUbicacion('mock_gps_detectado');
+  if(window.AndroidNative?.hasMockLocationApps())      return denegarUbicacion('app_mock_gps_instalada');
+  if(!navigator.geolocation)return denegarUbicacion('sin_gps');
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{
+      await sb.from('solicitudes_ubicacion').update({
+        estado:'aceptada',latitud:pos.coords.latitude,longitud:pos.coords.longitude,
+        respondido_en:new Date().toISOString()
+      }).eq('id',pendingSolicitudId);
+      pendingSolicitudId=null;
+    },
+    async()=>denegarUbicacion('error_gps'),
+    {timeout:10000,enableHighAccuracy:true}
+  );
+}
+async function denegarUbicacion(motivo='rechazado'){
+  clearInterval(dlgCountdownTimer);
+  document.getElementById('dlg-ubicacion').style.display='none';
+  if(!pendingSolicitudId)return;
+  const solId=pendingSolicitudId;pendingSolicitudId=null;
+  await sb.from('solicitudes_ubicacion').update({
+    estado:'rechazada',notas:motivo,respondido_en:new Date().toISOString()
+  }).eq('id',solId);
+  const{data:sol}=await sb.from('solicitudes_ubicacion').select('padre_id').eq('id',solId).single();
+  if(!sol)return;
+  const nombre=perfilData?`${perfilData.nombre} ${perfilData.apellido}`.trim():'Alumno';
+  const mensajes={
+    'rechazado':'rechazó compartir su ubicación',
+    'timeout_alumno':'no respondió a la solicitud de ubicación a tiempo',
+    'developer_options_activas':'tiene las opciones de desarrollador activadas en su dispositivo — posible intento de manipulación',
+    'mock_gps_detectado':'tiene GPS falso (mock location) activo en su dispositivo',
+    'app_mock_gps_instalada':'tiene una aplicación de GPS falso instalada en su dispositivo',
+    'sin_gps':'no tiene GPS disponible',
+    'error_gps':'tuvo un error al obtener la ubicación GPS'
+  };
+  const msgTexto=mensajes[motivo]||'no compartió su ubicación';
+  await sb.from('notificaciones').insert({destinatario_id:sol.padre_id,titulo:'ALERTA: Alumno no compartió ubicación',mensaje:`${nombre} ${msgTexto}.`,tipo:'urgente',global:false});
+  const{data:admins}=await sb.from('perfiles').select('id').in('rol',['admin','dueno','instructor']);
+  if(admins?.length){
+    await Promise.all(admins.map(a=>sb.from('notificaciones').insert({destinatario_id:a.id,titulo:`ALERTA UBICACIÓN: ${nombre}`,mensaje:`El alumno ${nombre} ${msgTexto}.`,tipo:'urgente',global:false})));
+  }
+}
 
 init();
 </script>

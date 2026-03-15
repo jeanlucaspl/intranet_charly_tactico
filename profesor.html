@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, viewport-fit=cover"/>
   <title>Charly Táctico · Profesor</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -114,7 +114,7 @@
     .empty .ei{font-size:36px;margin-bottom:10px}
     .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
-    .sb-tog{display:none;position:fixed;bottom:20px;right:20px;z-index:200;background:var(--blue);color:var(--navy);border:none;width:46px;height:46px;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--blue);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
@@ -492,6 +492,20 @@ function showResultado(ok,titulo,sub){
 // ── GPS ──
 function getGPS(){
   if(!navigator.geolocation)return alert('Tu dispositivo no soporta GPS');
+  // Detección nativa de trampa (solo disponible en la app Android)
+  if(window.AndroidNative){
+    const devOpts=AndroidNative.isDeveloperOptionsEnabled();
+    const mockGPS=AndroidNative.isMockLocationEnabled();
+    if(devOpts||mockGPS){
+      const motivo=mockGPS?'GPS falso (mock location) detectado':'Opciones de desarrollador activas';
+      const msg=document.getElementById('gps-msg');
+      msg.textContent=`⛔ ${motivo}. Acción registrada y notificada al administrador.`;
+      msg.className='msg err show';
+      document.getElementById('gps-coords').textContent='⛔ Ubicación bloqueada por seguridad';
+      alertarAdminGPS(motivo);
+      return;
+    }
+  }
   navigator.geolocation.getCurrentPosition(
     pos=>{
       gpsCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};
@@ -500,8 +514,12 @@ function getGPS(){
       document.getElementById('btn-registrar-gps').disabled=false;
     },
     err=>{
-      document.getElementById('gps-coords').textContent='❌ No se pudo obtener la ubicación';
-      alert('Error GPS: '+err.message);
+      const denegado=err.code===1;
+      document.getElementById('gps-coords').textContent=denegado?'⛔ Permiso de ubicación denegado':'❌ Error al obtener ubicación: '+err.message;
+      const msg=document.getElementById('gps-msg');
+      msg.textContent=denegado?'⚠️ Denegaste el permiso GPS. El administrador será notificado.':'No se pudo obtener la ubicación. Intenta de nuevo.';
+      msg.className='msg err show';
+      if(denegado)alertarAdminGPS();
     },
     {enableHighAccuracy:true,timeout:10000}
   );
@@ -593,8 +611,33 @@ function showPanel(id,btn){
   if(id==='historial')loadHistorial();
   if(id==='asistencia')checkYaMarcado();
 }
+async function alertarAdminGPS(motivo='GPS denegado'){
+  const nombre=document.getElementById('tb-nombre').textContent;
+  const ahora=new Date().toLocaleString('es-PE');
+  // Registrar en asistencias_profesores con estado especial (el admin lo ve en historial)
+  if(profesorId){
+    await sb.from('asistencias_profesores').upsert({
+      profesor_id:profesorId,fecha:todayISO(),hora_ingreso:nowTime(),
+      estado:'gps_denegado',verificado_facial:false,latitud:null,longitud:null
+    },{onConflict:'profesor_id,fecha'});
+  }
+  // Intentar enviar notificación global a admins
+  // NOTA: requiere esta política RLS en Supabase:
+  //   CREATE POLICY "profesor_alerta_gps" ON notificaciones FOR INSERT TO authenticated
+  //   WITH CHECK (tipo='urgente' AND global=true AND
+  //     EXISTS (SELECT 1 FROM perfiles WHERE id=auth.uid() AND rol='profesor'));
+  try{
+    await sb.from('notificaciones').insert({
+      titulo:`⚠️ Alerta GPS — Prof. ${nombre}`,
+      mensaje:`${motivo} al intentar registrar asistencia el ${ahora}.`,
+      tipo:'urgente',global:true,leida:false
+    });
+  }catch(e){console.warn('Notif no enviada (RLS pendiente):',e.message);}
+}
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+// Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
+(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 async function doLogout(){await sb.auth.signOut();}
 
 init();
