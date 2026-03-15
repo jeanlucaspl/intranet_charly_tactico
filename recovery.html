@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charly Táctico · Nueva Contraseña</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--navy:#0b1120;--navy2:#111a2e;--gold:#c9a84c;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--red:#e05555;--green:#4caf7d}
+    html,body{height:100%;background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;pointer-events:none}
+    .page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:var(--navy2);border:1px solid var(--border);width:100%;max-width:420px;padding:44px 38px;position:relative;animation:fadeUp .5s ease both}
+    .card::before,.card::after{content:'';position:absolute;width:20px;height:20px}
+    .card::before{top:-1px;left:-1px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+    .card::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+    .header{text-align:center;margin-bottom:32px}
+    .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;border:1px solid var(--border);display:inline-block;padding:4px 14px;margin-bottom:14px}
+    .brand{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:.9;letter-spacing:.02em}
+    .brand .g{color:var(--gold)}
+    .sub{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-top:8px}
+    .divider{width:48px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:18px auto}
+    .fg{margin-bottom:16px}
+    label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+    input{width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s}
+    input:focus{border-color:var(--gold)}
+    input::placeholder{color:var(--muted);font-size:13px}
+    .btn{width:100%;padding:13px;background:var(--gold);color:var(--navy);border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.1em;cursor:pointer;transition:background .2s;margin-top:6px}
+    .btn:hover{background:#e8c96a}
+    .btn:disabled{background:var(--muted);cursor:not-allowed}
+    .msg{margin-top:14px;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;display:none}
+    .msg.error{border:1px solid var(--red);color:var(--red);background:rgba(224,85,85,.08);display:block}
+    .msg.success{border:1px solid var(--green);color:var(--green);background:rgba(76,175,125,.08);display:block}
+    .loading{text-align:center;padding:40px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+    .back{display:block;text-align:center;margin-top:18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-decoration:none;text-transform:uppercase;transition:color .2s}
+    .back:hover{color:var(--gold)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:480px){.card{padding:32px 22px}.brand{font-size:38px}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="header">
+      <div class="eyebrow">Recuperar Acceso</div>
+      <div class="brand">CHARLY<br><span class="g">TÁCTICO</span></div>
+      <div class="sub">Academia Pre-Cadetes</div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- Estado: cargando -->
+    <div id="estado-cargando" class="loading">Verificando enlace...</div>
+
+    <!-- Estado: formulario nueva contraseña -->
+    <div id="estado-form" style="display:none">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:20px;text-align:center">
+        Ingresa tu nueva contraseña
+      </div>
+      <div class="fg">
+        <label>Nueva contraseña</label>
+        <input type="password" id="pass1" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+      </div>
+      <div class="fg">
+        <label>Confirmar contraseña</label>
+        <input type="password" id="pass2" placeholder="Repite la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')cambiar()"/>
+      </div>
+      <button class="btn" id="btn-cambiar" onclick="cambiar()">CAMBIAR CONTRASEÑA</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <!-- Estado: éxito -->
+    <div id="estado-ok" style="display:none;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">✅</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green);margin-bottom:8px">CONTRASEÑA ACTUALIZADA</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
+        Redirigiendo al login...
+      </div>
+    </div>
+
+    <!-- Estado: enlace inválido -->
+    <div id="estado-error" style="display:none;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--red);margin-bottom:8px">ENLACE INVÁLIDO</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:20px">
+        El enlace expiró o ya fue usado
+      </div>
+      <a href="login.html" class="btn" style="display:block;text-decoration:none;text-align:center">IR AL LOGIN</a>
+    </div>
+
+    <a class="back" href="login.html">← Volver al inicio</a>
+  </div>
+</div>
+
+<script>
+const SB_URL='https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+function show(id){
+  ['estado-cargando','estado-form','estado-ok','estado-error'].forEach(s=>{
+    document.getElementById(s).style.display = s===id ? 'block' : 'none';
+  });
+}
+
+function showMsg(txt,tipo){
+  const el=document.getElementById('msg');
+  el.textContent=txt;
+  el.className='msg '+tipo;
+}
+
+// Supabase envía el token en el hash de la URL: #access_token=xxx&type=recovery
+async function init(){
+  // Supabase JS v2 maneja el hash automáticamente via onAuthStateChange
+  sb.auth.onAuthStateChange(async(event, session)=>{
+    if(event==='PASSWORD_RECOVERY'){
+      // El token es válido, mostrar formulario
+      show('estado-form');
+    } else if(event==='SIGNED_IN' && session){
+      // Ya hay sesión activa (puede venir de recovery también)
+      // Solo mostrar form si estamos en recovery
+      const hash=window.location.hash;
+      if(hash.includes('type=recovery')){
+        show('estado-form');
+      }
+    }
+  });
+
+  // Verificar si hay token en el hash
+  const hash=window.location.hash;
+  if(!hash || (!hash.includes('access_token') && !hash.includes('type=recovery'))){
+    // No hay token — puede que Supabase ya lo procesó, verificar sesión
+    setTimeout(async()=>{
+      const {data:{session}}=await sb.auth.getSession();
+      if(session){
+        show('estado-form');
+      } else {
+        show('estado-error');
+      }
+    }, 1500);
+  }
+  // Si hay token, onAuthStateChange lo procesará
+}
+
+async function cambiar(){
+  const p1=document.getElementById('pass1').value;
+  const p2=document.getElementById('pass2').value;
+  if(!p1||!p2) return showMsg('Completa ambos campos','error');
+  if(p1.length<6) return showMsg('Mínimo 6 caracteres','error');
+  if(p1!==p2) return showMsg('Las contraseñas no coinciden','error');
+
+  const btn=document.getElementById('btn-cambiar');
+  btn.disabled=true; btn.textContent='GUARDANDO...';
+
+  const {data,error}=await sb.auth.updateUser({password:p1});
+  if(error){
+    showMsg(error.message,'error');
+    btn.disabled=false; btn.textContent='CAMBIAR CONTRASEÑA';
+    return;
+  }
+
+  // Actualizar también en gestion_contrasenas
+  const uid=data.user?.id;
+  if(uid){
+    await sb.from('gestion_contrasenas').upsert(
+      {perfil_id:uid, contrasena_actual:p1, actualizado_en:new Date().toISOString()},
+      {onConflict:'perfil_id'}
+    );
+  }
+
+  show('estado-ok');
+  setTimeout(()=>location.replace('login.html'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
