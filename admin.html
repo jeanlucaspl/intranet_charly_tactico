@@ -1835,6 +1835,9 @@ async function saveManual(){
 
 // ── REGISTRATION CAMERA ──
 async function startRegCam(){
+  // Liberar cualquier stream activo antes de abrir uno nuevo
+  if(facialStream){facialStream.getTracks().forEach(t=>t.stop());facialStream=null;}
+  if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
   try{
     regStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
     const v=document.getElementById('reg-video');v.srcObject=regStream;await v.play();
@@ -1888,6 +1891,8 @@ async function deleteProfesor(id,perfilId){
 
 let prStream=null,prPhotoBlob=null,prFotoFile=null;
 async function startProfesorCam(){
+  if(facialStream){facialStream.getTracks().forEach(t=>t.stop());facialStream=null;}
+  if(prStream){prStream.getTracks().forEach(t=>t.stop());prStream=null;}
   try{
     prStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
     const v=document.getElementById('pr-video');v.srcObject=prStream;await v.play();
