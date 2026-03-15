@@ -374,6 +374,7 @@
   <div style="background:var(--navy2);border:1px solid var(--border);padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
     <select id="f-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:240px"><option value="">-- Selecciona materia --</option></select>
     <button class="btn btn-gold" onclick="startCam()">📷 Activar Cámara</button>
+    <button class="btn btn-outline" onclick="flipCam()" id="btn-flip" title="Cambiar cámara">🔄 Cambiar</button>
     <button class="btn btn-outline" onclick="stopCam()">⏹ Detener</button>
     <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
   </div>
@@ -995,7 +996,7 @@ window.addEventListener('pageshow', (e) => {
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFile=null;
-let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null;
+let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
 
 // ── UBICACIÓN ACADEMIA ──
 let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'Jr. Túpac Amaru 187, Tarapoto 22201'};
@@ -1769,7 +1770,7 @@ async function startCam(){
   }
   document.getElementById('f-status-top').textContent=`✅ Ubicación OK (${geo.dist}m de la academia)`;
   try{
-    facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'environment'}});
+    facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
     v.addEventListener('loadedmetadata',()=>{const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight});
     setCamSt('✅ Cámara activa — Listo','cs-ok');
@@ -1779,6 +1780,12 @@ function stopCam(){
   if(facialStream)facialStream.getTracks().forEach(t=>t.stop());
   facialStream=null;document.getElementById('f-video').srcObject=null;
   setCamSt('Cámara detenida','cs-idle');document.getElementById('verify-card').style.display='none';
+}
+async function flipCam(){
+  facingMode=facingMode==='environment'?'user':'environment';
+  const lbl=facingMode==='environment'?'Trasera':'Frontal';
+  document.getElementById('btn-flip').textContent=`🔄 ${lbl}`;
+  if(facialStream){await stopCam();await startCam();}
 }
 function setCamSt(txt,cls){const el=document.getElementById('f-camst');el.textContent=txt;el.className='cam-status '+cls}
 async function captureVerify(){
