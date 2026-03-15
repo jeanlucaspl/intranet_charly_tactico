@@ -235,6 +235,15 @@
       .ph-left .ttl{font-size:24px}
     }
     @media(hover:none){tbody tr:hover td{background:transparent}}
+
+    /* DNI AUTOCOMPLETE */
+    .dni-wrap{position:relative}
+    .dni-sug{position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);z-index:300;max-height:200px;overflow-y:auto;display:none}
+    .dni-sug.show{display:block}
+    .dni-sug-item{padding:9px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.05em;border-bottom:1px solid rgba(201,168,76,.1);display:flex;gap:12px;align-items:center}
+    .dni-sug-item:hover{background:var(--navy3);color:var(--gold)}
+    .dni-sug-dni{color:var(--gold);font-weight:700;min-width:80px}
+    .dni-sug-nom{color:var(--white)}
   </style>
 </head>
 <body>
@@ -264,7 +273,6 @@
   <div class="sb-section">
     <div class="sb-label">Asistencia</div>
     <button class="sb-link" onclick="showPanel('facial',this)"><span class="ic">📸</span>Verificación Facial</button>
-    <button class="sb-link" onclick="showPanel('asistencia',this)"><span class="ic">📅</span>Tomar Asistencia</button>
     <button class="sb-link" onclick="showPanel('reportes',this)"><span class="ic">📋</span>Reportes</button>
   </div>
   <div class="sb-section">
@@ -401,20 +409,6 @@
   </div>
 </div>
 
-<!-- ══ ASISTENCIA MANUAL ══ -->
-<div class="panel" id="panel-asistencia">
-  <div class="ph">
-    <div class="ph-left"><div class="eye">Control de presencia</div><div class="ttl">TOMAR ASISTENCIA</div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="a-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none"><option value="">-- Materia --</option></select>
-      <button class="btn btn-gold" onclick="saveAllAtt()">💾 Guardar</button>
-    </div>
-  </div>
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:10px 16px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
-    ✅ Verde=Presente &nbsp;⏰ Amarillo=Tardanza &nbsp;❌ Rojo=Ausente
-  </div>
-  <div class="att-grid" id="d-att"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
-</div>
 
 <!-- ══ REPORTES ══ -->
 <div class="panel" id="panel-reportes">
@@ -570,7 +564,10 @@
     🔑 Busca un usuario por DNI para ver o cambiar su contraseña
   </div>
   <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-    <input type="text" id="pass-dni-search" placeholder="DNI del usuario..." maxlength="8" inputmode="numeric" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;flex:1;min-width:180px;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+    <div class="dni-wrap" style="flex:1;min-width:180px">
+      <input type="text" id="pass-dni-search" placeholder="DNI del usuario..." maxlength="8" inputmode="numeric" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;width:100%;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="setTimeout(()=>hideSug('sug-pass'),200)" oninput="dniSuggest(this,'sug-pass','todos')"/>
+      <div id="sug-pass" class="dni-sug"></div>
+    </div>
     <button class="btn btn-gold" onclick="buscarUsuarioPorDNI()">Buscar</button>
   </div>
   <div id="pass-result" style="display:none;background:var(--navy2);border:1px solid var(--border);padding:20px">
@@ -728,7 +725,10 @@
         <div class="fg full">
           <label>Buscar alumno por DNI</label>
           <div style="display:flex;gap:8px">
-            <input type="text" id="n-dni-search" placeholder="Ingresa el DNI..." maxlength="8" inputmode="numeric" style="flex:1"/>
+            <div class="dni-wrap" style="flex:1">
+              <input type="text" id="n-dni-search" placeholder="Ingresa el DNI..." maxlength="8" inputmode="numeric" style="width:100%" onblur="setTimeout(()=>hideSug('sug-nota'),200)" oninput="dniSuggest(this,'sug-nota','alumnos')"/>
+              <div id="sug-nota" class="dni-sug"></div>
+            </div>
             <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('nota')">Buscar</button>
           </div>
           <div id="n-alumno-info" style="display:none;margin-top:8px;padding:10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
@@ -849,7 +849,10 @@
         <div class="fg full">
           <label>Buscar alumno vinculado por DNI</label>
           <div style="display:flex;gap:8px">
-            <input type="text" id="pad-alumno-dni" placeholder="DNI del alumno..." maxlength="8" inputmode="numeric" style="flex:1"/>
+            <div class="dni-wrap" style="flex:1">
+              <input type="text" id="pad-alumno-dni" placeholder="DNI del alumno..." maxlength="8" inputmode="numeric" style="width:100%" onblur="setTimeout(()=>hideSug('sug-padre'),200)" oninput="dniSuggest(this,'sug-padre','alumnos')"/>
+              <div id="sug-padre" class="dni-sug"></div>
+            </div>
             <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('padre')">Buscar</button>
           </div>
           <div id="pad-alumno-info" style="display:none;margin-top:8px;padding:10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
@@ -1766,7 +1769,7 @@ async function startCam(){
   }
   document.getElementById('f-status-top').textContent=`✅ Ubicación OK (${geo.dist}m de la academia)`;
   try{
-    facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'environment'}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
     v.addEventListener('loadedmetadata',()=>{const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight});
     setCamSt('✅ Cámara activa — Listo','cs-ok');
@@ -1946,6 +1949,44 @@ function populateSelects(){
 
 function filterAlumnos(){const q=document.getElementById('q-alumno').value.toLowerCase();renderAlumnos(allAlumnos.filter(a=>`${a.perfiles?.nombre} ${a.perfiles?.apellido} ${a.codigo}`.toLowerCase().includes(q)))}
 function filterNotas(){const m=document.getElementById('q-nota-materia').value;renderNotas(m?allNotas.filter(n=>n.materia_id===m):allNotas)}
+
+// ── DNI AUTOCOMPLETE ──
+function dniSuggest(input,sugId,tipo){
+  const q=input.value.trim();
+  const box=document.getElementById(sugId);
+  if(!q){box.innerHTML='';box.classList.remove('show');return}
+  let fuente=[];
+  if(tipo==='alumnos'){
+    fuente=allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q)).slice(0,8);
+    box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectDniSug('${sugId}','${a.perfiles?.dni}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&apos;')}')"><span class="dni-sug-dni">${a.perfiles?.dni}</span><span class="dni-sug-nom">${a.perfiles?.nombre} ${a.perfiles?.apellido}</span></div>`).join('');
+  }else{
+    // 'todos': buscar en allAlumnos + query dinámica
+    fuente=allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q)).slice(0,6);
+    box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectDniSug('${sugId}','${a.perfiles?.dni}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&apos;')} (alumno)')"><span class="dni-sug-dni">${a.perfiles?.dni}</span><span class="dni-sug-nom">${a.perfiles?.nombre} ${a.perfiles?.apellido} <span style="color:var(--muted);font-size:10px">alumno</span></span></div>`).join('');
+    // También buscar en perfiles de otros roles
+    if(q.length>=3){
+      sb.from('perfiles').select('id,dni,nombre,apellido,rol').like('dni',q+'%').neq('rol','alumno').limit(4).then(({data})=>{
+        if(!data?.length)return;
+        const extra=data.map(p=>`<div class="dni-sug-item" onmousedown="selectDniSug('${sugId}','${p.dni}','${(p.nombre+' '+p.apellido).replace(/'/g,'&apos;')} (${p.rol})')"><span class="dni-sug-dni">${p.dni}</span><span class="dni-sug-nom">${p.nombre} ${p.apellido} <span style="color:var(--muted);font-size:10px">${p.rol}</span></span></div>`).join('');
+        box.innerHTML+=extra;
+        if(box.innerHTML)box.classList.add('show');
+      });
+    }
+  }
+  box.classList.toggle('show',fuente.length>0);
+}
+function selectDniSug(sugId,dni,nombre){
+  // Determinar qué input alimentar
+  const map={'sug-pass':'pass-dni-search','sug-nota':'n-dni-search','sug-padre':'pad-alumno-dni'};
+  const inputId=map[sugId];if(!inputId)return;
+  document.getElementById(inputId).value=dni;
+  hideSug(sugId);
+  // Auto-ejecutar búsqueda
+  if(sugId==='sug-pass')buscarUsuarioPorDNI();
+  else if(sugId==='sug-nota')buscarAlumnoPorDNI('nota');
+  else if(sugId==='sug-padre')buscarAlumnoPorDNI('padre');
+}
+function hideSug(sugId){const el=document.getElementById(sugId);if(el){el.classList.remove('show');}}
 
 // ── MODAL ──
 function openMd(id){document.getElementById(id).classList.add('show')}
