@@ -345,7 +345,9 @@ async function loadNotifs(){
   const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
   document.getElementById('d-notifs').innerHTML=data.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    const adj=n.archivo_url?`<a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:inline-block;margin-top:6px">📎 Ver adjunto</a>`:'';
+    const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
+      ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
     return`<div class="nitem ${n.tipo}">
       <div class="nico">${icons[n.tipo]||'📢'}</div>
       <div style="flex:1">

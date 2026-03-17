@@ -236,6 +236,24 @@
     }
     @media(hover:none){tbody tr:hover td{background:transparent}}
 
+    /* HORARIO PLANTILLA TABLE */
+    .hor-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hor-table th{background:var(--gold);color:var(--navy);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;text-align:center;border:1px solid rgba(201,168,76,.4)}
+    .hor-table td{border:1px solid rgba(201,168,76,.15);padding:0;vertical-align:top}
+    .hor-slot-time{background:var(--gold);color:var(--navy);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;text-align:center;padding:6px 8px;vertical-align:middle;white-space:nowrap;width:72px;line-height:1.3}
+    .hor-section-hdr td{background:rgba(201,168,76,.3);color:var(--gold2);font-family:'Bebas Neue',sans-serif;font-size:13px;text-align:center;padding:5px;letter-spacing:.2em}
+    .hor-brake-row td{background:rgba(201,168,76,.08);font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--gold);text-align:center;padding:3px;letter-spacing:.12em;text-transform:uppercase}
+    .hor-cell{padding:7px 8px;min-height:52px;height:100%;display:block}
+    .hor-cell.editable:hover{background:rgba(201,168,76,.1);cursor:pointer}
+    .hor-cell .hc-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white);line-height:1.2}
+    .hor-cell .hc-prof{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.2}
+    .hor-cell .hc-empty{color:var(--muted);font-size:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:4px 0}
+    .aula-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:0}
+    .aula-tab{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;background:var(--navy2);border:1px solid var(--border);border-bottom:none;color:var(--muted);cursor:pointer;transition:all .2s}
+    .aula-tab.active{background:var(--navy3);color:var(--gold);border-color:var(--gold)}
+    .hor-sug-item{padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;border-bottom:1px solid rgba(201,168,76,.1);color:var(--white)}
+    .hor-sug-item:hover{background:var(--navy3);color:var(--gold)}
+
     /* DNI AUTOCOMPLETE */
     .dni-wrap{position:relative}
     .dni-sug{position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);z-index:300;max-height:200px;overflow-y:auto;display:none}
@@ -306,17 +324,13 @@
     <div class="sc"><div class="sc-lbl">Ausentes</div><div class="sc-val" id="s-aus" style="color:var(--red)">--</div><div class="sc-sub">Hoy</div></div>
     <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--</div><div class="sc-sub">Hoy</div></div>
   </div>
-  <div class="tw">
-    <div class="th"><span class="th-ttl">Últimas Asistencias</span></div>
-    <div id="d-ultimas"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
-  </div>
 </div>
 
 <!-- ══ AULAS ══ -->
 <div class="panel" id="panel-aulas">
   <div class="ph">
     <div class="ph-left"><div class="eye">Gestión de espacios</div><div class="ttl">AULAS</div></div>
-    <button class="btn btn-gold" onclick="openMd('md-aula')">+ Nueva Aula</button>
+    <button class="btn btn-gold" id="btn-nueva-aula" onclick="openMd('md-aula')" style="display:none">+ Nueva Aula</button>
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Listado de Aulas</span></div>
@@ -345,7 +359,7 @@
 <div class="panel" id="panel-materias">
   <div class="ph">
     <div class="ph-left"><div class="eye">Plan de estudios</div><div class="ttl">MATERIAS</div></div>
-    <button class="btn btn-gold" onclick="openMd('md-materia')">+ Nueva Materia</button>
+    <button class="btn btn-gold" id="btn-nueva-materia" onclick="openMd('md-materia')" style="display:none">+ Nueva Materia</button>
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Materias Registradas</span></div>
@@ -356,15 +370,46 @@
 <!-- ══ HORARIO ══ -->
 <div class="panel" id="panel-horario">
   <div class="ph">
-    <div class="ph-left"><div class="eye">Semana académica</div><div class="ttl">HORARIO SEMANAL</div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input type="date" id="h-semana" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none"/>
-      <button class="btn btn-outline" onclick="loadHorario()">Ver Semana</button>
-      <button class="btn btn-gold" onclick="openMd('md-horario')">+ Agregar Clase</button>
-    </div>
+    <div class="ph-left"><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
   </div>
-  <div class="hgrid" id="d-horario">
-    <div class="empty" style="grid-column:1/-1"><div class="ei">🗓️</div><div class="et">Selecciona una fecha</div></div>
+  <div id="hor-aula-tabs" class="aula-tabs"></div>
+  <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="hor-table-wrap">
+    <div class="empty"><div class="ei">🗓️</div><div class="et">Selecciona un aula arriba</div></div>
+  </div>
+  <!-- Cell editor overlay — solo dueño -->
+  <div id="hor-cell-editor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:250;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--navy2);border:1px solid var(--gold);width:100%;max-width:380px;padding:24px;animation:fadeIn .2s ease">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);margin-bottom:2px" id="hor-editor-title">EDITAR CLASE</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px" id="hor-editor-sub"></div>
+      <div class="fg">
+        <label>Materia</label>
+        <div style="position:relative">
+          <input type="text" id="hor-ed-materia-txt" placeholder="Buscar materia..." autocomplete="off"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none"
+            oninput="horSuggestMat(this)" onblur="setTimeout(()=>{const b=document.getElementById('hor-sug-mat');if(b)b.style.display='none'},200)"/>
+          <div id="hor-sug-mat" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);z-index:400;max-height:160px;overflow-y:auto"></div>
+          <input type="hidden" id="hor-ed-materia-id"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Profesor / Instructor</label>
+        <div style="position:relative">
+          <input type="text" id="hor-ed-profesor" placeholder="Nombre del profesor..." autocomplete="off"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none"
+            oninput="horSuggestProf(this)" onblur="setTimeout(()=>{const b=document.getElementById('hor-sug-prof');if(b)b.style.display='none'},200)"/>
+          <div id="hor-sug-prof" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);z-index:400;max-height:160px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <input type="hidden" id="hor-ed-aula-id"/>
+      <input type="hidden" id="hor-ed-dia"/>
+      <input type="hidden" id="hor-ed-slot"/>
+      <div class="msg" id="hor-ed-msg"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-red" style="font-size:11px;padding:8px 14px" onclick="clearCellHorario()">🗑️ Limpiar</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:8px 14px" onclick="closeCellEditor()">Cancelar</button>
+        <button class="btn btn-gold" style="flex:1" onclick="saveCellHorario()">GUARDAR</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -996,6 +1041,8 @@ window.addEventListener('pageshow', (e) => {
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFile=null;
+let esDueno = false;
+let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
 
 // ── UBICACIÓN ACADEMIA ──
@@ -1083,12 +1130,17 @@ async function init(){
   // Get current user role to show/hide dueno-only sections
   const {data:{session}}=await sb.auth.getSession();
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  esDueno = (pf?.rol==='dueno');
   // Show dueno-only sections
-  if(pf?.rol==='dueno'){
+  if(esDueno){
     const sbU=document.getElementById('sb-usuarios');
     if(sbU) sbU.style.display='flex';
     const sbP=document.getElementById('sb-profesores');
     if(sbP) sbP.style.display='flex';
+    const bA=document.getElementById('btn-nueva-aula');
+    if(bA) bA.style.display='inline-flex';
+    const bM=document.getElementById('btn-nueva-materia');
+    if(bM) bM.style.display='inline-flex';
   }
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   const mon = weekStart();
@@ -1097,6 +1149,8 @@ async function init(){
   document.getElementById('p-semana').value = mon;
   await loadAcademiaConfig();
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
+  renderAulaTabs();
+  if(esDueno) loadProfesoresTexto();
   await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
   populateSelects();
@@ -1140,19 +1194,12 @@ async function loadPracticas(){
     (data||[]).map(p=>`<option value="${p.id}">${p.titulo} (${p.semana_inicio})</option>`).join('');
 }
 async function loadDashboard(){
-  document.getElementById('s-alumnos').textContent = allAlumnos.length;
-  const {data} = await sb.from('asistencias').select('*').eq('fecha',todayISO());
+  const {count} = await sb.from('alumnos').select('*',{count:'exact',head:true}).eq('activo',true);
+  document.getElementById('s-alumnos').textContent = count||0;
+  const {data} = await sb.from('asistencias').select('estado').eq('fecha',todayISO());
   document.getElementById('s-pres').textContent = data?.filter(a=>a.estado==='presente').length||0;
   document.getElementById('s-aus').textContent  = data?.filter(a=>a.estado==='ausente').length||0;
   document.getElementById('s-tard').textContent = data?.filter(a=>a.estado==='tardanza').length||0;
-  if(!data?.length){document.getElementById('d-ultimas').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin asistencias hoy</div></div>`;return}
-  const ids=[...new Set(data.map(a=>a.alumno_id))];
-  const {data:als} = await sb.from('alumnos').select('id,perfiles(nombre,apellido),foto_url').in('id',ids);
-  const m={}; als?.forEach(a=>m[a.id]={nombre:`${a.perfiles?.nombre} ${a.perfiles?.apellido}`,foto:a.foto_url});
-  document.getElementById('d-ultimas').innerHTML=`<table><thead><tr><th>Alumno</th><th>Estado</th><th>Hora</th><th>Método</th></tr></thead><tbody>${data.slice(0,10).map(a=>{
-    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
-    return`<tr><td>${m[a.alumno_id]?.nombre||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td></tr>`;
-  }).join('')}</tbody></table>`;
 }
 async function loadReportes(){
   const {data} = await sb.from('asistencias').select('*');
@@ -1173,7 +1220,9 @@ async function loadNotifHist(){
   document.getElementById('d-notif-hist').innerHTML=data.map(n=>{
     const clr=n.tipo==='urgente'?'var(--red)':n.tipo==='alerta'?'var(--yellow)':'var(--blue)';
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    const adj=n.archivo_url?`<a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">📎 Ver adjunto</a>`:'';
+    const adj=n.archivo_url?(n.archivo_tipo==='imagen'
+      ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:320px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
     return`<div style="border-left:3px solid ${clr};padding:10px 14px;background:var(--navy);margin-bottom:3px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase">${icons[n.tipo]} ${n.titulo}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${n.mensaje}</div>${adj}<div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div></div>`;
   }).join('');
 }
@@ -1504,7 +1553,7 @@ function renderAulas(){
   document.getElementById('d-aulas').innerHTML=`<table><thead><tr><th>Nombre</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${allAulas.map(a=>`<tr>
     <td><strong>${a.nombre}</strong></td><td>${a.capacidad}</td>
     <td><span class="badge ${a.activa?'bg':'br'}">${a.activa?'Activa':'Inactiva'}</span></td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAula('${a.id}')">Dar de baja</button></td>
+    <td>${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAula('${a.id}')">Dar de baja</button>`:'--'}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderMaterias(){
@@ -1512,7 +1561,7 @@ function renderMaterias(){
   document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>`<tr>
     <td><strong>${m.nombre}</strong></td>
     <td>${m.codigo||'--'}</td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteMateria('${m.id}')">Eliminar</button></td>
+    <td>${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderNotas(data){
@@ -2019,7 +2068,7 @@ function showPanel(id,btn){
   if(btn)btn.classList.add('active');
   closeSb();
   if(id==='reportes')   loadReportes();
-  if(id==='horario')    loadHorario();
+  if(id==='horario'){renderAulaTabs();if(horCurrentAulaId)loadHorarioPlantilla(horCurrentAulaId);else if(allAulas.length>0)selectAulaTab(allAulas[0].id);}
   if(id==='contacto')   loadContacto();
   if(id==='padres')     loadPadres();
   if(id==='usuarios')   loadAdmins();
@@ -2032,6 +2081,154 @@ function closeSb(){document.getElementById('sidebar').classList.remove('open');d
 (function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 async function doLogout(){ await sb.auth.signOut(); }
+
+// ── HORARIO PLANTILLA ──
+const HOR_SLOTS=[
+  {seccion:'MAÑANA'},
+  {slot:'08:00-09:40',label:'8:00<br>9:40'},
+  {brake:'BRAKE  9:40 – 10:00'},
+  {slot:'10:00-11:45',label:'10:00<br>11:45'},
+  {seccion:'TARDE'},
+  {slot:'15:00-16:40',label:'15:00<br>16:40'},
+  {brake:'BRAKE  16:40 – 17:00'},
+  {slot:'17:00-19:00',label:'17:00<br>19:00'},
+  {seccion:'NOCHE'},
+  {slot:'21:00-23:00',label:'21:00<br>23:00'},
+];
+const HOR_DIAS=['lunes','martes','miercoles','jueves','viernes'];
+const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+let horCurrentAulaId=null,horData={};
+
+function renderAulaTabs(){
+  const cont=document.getElementById('hor-aula-tabs');
+  if(!cont)return;
+  const activas=allAulas.filter(a=>a.activa!==false);
+  if(!activas.length){cont.innerHTML='';return}
+  cont.innerHTML=activas.map(a=>`<div class="aula-tab ${a.id===horCurrentAulaId?'active':''}" onclick="selectAulaTab('${a.id}')">${a.nombre}</div>`).join('');
+}
+async function selectAulaTab(aulaId){
+  horCurrentAulaId=aulaId;
+  renderAulaTabs();
+  await loadHorarioPlantilla(aulaId);
+}
+async function loadHorarioPlantilla(aulaId){
+  const wrap=document.getElementById('hor-table-wrap');
+  if(!wrap)return;
+  const{data,error}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId);
+  if(error){wrap.innerHTML=`<div class="empty"><div class="ei">⚠️</div><div class="et">${error.message}</div></div>`;return}
+  horData={};
+  (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
+  renderHorarioTable(aulaId);
+}
+function renderHorarioTable(aulaId){
+  const wrap=document.getElementById('hor-table-wrap');
+  if(!wrap)return;
+  let html=`<table class="hor-table"><thead><tr><th style="width:72px">HORA/DÍA</th>${HOR_DIAS_LABEL.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+  HOR_SLOTS.forEach(row=>{
+    if(row.seccion){
+      html+=`<tr class="hor-section-hdr"><td colspan="6">${row.seccion}</td></tr>`;
+    }else if(row.brake){
+      html+=`<tr class="hor-brake-row"><td colspan="6">${row.brake}</td></tr>`;
+    }else{
+      html+=`<tr><td class="hor-slot-time">${row.label}</td>`;
+      HOR_DIAS.forEach(dia=>{
+        const r=horData[`${dia}__${row.slot}`];
+        const editAttr=esDueno?` onclick="openCellEditor('${aulaId}','${dia}','${row.slot}')"`:'' ;
+        html+=`<td><div class="hor-cell${esDueno?' editable':''}"${editAttr}>`;
+        if(r&&(r.materias?.nombre||r.profesor_texto)){
+          html+=`<div class="hc-mat">${r.materias?.nombre||''}</div><div class="hc-prof">${r.profesor_texto||''}</div>`;
+        }else{
+          html+=`<div class="hc-empty">${esDueno?'＋':''}</div>`;
+        }
+        html+=`</div></td>`;
+      });
+      html+=`</tr>`;
+    }
+  });
+  html+=`</tbody></table>`;
+  wrap.innerHTML=html;
+}
+function openCellEditor(aulaId,dia,slot){
+  if(!esDueno)return;
+  const key=`${dia}__${slot}`;
+  const r=horData[key];
+  document.getElementById('hor-ed-aula-id').value=aulaId;
+  document.getElementById('hor-ed-dia').value=dia;
+  document.getElementById('hor-ed-slot').value=slot;
+  document.getElementById('hor-ed-materia-txt').value=r?.materias?.nombre||'';
+  document.getElementById('hor-ed-materia-id').value=r?.materia_id||'';
+  document.getElementById('hor-ed-profesor').value=r?.profesor_texto||'';
+  const aula=allAulas.find(a=>a.id===aulaId);
+  const diaLabel=HOR_DIAS_LABEL[HOR_DIAS.indexOf(dia)]||dia;
+  document.getElementById('hor-editor-title').textContent=`${diaLabel.toUpperCase()} · ${slot}`;
+  document.getElementById('hor-editor-sub').textContent=aula?aula.nombre:'';
+  document.getElementById('hor-ed-msg').className='msg';
+  document.getElementById('hor-cell-editor').style.display='flex';
+}
+function closeCellEditor(){document.getElementById('hor-cell-editor').style.display='none';}
+async function saveCellHorario(){
+  const aulaId=document.getElementById('hor-ed-aula-id').value;
+  const dia=document.getElementById('hor-ed-dia').value;
+  const slot=document.getElementById('hor-ed-slot').value;
+  const materiaId=document.getElementById('hor-ed-materia-id').value||null;
+  const profesorTexto=document.getElementById('hor-ed-profesor').value.trim();
+  const msg=document.getElementById('hor-ed-msg');
+  const{error}=await sb.from('horario_plantilla').upsert(
+    {aula_id:aulaId,dia,hora_slot:slot,materia_id:materiaId||null,profesor_texto:profesorTexto||null,actualizado_en:new Date().toISOString()},
+    {onConflict:'aula_id,dia,hora_slot'}
+  );
+  if(error)return showMsg(msg,error.message,'err');
+  showMsg(msg,'Guardado ✅','ok');
+  await loadHorarioPlantilla(aulaId);
+  setTimeout(()=>closeCellEditor(),600);
+}
+async function clearCellHorario(){
+  const aulaId=document.getElementById('hor-ed-aula-id').value;
+  const dia=document.getElementById('hor-ed-dia').value;
+  const slot=document.getElementById('hor-ed-slot').value;
+  const msg=document.getElementById('hor-ed-msg');
+  const{error}=await sb.from('horario_plantilla').delete().eq('aula_id',aulaId).eq('dia',dia).eq('hora_slot',slot);
+  if(error)return showMsg(msg,error.message,'err');
+  showMsg(msg,'Eliminado ✅','ok');
+  await loadHorarioPlantilla(aulaId);
+  setTimeout(()=>closeCellEditor(),600);
+}
+async function loadProfesoresTexto(){
+  const{data}=await sb.from('profesores').select('perfiles(nombre,apellido)').eq('activo',true);
+  allProfesoresTexto=(data||[]).map(p=>{
+    if(!p.perfiles)return null;
+    return`${p.perfiles.nombre} ${p.perfiles.apellido}`.trim();
+  }).filter(Boolean);
+}
+function horSuggestMat(input){
+  const q=input.value.trim().toLowerCase();
+  const box=document.getElementById('hor-sug-mat');
+  if(!box)return;
+  if(!q){box.style.display='none';return}
+  const matches=allMaterias.filter(m=>m.nombre.toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){box.style.display='none';return}
+  box.innerHTML=matches.map(m=>`<div class="hor-sug-item" onmousedown="selectHorMateria('${m.id}','${m.nombre.replace(/'/g,'&apos;')}')">${m.nombre}</div>`).join('');
+  box.style.display='block';
+}
+function selectHorMateria(id,nombre){
+  document.getElementById('hor-ed-materia-id').value=id;
+  document.getElementById('hor-ed-materia-txt').value=nombre;
+  document.getElementById('hor-sug-mat').style.display='none';
+}
+function horSuggestProf(input){
+  const q=input.value.trim().toLowerCase();
+  const box=document.getElementById('hor-sug-prof');
+  if(!box)return;
+  if(!q){box.style.display='none';return}
+  const matches=allProfesoresTexto.filter(n=>n.toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){box.style.display='none';return}
+  box.innerHTML=matches.map(n=>`<div class="hor-sug-item" onmousedown="selectHorProf('${n.replace(/'/g,'&apos;')}')">${n}</div>`).join('');
+  box.style.display='block';
+}
+function selectHorProf(nombre){
+  document.getElementById('hor-ed-profesor').value=nombre;
+  document.getElementById('hor-sug-prof').style.display='none';
+}
 
 init();
 </script>

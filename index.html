@@ -40,42 +40,6 @@
       z-index: 0;
     }
 
-    /* ── NAV ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 48px;
-      height: 64px;
-      background: rgba(11,17,32,0.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .nav-badge {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.25em;
-      color: var(--gold);
-      text-transform: uppercase;
-      border: 1px solid var(--border);
-      padding: 4px 12px;
-    }
-
-    .nav-links {
-      display: flex; gap: 32px; list-style: none;
-    }
-    .nav-links a {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--gold); }
-
     /* ── HERO ── */
     .hero {
       position: relative;
@@ -83,7 +47,7 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       text-align: center;
-      padding: 120px 24px 80px;
+      padding: 48px 24px 80px;
       overflow: hidden;
     }
 
@@ -388,56 +352,6 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── HAMBURGER BUTTON ── */
-    .nav-hamburger {
-      display: none;
-      flex-direction: column;
-      gap: 5px;
-      cursor: pointer;
-      padding: 8px;
-      border: 1px solid var(--border);
-      background: transparent;
-    }
-    .nav-hamburger span {
-      display: block;
-      width: 22px; height: 2px;
-      background: var(--gold);
-      transition: all 0.3s ease;
-    }
-    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
-    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-    /* ── MOBILE MENU ── */
-    .mobile-menu {
-      display: none;
-      position: fixed;
-      top: 64px; left: 0; right: 0;
-      background: rgba(11,17,32,0.98);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      z-index: 99;
-      padding: 0;
-    }
-    .mobile-menu.open {
-      display: block;
-      animation: slideDown 0.25s ease both;
-    }
-    .mobile-menu a {
-      display: block;
-      padding: 18px 24px;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 14px; font-weight: 600;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      text-decoration: none;
-      border-bottom: 1px solid var(--border);
-      transition: color 0.2s, background 0.2s;
-    }
-    .mobile-menu a:hover { color: var(--gold); background: var(--navy2); }
-    .mobile-menu a:last-child { border-bottom: none; }
-
     /* ══════════════════════════════════════
        BREAKPOINTS
        XL  > 1200px  (large desktop)
@@ -450,7 +364,7 @@
     /* ── XL: large desktop ── */
     @media (min-width: 1200px) {
       .portals { grid-template-columns: repeat(4, 1fr); }
-      .hero { padding: 140px 48px 100px; }
+      .hero { padding: 60px 48px 100px; }
     }
 
     /* ── LG: standard desktop ── */
@@ -460,9 +374,6 @@
 
     /* ── MD: tablet landscape ── */
     @media (max-width: 959px) and (min-width: 768px) {
-      nav { padding: 0 24px; }
-      .nav-links { gap: 20px; }
-      .nav-links a { font-size: 12px; }
       .portals { grid-template-columns: repeat(2, 1fr); }
       .stats { flex-wrap: wrap; }
       .stat { min-width: 160px; flex: 1 1 160px; }
@@ -471,13 +382,8 @@
 
     /* ── SM: tablet portrait / large phones ── */
     @media (max-width: 767px) {
-      /* nav */
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
-      .nav-hamburger { display: flex; }
-
       /* hero */
-      .hero { padding: 100px 20px 60px; min-height: auto; }
+      .hero { padding: 48px 20px 60px; min-height: auto; }
       .hero-eyebrow {
         font-size: 9px;
         letter-spacing: 0.2em;
@@ -525,16 +431,6 @@
 
     /* ── XS: small phones (< 480px) ── */
     @media (max-width: 479px) {
-      .nav-badge {
-        font-size: 9px;
-        letter-spacing: 0.1em;
-        padding: 3px 8px;
-        max-width: 220px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
       /* portals go to single column on very small screens */
       .portals { grid-template-columns: 1fr; }
       .portal-card {
@@ -575,22 +471,6 @@
   </style>
 </head>
 <body>
-
-  <!-- NAV -->
-  <nav>
-    <div class="nav-badge">Academia Pre-Cadetes · Charly Táctico</div>
-    <ul class="nav-links">
-      <li><a href="#portales">Portales</a></li>
-    </ul>
-    <button class="nav-hamburger" id="hamburger" aria-label="Menú">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <!-- MOBILE MENU -->
-  <div class="mobile-menu" id="mobileMenu">
-    <a href="#portales" onclick="closeMobileMenu()">◆ Portales</a>
-  </div>
 
   <!-- HERO -->
   <section class="hero">
@@ -646,26 +526,5 @@
     <div class="footer-copy">© 2026 · Academia Pre-Cadetes · Todos los derechos reservados</div>
   </footer>
 
-  <script>
-    const hamburger = document.getElementById('hamburger');
-    const mobileMenu = document.getElementById('mobileMenu');
-
-    hamburger.addEventListener('click', () => {
-      hamburger.classList.toggle('open');
-      mobileMenu.classList.toggle('open');
-    });
-
-    function closeMobileMenu() {
-      hamburger.classList.remove('open');
-      mobileMenu.classList.remove('open');
-    }
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) {
-        closeMobileMenu();
-      }
-    });
-  </script>
 </body>
 </html>

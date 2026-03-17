@@ -6,6 +6,8 @@
   <title>Charly Táctico · Portal Padres</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
@@ -140,6 +142,7 @@
     }
     @media(max-width:479px){.cg{grid-template-columns:1fr 1fr}.ttl{font-size:24px}.sc-val{font-size:30px}.asist-hoy{grid-template-columns:1fr}}
     @media(hover:none){tbody tr:hover td{background:transparent}}
+    #leaflet-map{height:300px;width:100%;border:1px solid var(--border)}
   </style>
 </head>
 <body>
@@ -200,7 +203,7 @@
 
 <!-- UBICACIÓN -->
 <div class="panel" id="panel-ubicacion">
-  <div class="ph"><div class="eye">Última ubicación registrada</div><div class="ttl">UBICACIÓN</div></div>
+  <div class="ph"><div class="eye">Ubicación en tiempo real</div><div class="ttl">UBICACIÓN</div></div>
 
   <!-- SOLICITAR UBICACIÓN EN TIEMPO REAL -->
   <div style="background:var(--navy2);border:1px solid var(--border);border-left:4px solid var(--blue);padding:18px 20px;margin-bottom:16px">
@@ -216,12 +219,9 @@
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">ℹ️ La ubicación también se registra automáticamente cuando el alumno marca asistencia</div>
     <div id="ub-info" style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white)">Cargando...</div>
   </div>
-  <div class="map-container" id="map-container">
-    <div class="map-ph"><div class="mi">📍</div><div class="mt">Cargando ubicación...</div></div>
-  </div>
-  <div class="tw" style="margin-top:16px">
-    <div class="th"><span class="th-ttl">Historial de Ubicaciones</span></div>
-    <div id="d-ubicaciones"><div class="empty"><div class="ei">📍</div><div class="et">Sin registros</div></div></div>
+  <div id="map-container">
+    <div id="leaflet-map" style="display:none"></div>
+    <div id="map-ph-inner" class="map-ph"><div class="mi">📍</div><div class="mt">Sin ubicación disponible</div></div>
   </div>
 </div>
 
@@ -355,26 +355,32 @@ function renderAsistTable(data){
   }).join('')}</tbody></table>`;
 }
 
+let leafletMap=null,leafletMarker=null;
+function showLeafletMap(lat,lng,label){
+  document.getElementById('map-ph-inner').style.display='none';
+  const mapEl=document.getElementById('leaflet-map');
+  mapEl.style.display='block';
+  if(!leafletMap){
+    leafletMap=L.map('leaflet-map').setView([lat,lng],16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(leafletMap);
+  }else{
+    leafletMap.setView([lat,lng],16);
+    if(leafletMarker)leafletMap.removeLayer(leafletMarker);
+  }
+  leafletMarker=L.marker([lat,lng]).addTo(leafletMap).bindPopup(label||'Ubicación').openPopup();
+  setTimeout(()=>leafletMap.invalidateSize(),200);
+}
 async function loadUbicacion(){
   if(!alumnoId)return;
-  const {data}=await sb.from('asistencias').select('*,materias(nombre)').eq('alumno_id',alumnoId).not('latitud','is',null).order('fecha',{ascending:false}).limit(10);
+  const {data}=await sb.from('asistencias').select('latitud,longitud,fecha,hora_ingreso').eq('alumno_id',alumnoId).not('latitud','is',null).order('fecha',{ascending:false}).order('hora_ingreso',{ascending:false}).limit(1);
   const ultimo=data?.[0];
   if(!ultimo){
     document.getElementById('ub-info').textContent='Sin ubicación registrada';
-    document.getElementById('map-container').innerHTML=`<div class="map-ph"><div class="mi">📍</div><div class="mt">Aún no hay registros de ubicación</div></div>`;
     return;
   }
   const fecha=new Date(ultimo.fecha).toLocaleDateString('es-PE',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('ub-info').textContent=`Última: ${fecha} a las ${ultimo.hora_ingreso?.slice(0,5)||'--'}`;
-  // Google Maps embed
-  document.getElementById('map-container').innerHTML=`<iframe src="https://maps.google.com/maps?q=${ultimo.latitud},${ultimo.longitud}&z=16&output=embed" allowfullscreen loading="lazy"></iframe>`;
-  // History table
-  if(!data?.length)return;
-  document.getElementById('d-ubicaciones').innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora</th><th>Estado</th><th>Materia</th><th>Mapa</th></tr></thead><tbody>${data.map(a=>{
-    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
-    const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
-    return`<tr><td>${fecha}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.materias?.nombre||'--'}</td><td><a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--blue);font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase">📍 Ver</a></td></tr>`;
-  }).join('')}</tbody></table>`;
+  showLeafletMap(ultimo.latitud,ultimo.longitud,`Última asistencia: ${fecha}`);
 }
 
 async function loadNotas(){
@@ -398,7 +404,9 @@ async function loadNotifs(){
   const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
   document.getElementById('d-notifs').innerHTML=data.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    const adj=n.archivo_url?`<a href="${n.archivo_url}" target="_blank" style="color:var(--blue);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:inline-block;margin-top:6px">📎 Ver adjunto</a>`:'';
+    const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
+      ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--blue);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
     return`<div class="nitem ${n.tipo}"><div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
 }
@@ -437,8 +445,8 @@ async function solicitarUbicacion(){
       if(s.estado==='aceptada'){
         st.textContent=`✅ Ubicación recibida a las ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
         st.style.color='var(--green)';
-        document.getElementById('map-container').innerHTML=`<iframe src="https://maps.google.com/maps?q=${s.latitud},${s.longitud}&z=16&output=embed" allowfullscreen loading="lazy"></iframe>`;
-        document.getElementById('ub-info').textContent=`Ubicación en tiempo real — ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
+        showLeafletMap(s.latitud,s.longitud,'Ubicación en tiempo real');
+        document.getElementById('ub-info').textContent=`Ubicación recibida a las ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
         btn.disabled=false;sb.removeChannel(solicitudChannel);solicitudChannel=null;
       }else if(s.estado==='rechazada'||s.estado==='timeout'){
         const motivo=s.notas?` (${s.notas})`:'';
