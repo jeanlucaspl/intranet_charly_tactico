@@ -176,15 +176,18 @@
   <div style="background:var(--navy2);border:2px solid var(--gold);width:100%;max-width:360px;padding:28px 24px;text-align:center;animation:fi .3s ease">
     <div style="font-size:44px;margin-bottom:12px">📍</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-bottom:8px;color:var(--gold)">SOLICITUD DE UBICACIÓN</div>
-    <div style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--muted);margin-bottom:8px;line-height:1.6">
+    <div style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--muted);margin-bottom:6px;line-height:1.6">
       Tu padre / apoderado quiere conocer tu ubicación actual.
+    </div>
+    <div id="dlg-status" style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--white);margin:12px 0;min-height:44px;line-height:1.5;padding:10px;background:var(--navy3);border:1px solid var(--border)">
+      🔍 Verificando dispositivo...
     </div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--yellow);text-transform:uppercase;margin-bottom:20px">
       Esta solicitud expira en <span id="dlg-countdown">10:00</span>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn" style="flex:1;background:var(--red);color:var(--white);border:none" onclick="denegarUbicacion('rechazado')">✗ DENEGAR</button>
-      <button class="btn btn-gold" style="flex:1" onclick="aceptarUbicacion()">✓ COMPARTIR</button>
+      <button id="dlg-btn-deny" class="btn" style="flex:1;background:var(--red);color:var(--white);border:none;display:none" onclick="denegarUbicacion('rechazado')">✗ RECHAZAR</button>
+      <button id="dlg-btn-retry" class="btn btn-gold" style="flex:1;display:none" onclick="procesarUbicacionAuto()">🔄 REINTENTAR</button>
     </div>
   </div>
 </div>
@@ -536,38 +539,57 @@ function setupLocationRequestListener(){
       payload=>{if(payload.new.estado==='pendiente')mostrarDialogoUbicacion(payload.new.id);}
     ).subscribe();
 }
+const fmtCd=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+function setDlgStatus(msg,showBtns=false){
+  document.getElementById('dlg-status').innerHTML=msg;
+  document.getElementById('dlg-btn-deny').style.display=showBtns?'block':'none';
+  document.getElementById('dlg-btn-retry').style.display=showBtns?'block':'none';
+}
 function mostrarDialogoUbicacion(solicitudId){
   pendingSolicitudId=solicitudId;
   dlgCountdownSec=600;
-  const fmt=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-  document.getElementById('dlg-countdown').textContent=fmt(dlgCountdownSec);
+  document.getElementById('dlg-countdown').textContent=fmtCd(dlgCountdownSec);
   document.getElementById('dlg-ubicacion').style.display='flex';
   if(dlgCountdownTimer)clearInterval(dlgCountdownTimer);
   dlgCountdownTimer=setInterval(()=>{
     dlgCountdownSec--;
     const el=document.getElementById('dlg-countdown');
-    if(el)el.textContent=fmt(dlgCountdownSec);
+    if(el)el.textContent=fmtCd(dlgCountdownSec);
     if(dlgCountdownSec<=0){clearInterval(dlgCountdownTimer);denegarUbicacion('timeout_alumno');}
   },1000);
+  procesarUbicacionAuto();
 }
-async function aceptarUbicacion(){
-  clearInterval(dlgCountdownTimer);
-  document.getElementById('dlg-ubicacion').style.display='none';
-  if(!pendingSolicitudId)return;
-  // Verificaciones nativas anti-fraude (app Android siempre disponible para alumnos)
-  if(window.AndroidNative?.isDeveloperOptionsEnabled()) return denegarUbicacion('developer_options_activas');
-  if(window.AndroidNative?.isMockLocationEnabled())    return denegarUbicacion('mock_gps_detectado');
-  if(window.AndroidNative?.hasMockLocationApps())      return denegarUbicacion('app_mock_gps_instalada');
-  if(!navigator.geolocation)return denegarUbicacion('sin_gps');
+async function procesarUbicacionAuto(){
+  setDlgStatus('🔍 Verificando dispositivo...');
+  if(window.AndroidNative){
+    if(AndroidNative.isDeveloperOptionsEnabled()){
+      setDlgStatus('⚠️ Tenés las opciones de desarrollador activadas.<br>Desactiválas en Ajustes → Opciones de desarrollador y presioná Reintentar.',true);
+      return;
+    }
+    if(AndroidNative.isMockLocationEnabled()){
+      setDlgStatus('⚠️ Se detectó ubicación simulada (GPS falso) activa.<br>Desactivála y presioná Reintentar.',true);
+      return;
+    }
+    if(AndroidNative.hasMockLocationApps()){
+      setDlgStatus('⚠️ Tenés una app de GPS falso instalada.<br>Desinstalála y presioná Reintentar.',true);
+      return;
+    }
+  }
+  if(!navigator.geolocation){denegarUbicacion('sin_gps');return;}
+  setDlgStatus('📡 Obteniendo ubicación GPS...');
   navigator.geolocation.getCurrentPosition(
     async pos=>{
+      if(!pendingSolicitudId)return;
+      setDlgStatus('✅ Ubicación compartida correctamente.');
       await sb.from('solicitudes_ubicacion').update({
         estado:'aceptada',latitud:pos.coords.latitude,longitud:pos.coords.longitude,
         respondido_en:new Date().toISOString()
       }).eq('id',pendingSolicitudId);
       pendingSolicitudId=null;
+      clearInterval(dlgCountdownTimer);
+      setTimeout(()=>{document.getElementById('dlg-ubicacion').style.display='none';},2000);
     },
-    async()=>denegarUbicacion('error_gps'),
+    ()=>denegarUbicacion('error_gps'),
     {timeout:10000,enableHighAccuracy:true}
   );
 }
