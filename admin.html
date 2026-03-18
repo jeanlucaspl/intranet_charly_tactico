@@ -1027,6 +1027,12 @@ const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 const STORAGE = SB_URL + '/storage/v1/object/public/';
+async function sendFcmToUsers(perfil_ids,title,body){
+  if(!perfil_ids?.length)return;
+  const {data:tokens}=await sb.from('fcm_tokens').select('token').in('user_id',perfil_ids);
+  if(!tokens?.length)return;
+  await Promise.all(tokens.map(t=>fetch(`${SB_URL}/functions/v1/send-fcm`,{method:'POST',headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({token:t.token,title,body})}).catch(()=>{})));
+}
 // ── SEGURIDAD ──
 async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
@@ -1382,6 +1388,7 @@ async function cambiarContrasena(){
   if(!pass||pass.length<6)return showMsg(msg,'Mínimo 6 caracteres','err');
   // Update in gestion_contrasenas table
   await sb.from('gestion_contrasenas').upsert({perfil_id:uid,contrasena_actual:pass,actualizado_en:new Date().toISOString()},{onConflict:'perfil_id'});
+  sendFcmToUsers([uid],'🔑 Contraseña actualizada','Tu contraseña en la academia fue modificada por un administrador.');
   // Note: changing Supabase auth password requires admin API key (service_role)
   // With anon key we can only store the new password for reference
   showMsg(msg,'✅ Contraseña actualizada en registros. Para aplicarla en el sistema de auth, usa el panel de Supabase → Authentication → Users','ok');
@@ -1720,6 +1727,7 @@ async function saveHorario(){
   const {error}=await sb.from('horario_semanal').insert({semana_inicio:semana,dia,aula_id:aulaId||null,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Clase agregada ✅','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','profesor']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📅 Horario actualizado','Se realizó un cambio en el horario de clases. Revisalo en la app.');});
   await loadHorario();
   setTimeout(()=>closeMd('md-horario'),1200);
 }
@@ -1737,6 +1745,8 @@ async function saveNota(){
   const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Nota guardada ✅','ok');
+  const _matNota=document.getElementById('n-materia')?.selectedOptions[0]?.text||'una materia';
+  sendFcmToUsers([alumnoId],'📝 Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
   await loadNotas();
   setTimeout(()=>closeMd('md-nota'),1200);
 }
@@ -1757,6 +1767,7 @@ async function savePractica(){
   const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   showMsg(msg,'Práctica subida ✅','ok');
+  sb.from('perfiles').select('id').eq('rol','alumno').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);});
   practicaFile=null; document.getElementById('p-fname').textContent='';
   await loadPracticas();
   btn.disabled=false; btn.textContent='SUBIR PRÁCTICA';
@@ -1802,6 +1813,8 @@ async function sendNotif(){
     if(err)return showMsg(msg,'Error: '+err.error.message,'err');
   }
   showMsg(msg,`Enviada a ${recipientIds.length||1} destinatario(s) ✅`,'ok');
+  if(dest==='global'&&dniList.length===0){sb.from('perfiles').select('id').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),titulo,mensaje);});}
+  else{sendFcmToUsers(recipientIds.length?recipientIds:[dest],titulo,mensaje);}
   document.getElementById('n-titulo').value='';document.getElementById('n-msg-txt').value='';
   notifFile=null;dniList=[];document.getElementById('n-adj-name').textContent='';document.getElementById('dni-name').textContent='';
   await loadNotifHist();
@@ -1827,7 +1840,11 @@ async function saveAllAtt(){
   if(!rows.length)return alert('No has marcado ningún alumno.');
   const {error}=await sb.from('asistencias').upsert(rows,{onConflict:'alumno_id,fecha,materia_id'});
   if(error)alert('Error: '+error.message);
-  else{alert(`✅ ${rows.length} asistencias guardadas.`);loadDashboard()}
+  else{alert(`✅ ${rows.length} asistencias guardadas.`);
+  const _aMat=document.getElementById('a-materia')?.selectedOptions[0]?.text||'clase',_aHora=nowTime(),_aIds=rows.map(r=>r.alumno_id);
+  sendFcmToUsers(_aIds,'✅ Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
+  sb.from('padres_alumnos').select('padre_id').in('alumno_id',_aIds).then(({data})=>{if(data?.length)sendFcmToUsers([...new Set(data.map(l=>l.padre_id))],'📋 Asistencia registrada',`Tu hijo se presentó a ${_aMat} a las ${_aHora}.`);});
+  loadDashboard()}
 }
 
 // ── FACIAL ──
@@ -1881,6 +1898,9 @@ async function confirmAtt(estado){
   if(!verifyAlumno)return;
   const mid=document.getElementById('f-materia').value||null;
   await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
+  const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_cHora=nowTime();
+  sendFcmToUsers([_cAlumno.id],'✅ Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
   addFacialLog(verifyAlumno,estado,true);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
   setCamSt('✅ Registrado — Siguiente cadete','cs-ok');loadDashboard();
@@ -1934,6 +1954,9 @@ async function saveManual(){
   const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
   if(error){alert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
+  const _mMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_mHora=nowTime();
+  sendFcmToUsers([alumnoId],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
   closeMd('md-manual');loadDashboard();
 }
