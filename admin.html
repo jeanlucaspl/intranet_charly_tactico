@@ -1793,10 +1793,13 @@ async function sendNotif(){
     recipientIds=perfs?.map(p=>p.id)||[];
   }
   if(dest==='global'&&dniList.length===0){
-    await sb.from('notificaciones').insert({titulo,mensaje,tipo:nTypeNow,global:true,archivo_url:archivoUrl,archivo_tipo:archivoTipo});
+    const {error}=await sb.from('notificaciones').insert({titulo,mensaje,tipo:nTypeNow,global:true,leida:false,archivo_url:archivoUrl,archivo_tipo:archivoTipo});
+    if(error)return showMsg(msg,'Error: '+error.message,'err');
   } else {
     const ids=recipientIds.length?recipientIds:[dest];
-    await Promise.all(ids.map(id=>sb.from('notificaciones').insert({titulo,mensaje,tipo:nTypeNow,destinatario_id:id,global:false,archivo_url:archivoUrl,archivo_tipo:archivoTipo})));
+    const results=await Promise.all(ids.map(id=>sb.from('notificaciones').insert({titulo,mensaje,tipo:nTypeNow,destinatario_id:id,global:false,leida:false,archivo_url:archivoUrl,archivo_tipo:archivoTipo})));
+    const err=results.find(r=>r.error);
+    if(err)return showMsg(msg,'Error: '+err.error.message,'err');
   }
   showMsg(msg,`Enviada a ${recipientIds.length||1} destinatario(s) ✅`,'ok');
   document.getElementById('n-titulo').value='';document.getElementById('n-msg-txt').value='';
