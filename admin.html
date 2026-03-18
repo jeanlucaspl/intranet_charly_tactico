@@ -1917,7 +1917,8 @@ async function saveManual(){
   const estado=document.getElementById('man-estado').value;
   if(!alumnoId)return alert('Selecciona un alumno primero buscando por apellido o DNI');
   const mid=document.getElementById('f-materia').value||null;
-  await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
+  const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
+  if(error){alert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
   if(a)addFacialLog(a,estado,false);
   closeMd('md-manual');loadDashboard();
