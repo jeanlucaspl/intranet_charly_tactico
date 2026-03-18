@@ -482,25 +482,36 @@ async function solicitarUbicacion(){
   solicitudChannel=sb.channel(`sol-padre-${sol.id}`)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'solicitudes_ubicacion',filter:`id=eq.${sol.id}`},payload=>{
       const s=payload.new;
-      if(s.estado==='aceptada'){
-        st.textContent=`✅ Ubicación recibida a las ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
-        st.style.color='var(--green)';
-        showLeafletMap(s.latitud,s.longitud,'Ubicación en tiempo real');
-        document.getElementById('ub-info').textContent=`Ubicación recibida a las ${new Date(s.respondido_en).toLocaleTimeString('es-PE')}`;
-        btn.disabled=false;sb.removeChannel(solicitudChannel);solicitudChannel=null;
-      }else if(s.estado==='rechazada'||s.estado==='timeout'){
+      if(s.estado==='aceptada'){mostrarUbicacionRecibida(s,btn,st);}
+      else if(s.estado==='rechazada'||s.estado==='timeout'){
         const motivo=s.notas?` (${s.notas})`:'';
         st.textContent=`⚠️ El alumno no compartió su ubicación${motivo}. La academia ha sido notificada.`;
-        st.style.color='var(--red)';btn.disabled=false;sb.removeChannel(solicitudChannel);solicitudChannel=null;
+        st.style.color='var(--red)';btn.disabled=false;stopPollSolicitud();
       }
     }).subscribe();
-  setTimeout(()=>{
-    if(!solicitudChannel)return;
-    sb.removeChannel(solicitudChannel);solicitudChannel=null;
-    st.textContent='⏰ Sin respuesta después de 10 minutos.';st.style.color='var(--red)';btn.disabled=false;
-  },600000);
+  // Polling cada 3s como fallback (Realtime puede no disparar si el update viene de Android nativo)
+  let _pollSol=sol.id,_pollTimer=null;
+  function stopPollSolicitud(){clearInterval(_pollTimer);_pollTimer=null;if(solicitudChannel){sb.removeChannel(solicitudChannel);solicitudChannel=null;}}
+  _pollTimer=setInterval(async()=>{
+    const{data:s}=await sb.from('solicitudes_ubicacion').select('estado,latitud,longitud,respondido_en,notas').eq('id',_pollSol).single();
+    if(!s)return;
+    if(s.estado==='aceptada'&&s.latitud){stopPollSolicitud();mostrarUbicacionRecibida(s,btn,st);}
+    else if(s.estado==='rechazada'){
+      stopPollSolicitud();
+      const motivo=s.notas?` (${s.notas})`:'';
+      st.textContent=`⚠️ El alumno no compartió su ubicación${motivo}.`;st.style.color='var(--red)';btn.disabled=false;
+    }
+  },3000);
+  setTimeout(()=>{if(_pollTimer){stopPollSolicitud();st.textContent='⏰ Sin respuesta después de 10 minutos.';st.style.color='var(--red)';btn.disabled=false;}},600000);
 }
 
+function mostrarUbicacionRecibida(s,btn,st){
+  const hora=new Date(s.respondido_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+  st.textContent=`✅ Ubicación recibida a las ${hora}`;st.style.color='var(--green)';
+  showLeafletMap(s.latitud,s.longitud,'📍 Ubicación en tiempo real');
+  document.getElementById('ub-info').textContent=`📍 Ubicación en tiempo real: ${hora}`;
+  if(btn)btn.disabled=false;
+}
 function setContactoFile(input){contactoFile=input.files[0];if(contactoFile)document.getElementById('c-fname').textContent=contactoFile.name}
 
 async function sendContacto(){
