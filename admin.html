@@ -856,7 +856,22 @@
   <div class="md">
     <div class="md-hd"><div class="md-ttl">MARCAR MANUAL</div><button class="md-x" onclick="closeMd('md-manual')">✕</button></div>
     <div class="md-bd">
-      <div class="fg"><label>Alumno</label><select id="man-alumno"><option value="">-- Selecciona --</option></select></div>
+      <input type="hidden" id="man-alumno"/>
+      <div class="fg">
+        <label>Buscar por Apellido</label>
+        <div style="position:relative">
+          <input type="text" id="man-apellido-inp" placeholder="Escribe apellido..." autocomplete="off" oninput="manSuggest('apellido')" onfocus="manSuggest('apellido')" onblur="setTimeout(()=>hideSug('man-apellido-sug'),150)" style="width:100%"/>
+          <div id="man-apellido-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Buscar por DNI</label>
+        <div style="position:relative">
+          <input type="text" id="man-dni-inp" placeholder="Escribe DNI..." autocomplete="off" oninput="manSuggest('dni')" onfocus="manSuggest('dni')" onblur="setTimeout(()=>hideSug('man-dni-sug'),150)" style="width:100%"/>
+          <div id="man-dni-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:4px">✅ <span id="man-selected-name"></span></div>
       <div class="fg"><label>Estado</label>
         <select id="man-estado">
           <option value="presente">✅ Presente</option>
@@ -1871,10 +1886,38 @@ function addFacialLog(alumno,estado,facial){
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
   document.getElementById('f-log').innerHTML=[...facialLog].reverse().map(l=>`<div class="flog-item ${l.facial?'':'man'}"><span style="font-size:16px">${l.facial?'📸':'✏️'}</span><span style="flex:1">${l.nombre}</span><span style="color:var(--muted);font-size:10px">${l.hora}</span><span class="badge ${bc[l.estado]}">${l.estado}</span></div>`).join('');
 }
+// ── BÚSQUEDA MANUAL POR APELLIDO / DNI ──
+function manSuggest(campo){
+  const q=(campo==='apellido'
+    ?document.getElementById('man-apellido-inp').value
+    :document.getElementById('man-dni-inp').value).trim().toLowerCase();
+  const sugId='man-'+campo+'-sug';
+  const box=document.getElementById(sugId);
+  if(!q){box.style.display='none';return}
+  const filtro=campo==='apellido'
+    ?allAlumnos.filter(a=>a.perfiles?.apellido?.toLowerCase().startsWith(q))
+    :allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q));
+  if(!filtro.length){box.style.display='none';return}
+  box.innerHTML=filtro.slice(0,8).map(a=>`<div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.08em;border-bottom:1px solid var(--border)"
+    onmousedown="selectManAlumno('${a.id}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&#39;')}','${a.perfiles?.apellido||''}','${a.perfiles?.dni||''}')">
+    <span style="color:var(--gold)">${a.perfiles?.apellido||'--'}, ${a.perfiles?.nombre||'--'}</span>
+    <span style="color:var(--muted);font-size:10px;margin-left:8px">DNI: ${a.perfiles?.dni||'--'}</span>
+  </div>`).join('');
+  box.style.display='block';
+}
+function selectManAlumno(id,nombre,apellido,dni){
+  document.getElementById('man-alumno').value=id;
+  document.getElementById('man-apellido-inp').value=apellido;
+  document.getElementById('man-dni-inp').value=dni;
+  document.getElementById('man-selected-name').textContent=nombre;
+  document.getElementById('man-selected').style.display='block';
+  hideSug('man-apellido-sug');hideSug('man-dni-sug');
+}
+function hideSug(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 async function saveManual(){
   const alumnoId=document.getElementById('man-alumno').value;
   const estado=document.getElementById('man-estado').value;
-  if(!alumnoId)return alert('Selecciona un alumno');
+  if(!alumnoId)return alert('Selecciona un alumno primero buscando por apellido o DNI');
   const mid=document.getElementById('f-materia').value||null;
   await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
   const a=allAlumnos.find(x=>x.id===alumnoId);
@@ -2004,7 +2047,7 @@ function populateSelects(){
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
-  ['man-alumno'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Alumno --</option>'+alOpts});
+  // man-alumno is now a hidden input populated via search — no select to fill
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
@@ -2050,7 +2093,15 @@ function selectDniSug(sugId,dni,nombre){
 function hideSug(sugId){const el=document.getElementById(sugId);if(el){el.classList.remove('show');}}
 
 // ── MODAL ──
-function openMd(id){document.getElementById(id).classList.add('show')}
+function openMd(id){
+  document.getElementById(id).classList.add('show');
+  if(id==='md-manual'){
+    document.getElementById('man-alumno').value='';
+    document.getElementById('man-apellido-inp').value='';
+    document.getElementById('man-dni-inp').value='';
+    document.getElementById('man-selected').style.display='none';
+  }
+}
 function closeMd(id){document.getElementById(id).classList.remove('show')}
 
 // ── NAV ──
