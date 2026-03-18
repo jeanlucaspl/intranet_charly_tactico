@@ -286,8 +286,6 @@ async function init(){
   }
   const {data:al}=await sb.from('alumnos').select('*').eq('perfil_id',uid).single();
   if(al){alumnoId=al.id;alumnoData=al}
-  const mon=weekStart();
-  document.getElementById('hor-semana').value=mon;
   await Promise.all([loadNotas(),loadAsistencias(),loadNotifs(),loadPracticas(),loadHorario()]);
   setupLocationRequestListener();
   saveFcmToken();
@@ -300,7 +298,9 @@ async function saveFcmToken(){
   for(let i=0;i<10;i++){
     const token=AndroidNative.getFcmToken();
     if(token){
-      await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      const {error}=await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      if(error)console.error('FCM upsert error:',error.message,error.code);
+      else console.log('FCM token guardado OK');
       return;
     }
     await new Promise(r=>setTimeout(r,2000));
@@ -386,9 +386,10 @@ async function loadPracticas(){
   // Get materias of this alumno
   const {data:mats}=alumnoId?await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId):{data:[]};
   const matIds=mats?.map(m=>m.materia_id)||[];
-  let query=sb.from('practicas').select('*,materias(nombre)').eq('activa',true).order('semana_inicio',{ascending:false});
+  let query=sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
   if(matIds.length)query=query.in('materia_id',matIds);
-  const {data:practicas}=await query;
+  const {data:practicasRaw}=await query;
+  const practicas=(practicasRaw||[]).filter(p=>p.activa!==false);
   // Get submitted solutions
   const {data:sols}=alumnoId?await sb.from('soluciones').select('*').eq('alumno_id',alumnoId):{data:[]};
   const solMap={};sols?.forEach(s=>solMap[s.practica_id]=s);

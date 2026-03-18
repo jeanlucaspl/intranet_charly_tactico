@@ -298,9 +298,6 @@ async function init(){
   const{data:prof}=await sb.from('profesores').select('*').eq('perfil_id',uid).single();
   if(prof){profesorId=prof.id;profesorData=prof;}
 
-  const mon=weekStart();
-  document.getElementById('hor-semana').value=mon;
-
   await Promise.all([loadDashboard(),loadHorario(),loadHistorial()]);
   loadFaceApi();
   checkYaMarcado();
