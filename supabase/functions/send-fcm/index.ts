@@ -26,6 +26,24 @@ Deno.serve(async (req) => {
     const sa = JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT")!);
     const accessToken = await getAccessToken(sa);
 
+    // Solicitudes de ubicación → data-only (sin notification) para que
+    // onMessageReceived se llame siempre, incluso con app en background.
+    // El título/body van dentro de data para que el servicio nativo pueda leerlos.
+    const isLocationRequest = data?.type === "location_request";
+
+    const message = isLocationRequest
+      ? {
+          token,
+          android: { priority: "HIGH" },
+          data: { title, body: body ?? "", ...data },
+        }
+      : {
+          token,
+          notification: { title, body: body ?? "" },
+          android: { priority: "HIGH" },
+          ...(data ? { data } : {}),
+        };
+
     const res = await fetch(
       `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
       {
@@ -34,14 +52,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: {
-            token,
-            notification: { title, body: body ?? "" },
-            android: { priority: "HIGH" },
-            ...(data ? { data } : {}),
-          },
-        }),
+        body: JSON.stringify({ message }),
       }
     );
 
