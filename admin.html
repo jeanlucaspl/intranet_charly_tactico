@@ -1159,7 +1159,6 @@ async function init(){
   }
   document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   const mon = weekStart();
-  document.getElementById('h-semana').value = mon;
   document.getElementById('hor-semana').value = mon;
   document.getElementById('p-semana').value = mon;
   await loadAcademiaConfig();
@@ -1482,7 +1481,7 @@ async function loadContacto(){
   }).join('');
 }
 async function loadHorario(){
-  const semana=document.getElementById('h-semana').value;
+  const semana=document.getElementById('hor-semana')?.value;
   if(!semana)return;
   const {data}=await sb.from('horario_semanal').select('*,materias(nombre),aulas(nombre)').eq('semana_inicio',semana).order('hora_inicio');
   const dias=['lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -1717,7 +1716,6 @@ async function saveHorario(){
   const {error}=await sb.from('horario_semanal').insert({semana_inicio:semana,dia,aula_id:aulaId||null,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Clase agregada ✅','ok');
-  document.getElementById('h-semana').value=semana;
   await loadHorario();
   setTimeout(()=>closeMd('md-horario'),1200);
 }
@@ -2131,7 +2129,7 @@ function closeSb(){document.getElementById('sidebar').classList.remove('open');d
 // Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
 (function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
-async function doLogout(){ await sb.auth.signOut(); }
+async function doLogout(){ await sb.auth.signOut(); location.replace('index.html'); }
 
 // ── HORARIO PLANTILLA ──
 const HOR_SLOTS=[
