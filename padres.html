@@ -295,6 +295,7 @@ sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'&&authListenerReady)locatio
 window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
 let uid=null,padreData=null,alumnoId=null,alumnoData=null,contactoFile=null,solicitudChannel=null;
+let _pollTimer=null,_pollSolId=null;
 
 function todayISO(){return new Date().toISOString().split('T')[0]}
 
@@ -479,38 +480,39 @@ async function solicitarUbicacion(){
     }
   }
   if(solicitudChannel){sb.removeChannel(solicitudChannel);solicitudChannel=null;}
-  solicitudChannel=sb.channel(`sol-padre-${sol.id}`)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'solicitudes_ubicacion',filter:`id=eq.${sol.id}`},payload=>{
-      const s=payload.new;
-      if(s.estado==='aceptada'){mostrarUbicacionRecibida(s,btn,st);}
-      else if(s.estado==='rechazada'||s.estado==='timeout'){
-        const motivo=s.notas?` (${s.notas})`:'';
-        st.textContent=`⚠️ El alumno no compartió su ubicación${motivo}. La academia ha sido notificada.`;
-        st.style.color='var(--red)';btn.disabled=false;stopPollSolicitud();
-      }
-    }).subscribe();
-  // Polling cada 3s como fallback (Realtime puede no disparar si el update viene de Android nativo)
-  let _pollSol=sol.id,_pollTimer=null;
-  function stopPollSolicitud(){clearInterval(_pollTimer);_pollTimer=null;if(solicitudChannel){sb.removeChannel(solicitudChannel);solicitudChannel=null;}}
+  if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}
+  _pollSolId=sol.id;
   _pollTimer=setInterval(async()=>{
-    const{data:s}=await sb.from('solicitudes_ubicacion').select('estado,latitud,longitud,respondido_en,notas').eq('id',_pollSol).single();
+    const{data:s}=await sb.from('solicitudes_ubicacion').select('estado,latitud,longitud,respondido_en,notas').eq('id',_pollSolId).single();
+    console.log('poll:',s?.estado,s?.latitud);
     if(!s)return;
-    if(s.estado==='aceptada'&&s.latitud){stopPollSolicitud();mostrarUbicacionRecibida(s,btn,st);}
-    else if(s.estado==='rechazada'){
-      stopPollSolicitud();
+    if(s.estado==='aceptada'&&s.latitud){
+      clearInterval(_pollTimer);_pollTimer=null;
+      mostrarUbicacionRecibida(s);
+    }else if(s.estado==='rechazada'){
+      clearInterval(_pollTimer);_pollTimer=null;
       const motivo=s.notas?` (${s.notas})`:'';
-      st.textContent=`⚠️ El alumno no compartió su ubicación${motivo}.`;st.style.color='var(--red)';btn.disabled=false;
+      document.getElementById('sol-status').textContent=`⚠️ El alumno no compartió su ubicación${motivo}.`;
+      document.getElementById('sol-status').style.color='var(--red)';
+      document.getElementById('btn-solicitar-ub').disabled=false;
     }
   },3000);
-  setTimeout(()=>{if(_pollTimer){stopPollSolicitud();st.textContent='⏰ Sin respuesta después de 10 minutos.';st.style.color='var(--red)';btn.disabled=false;}},600000);
+  setTimeout(()=>{
+    if(!_pollTimer)return;
+    clearInterval(_pollTimer);_pollTimer=null;
+    document.getElementById('sol-status').textContent='⏰ Sin respuesta después de 10 minutos.';
+    document.getElementById('sol-status').style.color='var(--red)';
+    document.getElementById('btn-solicitar-ub').disabled=false;
+  },600000);
 }
 
-function mostrarUbicacionRecibida(s,btn,st){
+function mostrarUbicacionRecibida(s){
   const hora=new Date(s.respondido_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
-  st.textContent=`✅ Ubicación recibida a las ${hora}`;st.style.color='var(--green)';
-  showLeafletMap(s.latitud,s.longitud,'📍 Ubicación en tiempo real');
+  const st=document.getElementById('sol-status');
+  if(st){st.textContent=`✅ Ubicación recibida a las ${hora}`;st.style.color='var(--green)';}
+  document.getElementById('btn-solicitar-ub').disabled=false;
   document.getElementById('ub-info').textContent=`📍 Ubicación en tiempo real: ${hora}`;
-  if(btn)btn.disabled=false;
+  showLeafletMap(s.latitud,s.longitud,'📍 Ubicación en tiempo real');
 }
 function setContactoFile(input){contactoFile=input.files[0];if(contactoFile)document.getElementById('c-fname').textContent=contactoFile.name}
 
