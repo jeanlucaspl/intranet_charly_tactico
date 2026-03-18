@@ -203,7 +203,16 @@
     <div class="sc"><div class="sc-lbl">Materias</div><div class="sc-val" id="s-mat">--</div><div class="sc-sub">Activas</div></div>
     <div class="sc"><div class="sc-lbl">Notificaciones</div><div class="sc-val" id="s-notif" style="color:var(--red)">--</div><div class="sc-sub">Sin leer</div></div>
   </div>
-  <div class="tw">
+  <!-- Estado del dispositivo — solo visible en app Android -->
+  <div id="device-status-card" style="display:none;margin-top:16px;background:var(--navy2);border:1px solid var(--border);overflow:hidden">
+    <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+      <span id="device-status-badge" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
+    </div>
+    <div id="device-status-list" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="device-status-warn" style="display:none;padding:12px 16px;border-top:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;line-height:1.6;color:var(--yellow)"></div>
+  </div>
+  <div class="tw" style="margin-top:16px">
     <div class="th"><span class="th-ttl">Mis Notas — Resumen</span></div>
     <div id="d-notas-res"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
   </div>
@@ -297,6 +306,7 @@ async function init(){
   setupLocationRequestListener();
   saveFcmToken();
   checkPendingSolicitud();
+  checkDeviceStatus();
 }
 
 async function saveFcmToken(){
@@ -516,6 +526,33 @@ async function selectHorAulaTab(aulaId){
   wrap.innerHTML=html;
 }
 
+function checkDeviceStatus(){
+  if(!window.AndroidNative)return;
+  document.getElementById('device-status-card').style.display='block';
+  const checks=[
+    {label:'GPS disponible',ok:!!navigator.geolocation,failMsg:'Tu dispositivo no tiene GPS.'},
+    {label:'Opciones de desarrollador',ok:!AndroidNative.isDeveloperOptionsEnabled(),failMsg:'Tenés las opciones de desarrollador activadas. Desactiválas en Ajustes → Sistema → Opciones de desarrollador.'},
+    {label:'Ubicación simulada (mock GPS)',ok:!AndroidNative.isMockLocationEnabled(),failMsg:'Se detectó GPS falso activo. Desactivá la ubicación simulada.'},
+    {label:'Apps de GPS falso',ok:!AndroidNative.hasMockLocationApps(),failMsg:'Tenés una app de GPS falso instalada. Desinstalála.'},
+  ];
+  const problemas=checks.filter(c=>!c.ok);
+  const badge=document.getElementById('device-status-badge');
+  const list=document.getElementById('device-status-list');
+  const warn=document.getElementById('device-status-warn');
+  list.innerHTML=checks.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">${c.ok?'✅':'❌'}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;color:${c.ok?'var(--muted)':'var(--red)'};text-transform:uppercase">${c.label}</span>
+    </div>`).join('');
+  if(problemas.length){
+    badge.textContent='⚠️ PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.12)';
+    warn.style.display='block';
+    warn.innerHTML='⚠️ <strong>Si tu padre solicita tu ubicación ahora, no podremos compartirla automáticamente y la academia será notificada.</strong><br><br>'+problemas.map(p=>`• ${p.failMsg}`).join('<br>');
+  }else{
+    badge.textContent='✅ TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.12)';
+    warn.style.display='none';
+  }
+}
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 
 function showPanel(id,btn){
