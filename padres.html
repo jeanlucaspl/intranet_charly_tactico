@@ -387,14 +387,26 @@ function showLeafletMap(lat,lng,label){
 }
 async function loadUbicacion(){
   if(!alumnoId)return;
-  const {data}=await sb.from('asistencias').select('latitud,longitud,fecha,hora_ingreso').eq('alumno_id',alumnoId).not('latitud','is',null).order('fecha',{ascending:false}).order('hora_ingreso',{ascending:false}).limit(1);
-  const ultimo=data?.[0];
-  if(!ultimo){
-    document.getElementById('ub-info').textContent='Sin ubicación registrada';
+  // Prioridad 1: última solicitud de ubicación aceptada (tiempo real)
+  const {data:solData}=await sb.from('solicitudes_ubicacion')
+    .select('latitud,longitud,respondido_en')
+    .eq('alumno_id',alumnoId).eq('estado','aceptada')
+    .not('latitud','is',null)
+    .order('respondido_en',{ascending:false}).limit(1);
+  if(solData?.[0]){
+    const s=solData[0];
+    const hora=new Date(s.respondido_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+    const fecha=new Date(s.respondido_en).toLocaleDateString('es-PE',{weekday:'long',day:'2-digit',month:'long'});
+    document.getElementById('ub-info').textContent=`📍 Ubicación en tiempo real: ${fecha} a las ${hora}`;
+    showLeafletMap(s.latitud,s.longitud,`📍 ${fecha} ${hora}`);
     return;
   }
+  // Prioridad 2: última asistencia con GPS
+  const {data}=await sb.from('asistencias').select('latitud,longitud,fecha,hora_ingreso').eq('alumno_id',alumnoId).not('latitud','is',null).order('fecha',{ascending:false}).order('hora_ingreso',{ascending:false}).limit(1);
+  const ultimo=data?.[0];
+  if(!ultimo){document.getElementById('ub-info').textContent='Sin ubicación registrada';return;}
   const fecha=new Date(ultimo.fecha).toLocaleDateString('es-PE',{weekday:'long',day:'2-digit',month:'long'});
-  document.getElementById('ub-info').textContent=`Última: ${fecha} a las ${ultimo.hora_ingreso?.slice(0,5)||'--'}`;
+  document.getElementById('ub-info').textContent=`Última asistencia: ${fecha} a las ${ultimo.hora_ingreso?.slice(0,5)||'--'}`;
   showLeafletMap(ultimo.latitud,ultimo.longitud,`Última asistencia: ${fecha}`);
 }
 

