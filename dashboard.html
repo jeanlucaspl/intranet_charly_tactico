@@ -74,12 +74,16 @@
     .nota-b{color:var(--red);font-weight:600}
 
     /* HORARIO */
-    .hgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
-    .hday{background:var(--navy2);border:1px solid var(--border);padding:12px}
-    .hday-name{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:7px;margin-bottom:8px}
-    .hclase{background:var(--navy3);border-left:2px solid var(--gold);padding:8px 10px;margin-bottom:4px}
-    .hclase-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-    .hclase-inf{font-size:11px;color:var(--muted);margin-top:2px}
+    .hor-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hor-table th{background:var(--gold);color:var(--navy);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;text-align:center;border:1px solid rgba(201,168,76,.4)}
+    .hor-table td{border:1px solid rgba(201,168,76,.15);padding:0;vertical-align:top}
+    .hor-slot-time{background:var(--gold);color:var(--navy);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;text-align:center;padding:6px 8px;vertical-align:middle;white-space:nowrap;width:72px;line-height:1.3}
+    .hor-section-hdr td{background:rgba(201,168,76,.3);color:var(--gold2);font-family:'Bebas Neue',sans-serif;font-size:13px;text-align:center;padding:5px;letter-spacing:.2em}
+    .hor-brake-row td{background:rgba(201,168,76,.08);font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--gold);text-align:center;padding:3px;letter-spacing:.12em;text-transform:uppercase}
+    .hor-cell{padding:7px 8px;min-height:52px;height:100%;display:block}
+    .hor-cell .hc-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white);line-height:1.2}
+    .hor-cell .hc-prof{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.2}
+    .hor-cell .hc-empty{color:var(--muted);font-size:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:4px 0}
 
     /* NOTIF */
     .nlist{display:flex;flex-direction:column;gap:3px}
@@ -130,14 +134,14 @@
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
-    @media(max-width:959px) and (min-width:768px){.sidebar{width:190px}.main{margin-left:190px;padding:20px 16px}.hgrid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:959px) and (min-width:768px){.sidebar{width:190px}.main{margin-left:190px;padding:20px 16px}}
     @media(max-width:767px){
       .sidebar{transform:translateX(-100%);width:250px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
       .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
       .tb-user{display:none}.cg{grid-template-columns:repeat(2,1fr)}.ttl{font-size:28px}
-      .hgrid{grid-template-columns:repeat(2,1fr)}.prac-grid{grid-template-columns:1fr}
+      .prac-grid{grid-template-columns:1fr}
     }
-    @media(max-width:479px){.cg{grid-template-columns:1fr 1fr}.ttl{font-size:24px}.hgrid{grid-template-columns:1fr}.sc-val{font-size:30px}}
+    @media(max-width:479px){.cg{grid-template-columns:1fr 1fr}.ttl{font-size:24px}.sc-val{font-size:30px}}
     @media(hover:none){tbody tr:hover td{background:transparent}}
   </style>
 </head>
@@ -201,14 +205,10 @@
 
 <!-- HORARIO -->
 <div class="panel" id="panel-horario">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div><div class="eye">Semana académica</div><div class="ttl">MI HORARIO</div></div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input type="date" id="hor-semana" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:7px 10px;font-family:'Barlow',sans-serif;font-size:12px;outline:none"/>
-      <button class="btn btn-outline" onclick="loadHorario()">Ver</button>
-    </div>
+  <div class="ph"><div class="eye">Plantilla semanal</div><div class="ttl">MI HORARIO</div></div>
+  <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="d-horario">
+    <div class="empty"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div>
   </div>
-  <div class="hgrid" id="d-horario"><div class="empty" style="grid-column:1/-1"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div></div>
 </div>
 
 <!-- ASISTENCIAS -->
@@ -386,7 +386,7 @@ async function loadPracticas(){
   // Get materias of this alumno
   const {data:mats}=alumnoId?await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId):{data:[]};
   const matIds=mats?.map(m=>m.materia_id)||[];
-  let query=sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
+  let query=sb.from('practicas').select('*,materias(nombre)').eq('activa',true).order('semana_inicio',{ascending:false});
   if(matIds.length)query=query.in('materia_id',matIds);
   const {data:practicas}=await query;
   // Get submitted solutions
@@ -447,22 +447,52 @@ async function submitSolucion(pid){
   setTimeout(()=>loadPracticas(),1200);
 }
 
+const HOR_SLOTS=[
+  {seccion:'MAÑANA'},
+  {slot:'08:00-09:40',label:'8:00<br>9:40'},
+  {brake:'BRAKE  9:40 – 10:00'},
+  {slot:'10:00-11:45',label:'10:00<br>11:45'},
+  {seccion:'TARDE'},
+  {slot:'15:00-16:40',label:'15:00<br>16:40'},
+  {brake:'BRAKE  16:40 – 17:00'},
+  {slot:'17:00-19:00',label:'17:00<br>19:00'},
+  {seccion:'NOCHE'},
+  {slot:'21:00-23:00',label:'21:00<br>23:00'},
+];
+const HOR_DIAS=['lunes','martes','miercoles','jueves','viernes'];
+const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+
 async function loadHorario(){
-  const semana=document.getElementById('hor-semana').value;
-  if(!semana)return;
-  const {data}=await sb.from('horario_semanal').select('*,materias(nombre),aulas(nombre)').eq('semana_inicio',semana).order('hora_inicio');
-  const dias=['lunes','martes','miércoles','jueves','viernes','sábado'];
-  document.getElementById('d-horario').innerHTML=dias.map(dia=>{
-    const clases=(data||[]).filter(h=>h.dia===dia);
-    return`<div class="hday">
-      <div class="hday-name">${dia.toUpperCase()}</div>
-      ${clases.length?clases.map(c=>`<div class="hclase">
-        <div class="hclase-mat">${c.materias?.nombre||'--'}</div>
-        <div class="hclase-inf">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)}</div>
-        <div class="hclase-inf">🏫 ${c.aulas?.nombre||'--'}</div>
-      </div>`).join(''):`<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Libre</div>`}
-    </div>`;
-  }).join('');
+  const wrap=document.getElementById('d-horario');
+  if(!alumnoId){wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">Sin datos</div></div>`;return;}
+  const {data:aulaRow}=await sb.from('alumno_aula').select('aula_id').eq('alumno_id',alumnoId).maybeSingle();
+  if(!aulaRow){wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">No estás asignado a ningún aula</div></div>`;return;}
+  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaRow.aula_id);
+  const horData={};
+  (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
+  let html=`<table class="hor-table"><thead><tr><th style="width:72px">HORA/DÍA</th>${HOR_DIAS_LABEL.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+  HOR_SLOTS.forEach(row=>{
+    if(row.seccion){
+      html+=`<tr class="hor-section-hdr"><td colspan="6">${row.seccion}</td></tr>`;
+    }else if(row.brake){
+      html+=`<tr class="hor-brake-row"><td colspan="6">${row.brake}</td></tr>`;
+    }else{
+      html+=`<tr><td class="hor-slot-time">${row.label}</td>`;
+      HOR_DIAS.forEach(dia=>{
+        const r=horData[`${dia}__${row.slot}`];
+        html+=`<td><div class="hor-cell">`;
+        if(r&&r.materias?.nombre){
+          html+=`<div class="hc-mat">${r.materias.nombre}</div><div class="hc-prof">${r.profesor_texto||''}</div>`;
+        }else{
+          html+=`<div class="hc-empty">—</div>`;
+        }
+        html+=`</div></td>`;
+      });
+      html+=`</tr>`;
+    }
+  });
+  html+=`</tbody></table>`;
+  wrap.innerHTML=html;
 }
 
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}

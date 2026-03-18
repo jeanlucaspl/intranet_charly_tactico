@@ -1589,8 +1589,12 @@ function renderPracticas(){
     <div class="prac-semana">Semana: ${p.semana_inicio}</div>
     <div class="prac-titulo">${p.titulo}</div>
     <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;margin-bottom:8px;color:${p.activa!==false?'var(--green)':'var(--red)'}">
+      ${p.activa!==false?'👁️ VISIBLE PARA ALUMNOS':'🙈 OCULTA PARA ALUMNOS'}
+    </div>
     <div class="prac-btns">
       ${p.archivo_url?`<a href="${p.archivo_url}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 Descargar PDF</a>`:'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}
+      <button class="btn btn-outline" style="font-size:10px;padding:7px 12px" onclick="togglePractica('${p.id}',${p.activa!==false})">${p.activa!==false?'Ocultar':'Mostrar'}</button>
       <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')">🗑️</button>
     </div>
   </div>`).join('');
@@ -1763,6 +1767,10 @@ async function deletePractica(id){
   await sb.from('practicas').delete().eq('id',id);
   await loadPracticas();
 }
+async function togglePractica(id,activa){
+  await sb.from('practicas').update({activa:!activa}).eq('id',id);
+  await loadPracticas();
+}
 async function sendNotif(){
   const dest=document.getElementById('n-dest').value;
   const titulo=document.getElementById('n-titulo').value.trim();
@@ -1910,6 +1918,8 @@ function selectManAlumno(id,nombre,apellido,dni){
   document.getElementById('man-selected-name').textContent=nombre;
   document.getElementById('man-selected').style.display='block';
   hideSug('man-apellido-sug');hideSug('man-dni-sug');
+  document.getElementById('man-apellido-inp').blur();
+  document.getElementById('man-dni-inp').blur();
 }
 function hideSug(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 async function saveManual(){
