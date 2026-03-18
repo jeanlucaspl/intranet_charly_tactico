@@ -1727,7 +1727,7 @@ async function saveHorario(){
   const {error}=await sb.from('horario_semanal').insert({semana_inicio:semana,dia,aula_id:aulaId||null,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Clase agregada ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['alumno','profesor']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📅 Horario actualizado','Se realizó un cambio en el horario de clases. Revisalo en la app.');});
+  sb.from('perfiles').select('id').in('rol',['alumno','profesor','admin','dueno']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📅 Horario actualizado','Se realizó un cambio en el horario de clases. Revisalo en la app.');});
   await loadHorario();
   setTimeout(()=>closeMd('md-horario'),1200);
 }
@@ -1747,6 +1747,7 @@ async function saveNota(){
   showMsg(msg,'Nota guardada ✅','ok');
   const _matNota=document.getElementById('n-materia')?.selectedOptions[0]?.text||'una materia';
   sendFcmToUsers([alumnoId],'📝 Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}. Revisalas en la app.`);});
   await loadNotas();
   setTimeout(()=>closeMd('md-nota'),1200);
 }

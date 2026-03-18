@@ -499,7 +499,7 @@ async function sendContacto(){
   const {error}=await sb.from('contacto_mensajes').insert({padre_id:uid,alumno_id:alumnoId||null,mensaje:texto,archivo_url:archivoUrl,archivo_tipo:contactoFile?.type?.includes('pdf')?'pdf':'imagen'});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Mensaje enviado a la academia ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['admin','dueno','instructor']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'💬 Nueva consulta de padre','Un padre/apoderado envió un mensaje a la academia. Revisalo en la sección de contacto.');});
+  sb.from('perfiles').select('id').in('rol',['admin','dueno']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'💬 Nueva consulta de padre','Un padre/apoderado envió un mensaje a la academia. Revisalo en la sección de contacto.');});
   document.getElementById('c-texto').value='';contactoFile=null;document.getElementById('c-fname').textContent='';
   await loadContactoHist();
 }
