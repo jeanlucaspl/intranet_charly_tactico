@@ -297,10 +297,11 @@ async function init(){
 }
 
 async function saveFcmToken(){
+  console.log('saveFcmToken llamado','AndroidNative:',!!window.AndroidNative,'uid:',uid);
   if(!window.AndroidNative||!uid)return;
-  // Firebase obtiene el token de forma asíncrona — reintentamos hasta 10 veces con 2s de espera
   for(let i=0;i<10;i++){
     const token=AndroidNative.getFcmToken();
+    console.log('intento',i,'token:',token?token.slice(0,20)+'...':'vacío');
     if(token){
       const {error}=await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
       if(error)console.error('FCM upsert error:',error.message,error.code);
@@ -309,6 +310,7 @@ async function saveFcmToken(){
     }
     await new Promise(r=>setTimeout(r,2000));
   }
+  console.warn('FCM: token no disponible tras 10 intentos');
 }
 
 async function checkPendingSolicitud(){
