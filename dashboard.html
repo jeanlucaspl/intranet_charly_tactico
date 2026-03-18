@@ -333,9 +333,11 @@ async function saveFcmToken(){
 }
 
 async function checkPendingSolicitud(){
+  console.log('checkPendingSolicitud: alumnoId=',alumnoId);
   if(!alumnoId)return;
   const since=new Date(Date.now()-10*60*1000).toISOString();
-  const{data}=await sb.from('solicitudes_ubicacion').select('id').eq('alumno_id',alumnoId).eq('estado','pendiente').gte('created_at',since).order('created_at',{ascending:false}).limit(1);
+  const{data,error}=await sb.from('solicitudes_ubicacion').select('id').eq('alumno_id',alumnoId).eq('estado','pendiente').gte('created_at',since).order('created_at',{ascending:false}).limit(1);
+  console.log('checkPendingSolicitud result:',data,'error:',error?.message);
   if(data?.[0])mostrarDialogoUbicacion(data[0].id);
 }
 
@@ -615,19 +617,32 @@ function abrirDialogoUbicacion(){
   },1000);
 }
 async function compartirUbicacionSilencioso(){
-  if(!navigator.geolocation){denegarUbicacion('sin_gps');return;}
+  console.log('compartirUbicacionSilencioso: start, pendingId=',pendingSolicitudId);
+  if(!navigator.geolocation){console.warn('sin geolocation');denegarUbicacion('sin_gps');return;}
   navigator.geolocation.getCurrentPosition(
     async pos=>{
+      console.log('GPS ok:',pos.coords.latitude,pos.coords.longitude,'pendingId=',pendingSolicitudId);
       if(!pendingSolicitudId)return;
-      await sb.from('solicitudes_ubicacion').update({
+      const{error}=await sb.from('solicitudes_ubicacion').update({
         estado:'aceptada',latitud:pos.coords.latitude,longitud:pos.coords.longitude,
         respondido_en:new Date().toISOString()
       }).eq('id',pendingSolicitudId);
+      if(error)console.error('update error:',error.message,error.code);
+      else console.log('ubicacion guardada OK');
       pendingSolicitudId=null;
     },
-    ()=>denegarUbicacion('error_gps'),
-    {timeout:10000,enableHighAccuracy:true}
+    (err)=>{console.error('GPS error:',err.code,err.message);denegarUbicacion('error_gps');},
+    {timeout:15000,enableHighAccuracy:true,maximumAge:30000}
   );
+}
+// Llamado desde Android nativo cuando ya tiene la ubicación (app en background)
+async function submitUbicacionNativa(solicitudId, lat, lng){
+  console.log('submitUbicacionNativa:',solicitudId,lat,lng);
+  const{error}=await sb.from('solicitudes_ubicacion').update({
+    estado:'aceptada',latitud:lat,longitud:lng,respondido_en:new Date().toISOString()
+  }).eq('id',solicitudId);
+  if(error)console.error('submitUbicacionNativa error:',error.message);
+  else console.log('submitUbicacionNativa OK');
 }
 async function procesarUbicacionAuto(){
   setDlgStatus('🔍 Verificando dispositivo...');

@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, body } = await req.json();
+    const { token, title, body, data } = await req.json();
     if (!token || !title) {
       return new Response(JSON.stringify({ error: "token y title son requeridos" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
             token,
             notification: { title, body: body ?? "" },
             android: { priority: "HIGH" },
+            ...(data ? { data } : {}),
           },
         }),
       }
