@@ -446,7 +446,7 @@ async function solicitarUbicacion(){
         await fetch(`${SB_URL}/functions/v1/send-fcm`,{
           method:'POST',
           headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},
-          body:JSON.stringify({token:tokenRow.token,title:'📍 Solicitud de Ubicación',body:'Tu padre/apoderado quiere conocer tu ubicación. Tenés 10 minutos para responder.'})
+          body:JSON.stringify({token:tokenRow.token,title:'📍 Solicitud de Ubicación',body:'Tu padre/apoderado quiere saber dónde estás. Abrí la app y respondé en los próximos 10 minutos para evitar que se notifique a la academia.'})
         });
       }catch(e){console.warn('FCM send failed:',e);}
     }
