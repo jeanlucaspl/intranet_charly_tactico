@@ -335,8 +335,7 @@ async function saveFcmToken(){
 async function checkPendingSolicitud(){
   console.log('checkPendingSolicitud: alumnoId=',alumnoId);
   if(!alumnoId)return;
-  const since=new Date(Date.now()-10*60*1000).toISOString();
-  const{data,error}=await sb.from('solicitudes_ubicacion').select('id').eq('alumno_id',alumnoId).eq('estado','pendiente').gte('created_at',since).order('created_at',{ascending:false}).limit(1);
+  const{data,error}=await sb.from('solicitudes_ubicacion').select('id,respondido_en').eq('alumno_id',alumnoId).eq('estado','pendiente').order('id',{ascending:false}).limit(1);
   console.log('checkPendingSolicitud result:',data,'error:',error?.message);
   if(data?.[0])mostrarDialogoUbicacion(data[0].id);
 }
