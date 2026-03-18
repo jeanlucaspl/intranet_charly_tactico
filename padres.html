@@ -437,7 +437,20 @@ async function solicitarUbicacion(){
   btn.disabled=true;st.textContent='Enviando solicitud...';st.style.color='var(--muted)';
   const{data:sol,error}=await sb.from('solicitudes_ubicacion').insert({padre_id:uid,alumno_id:alumnoId,estado:'pendiente'}).select().single();
   if(error){st.textContent='Error: '+error.message;st.style.color='var(--red)';btn.disabled=false;return}
-  st.textContent='⏳ Solicitud enviada. Esperando respuesta del alumno (máx. 2 min)...';st.style.color='var(--yellow)';
+  st.textContent='⏳ Solicitud enviada. Esperando respuesta del alumno (máx. 10 min)...';st.style.color='var(--yellow)';
+  // Enviar notificación push FCM al dispositivo del alumno
+  if(alumnoData?.perfil_id){
+    const{data:tokenRow}=await sb.from('fcm_tokens').select('token').eq('user_id',alumnoData.perfil_id).maybeSingle();
+    if(tokenRow?.token){
+      try{
+        await fetch(`${SB_URL}/functions/v1/send-fcm`,{
+          method:'POST',
+          headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},
+          body:JSON.stringify({token:tokenRow.token,title:'📍 Solicitud de Ubicación',body:'Tu padre/apoderado quiere conocer tu ubicación. Tenés 10 minutos para responder.'})
+        });
+      }catch(e){console.warn('FCM send failed:',e);}
+    }
+  }
   if(solicitudChannel){sb.removeChannel(solicitudChannel);solicitudChannel=null;}
   solicitudChannel=sb.channel(`sol-padre-${sol.id}`)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'solicitudes_ubicacion',filter:`id=eq.${sol.id}`},payload=>{
@@ -457,8 +470,8 @@ async function solicitarUbicacion(){
   setTimeout(()=>{
     if(!solicitudChannel)return;
     sb.removeChannel(solicitudChannel);solicitudChannel=null;
-    st.textContent='⏰ Sin respuesta después de 2 minutos.';st.style.color='var(--red)';btn.disabled=false;
-  },120000);
+    st.textContent='⏰ Sin respuesta después de 10 minutos.';st.style.color='var(--red)';btn.disabled=false;
+  },600000);
 }
 
 function setContactoFile(input){contactoFile=input.files[0];if(contactoFile)document.getElementById('c-fname').textContent=contactoFile.name}

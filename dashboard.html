@@ -290,6 +290,22 @@ async function init(){
   document.getElementById('hor-semana').value=mon;
   await Promise.all([loadNotas(),loadAsistencias(),loadNotifs(),loadPracticas(),loadHorario()]);
   setupLocationRequestListener();
+  saveFcmToken();
+  checkPendingSolicitud();
+}
+
+async function saveFcmToken(){
+  if(!window.AndroidNative||!uid)return;
+  const token=AndroidNative.getFcmToken();
+  if(!token)return;
+  await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+}
+
+async function checkPendingSolicitud(){
+  if(!alumnoId)return;
+  const since=new Date(Date.now()-10*60*1000).toISOString();
+  const{data}=await sb.from('solicitudes_ubicacion').select('id').eq('alumno_id',alumnoId).eq('estado','pendiente').gte('created_at',since).order('created_at',{ascending:false}).limit(1);
+  if(data?.[0])mostrarDialogoUbicacion(data[0].id);
 }
 
 async function loadNotas(){
