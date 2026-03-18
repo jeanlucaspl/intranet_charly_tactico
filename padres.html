@@ -309,6 +309,15 @@ async function init(){
   const {data:link}=await sb.from('padres_alumnos').select('*,alumnos(*)').eq('padre_id',uid).single();
   if(link?.alumnos){alumnoId=link.alumnos.id;alumnoData=link.alumnos}
   await Promise.all([loadHijo(),loadAsistencias(),loadNotas(),loadNotifs(),loadUbicacion(),loadContactoHist()]);
+  saveFcmToken();
+}
+async function saveFcmToken(){
+  if(!window.AndroidNative||!uid)return;
+  for(let i=0;i<10;i++){
+    const token=AndroidNative.getFcmToken();
+    if(token){await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});return;}
+    await new Promise(r=>setTimeout(r,2000));
+  }
 }
 
 async function loadHijo(){

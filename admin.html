@@ -1062,7 +1062,7 @@ window.addEventListener('pageshow', (e) => {
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFile=null;
-let esDueno = false;
+let esDueno = false, uid = null;
 let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
 
@@ -1150,7 +1150,8 @@ async function init(){
   if (!ok) return;
   // Get current user role to show/hide dueno-only sections
   const {data:{session}}=await sb.auth.getSession();
-  const {data:pf}=await sb.from('perfiles').select('rol').eq('id',session.user.id).single();
+  uid=session.user.id;
+  const {data:pf}=await sb.from('perfiles').select('rol').eq('id',uid).single();
   esDueno = (pf?.rol==='dueno');
   // Show dueno-only sections
   if(esDueno){
@@ -1174,6 +1175,15 @@ async function init(){
   await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
   populateSelects();
+  saveFcmToken();
+}
+async function saveFcmToken(){
+  if(!window.AndroidNative||!uid)return;
+  for(let i=0;i<10;i++){
+    const token=AndroidNative.getFcmToken();
+    if(token){await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});return;}
+    await new Promise(r=>setTimeout(r,2000));
+  }
 }
 
 // helpers
