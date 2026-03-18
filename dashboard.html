@@ -84,6 +84,9 @@
     .hor-cell .hc-mat{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white);line-height:1.2}
     .hor-cell .hc-prof{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.2}
     .hor-cell .hc-empty{color:var(--muted);font-size:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:4px 0}
+    .aula-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:0}
+    .aula-tab{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;background:var(--navy2);border:1px solid var(--border);border-bottom:none;color:var(--muted);cursor:pointer;transition:all .2s}
+    .aula-tab.active{background:var(--navy3);color:var(--gold);border-color:var(--gold)}
 
     /* NOTIF */
     .nlist{display:flex;flex-direction:column;gap:3px}
@@ -205,7 +208,8 @@
 
 <!-- HORARIO -->
 <div class="panel" id="panel-horario">
-  <div class="ph"><div class="eye">Plantilla semanal</div><div class="ttl">MI HORARIO</div></div>
+  <div class="ph"><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
+  <div id="hor-aula-tabs" class="aula-tabs"></div>
   <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="d-horario">
     <div class="empty"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div>
   </div>
@@ -463,12 +467,23 @@ const HOR_SLOTS=[
 const HOR_DIAS=['lunes','martes','miercoles','jueves','viernes'];
 const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 
+let horCurrentAulaId=null,horAulasData=[];
 async function loadHorario(){
+  const {data:aulas}=await sb.from('aulas').select('id,nombre').eq('activa',true).order('nombre');
+  horAulasData=aulas||[];
+  renderHorAulaTabs();
+  if(horAulasData.length)selectHorAulaTab(horAulasData[0].id);
+}
+function renderHorAulaTabs(){
+  const cont=document.getElementById('hor-aula-tabs');
+  if(!cont)return;
+  cont.innerHTML=horAulasData.map(a=>`<div class="aula-tab${a.id===horCurrentAulaId?' active':''}" onclick="selectHorAulaTab('${a.id}')">${a.nombre}</div>`).join('');
+}
+async function selectHorAulaTab(aulaId){
+  horCurrentAulaId=aulaId;
+  renderHorAulaTabs();
   const wrap=document.getElementById('d-horario');
-  if(!alumnoId){wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">Sin datos</div></div>`;return;}
-  const {data:aulaRow}=await sb.from('alumno_aula').select('aula_id').eq('alumno_id',alumnoId).maybeSingle();
-  if(!aulaRow){wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">No estás asignado a ningún aula</div></div>`;return;}
-  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaRow.aula_id);
+  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId);
   const horData={};
   (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
   let html=`<table class="hor-table"><thead><tr><th style="width:72px">HORA/DÍA</th>${HOR_DIAS_LABEL.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
