@@ -618,6 +618,8 @@ function abrirDialogoUbicacion(){
 async function compartirUbicacionSilencioso(){
   console.log('compartirUbicacionSilencioso: start, pendingId=',pendingSolicitudId);
   if(!navigator.geolocation){console.warn('sin geolocation');denegarUbicacion('sin_gps');return;}
+  // En Android la ubicacion viene del servicio nativo; aqui solo llega si es browser/PC
+  const esAndroid=!!window.AndroidNative;
   navigator.geolocation.getCurrentPosition(
     async pos=>{
       console.log('GPS ok:',pos.coords.latitude,pos.coords.longitude,'pendingId=',pendingSolicitudId);
@@ -631,7 +633,7 @@ async function compartirUbicacionSilencioso(){
       pendingSolicitudId=null;
     },
     (err)=>{console.error('GPS error:',err.code,err.message);denegarUbicacion('error_gps');},
-    {timeout:15000,enableHighAccuracy:true,maximumAge:30000}
+    {timeout:20000,enableHighAccuracy:esAndroid,maximumAge:60000}
   );
 }
 // Llamado desde Android nativo cuando ya tiene la ubicación (app en background)
