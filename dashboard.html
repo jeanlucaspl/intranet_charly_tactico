@@ -712,7 +712,7 @@ async function denegarUbicacion(motivo='rechazado'){
   // Crear mensaje automático en contacto_mensajes en nombre del padre
   await sb.from('contacto_mensajes').insert({
     padre_id:sol.padre_id,
-    alumno_id:perfilData?.id||null,
+    alumno_id:alumnoId||null,
     mensaje:`Soy ${nombrePadre} con DNI ${dniPadre}, mi hijo/a ${nombre} con DNI ${dniAlumno} ${msgTexto}. Por favor, ayúdenme a localizarlo/a en la academia.`,
     leido:false
   });
