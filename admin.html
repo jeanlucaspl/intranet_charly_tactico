@@ -1010,7 +1010,7 @@
         <div class="fg full"><label>Rol</label>
           <select id="adm-rol">
             <option value="admin">Admin</option>
-            <option value="instructor">Instructor</option>
+            <option value="profesor">Profesor</option>
           </select>
         </div>
       </div>
@@ -1038,7 +1038,7 @@ async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { location.replace('login.html'); return false; }
   const { data: pf } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
-  if (!['admin','instructor','dueno'].includes(pf?.rol)) {
+  if (!['admin','profesor','dueno'].includes(pf?.rol)) {
     await sb.auth.signOut();
     location.replace('login.html');
     return false;
@@ -1361,7 +1361,7 @@ async function loadAdmins(){
   const el=document.getElementById('d-admins');
   if(!el) return;
   const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol,email_ref')
-    .in('rol',['admin','instructor','dueno']).order('nombre');
+    .in('rol',['admin','profesor','dueno']).order('nombre');
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin admins registrados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td><strong>${a.nombre} ${a.apellido}</strong></td>

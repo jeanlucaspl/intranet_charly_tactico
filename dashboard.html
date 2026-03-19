@@ -705,7 +705,7 @@ async function denegarUbicacion(motivo='rechazado'){
   };
   const msgTexto=mensajes[motivo]||'no compartió su ubicación';
   await sb.from('notificaciones').insert({destinatario_id:sol.padre_id,titulo:'ALERTA: Alumno no compartió ubicación',mensaje:`Su hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`,tipo:'urgente',global:false});
-  const{data:admins}=await sb.from('perfiles').select('id').in('rol',['admin','dueno','instructor']);
+  const{data:admins}=await sb.from('perfiles').select('id').in('rol',['admin','dueno','profesor']);
   if(admins?.length){
     await Promise.all(admins.map(a=>sb.from('notificaciones').insert({destinatario_id:a.id,titulo:`ALERTA UBICACIÓN: ${nombre}`,mensaje:`El alumno ${nombre} (DNI: ${dniAlumno}), hijo/a de ${nombrePadre} (DNI: ${dniPadre}), ${msgTexto}.`,tipo:'urgente',global:false})));
     sendFcmToUsers(admins.map(a=>a.id),`🚨 ALERTA UBICACIÓN: ${nombre}`,`${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);

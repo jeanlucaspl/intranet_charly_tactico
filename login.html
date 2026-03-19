@@ -148,7 +148,7 @@ function switchTab(tab){
 }
 
 function redirigir(rol){
-  if(rol==='admin'||rol==='instructor'||rol==='dueno') location.replace('admin.html');
+  if(rol==='admin'||rol==='profesor'||rol==='dueno') location.replace('admin.html');
   else if(rol==='padre') location.replace('padres.html');
   else if(rol==='profesor') location.replace('profesor.html');
   else location.replace('dashboard.html');
@@ -216,7 +216,7 @@ async function loginAdmin(){
   const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){showMsg('Correo o contraseña incorrectos','error');btn.disabled=false;btn.textContent='INGRESAR';return}
   const{data:pf}=await sb.from('perfiles').select('rol').eq('id',data.user.id).single();
-  if(!['admin','instructor','dueno'].includes(pf?.rol)){
+  if(!['admin','profesor','dueno'].includes(pf?.rol)){
     await sb.auth.signOut();
     showMsg('Sin permisos de administrador','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
