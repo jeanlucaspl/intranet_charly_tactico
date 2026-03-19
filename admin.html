@@ -1624,9 +1624,10 @@ function renderPracticas(){
   </div>`).join('');
 }
 function renderAttGrid(data){
-  if(!data.length){document.getElementById('d-att').innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos</div></div>`;return}
+  const el=document.getElementById('d-att');if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos</div></div>`;return}
   data.forEach(a=>{if(!attState[a.id])attState[a.id]=null});
-  document.getElementById('d-att').innerHTML=data.map(a=>{
+  el.innerHTML=data.map(a=>{
     const s=attState[a.id];const cls=s==='presente'?'p':s==='tardanza'?'t':s==='ausente'?'a':'';
     const st=s?s.toUpperCase():'Sin marcar';
     const foto=a.foto_url?`<img src="${a.foto_url}" alt="foto">`:'👮';
