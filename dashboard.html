@@ -710,12 +710,13 @@ async function denegarUbicacion(motivo='rechazado'){
     sendFcmToUsers(admins.map(a=>a.id),`🚨 ALERTA UBICACIÓN: ${nombre}`,`${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
   }
   // Crear mensaje automático en contacto_mensajes en nombre del padre
-  await sb.from('contacto_mensajes').insert({
+  const{error:cErr}=await sb.from('contacto_mensajes').insert({
     padre_id:sol.padre_id,
     alumno_id:alumnoId||null,
     mensaje:`Soy ${nombrePadre} con DNI ${dniPadre}, mi hijo/a ${nombre} con DNI ${dniAlumno} ${msgTexto}. Por favor, ayúdenme a localizarlo/a en la academia.`,
     leido:false
   });
+  if(cErr)console.error('contacto_mensajes insert error:',cErr.code,cErr.message,cErr.details,cErr.hint);
 }
 
 init();
