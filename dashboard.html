@@ -705,11 +705,19 @@ async function denegarUbicacion(motivo='rechazado'){
   };
   const msgTexto=mensajes[motivo]||'no compartió su ubicación';
   await sb.from('notificaciones').insert({destinatario_id:sol.padre_id,titulo:'ALERTA: Alumno no compartió ubicación',mensaje:`Su hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`,tipo:'urgente',global:false});
+  sendFcmToUsers([sol.padre_id],`🚨 ALERTA: ${nombre} no compartió ubicación`,`Tu hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
   const{data:admins}=await sb.from('perfiles').select('id').in('rol',['admin','dueno','profesor']);
   if(admins?.length){
     await Promise.all(admins.map(a=>sb.from('notificaciones').insert({destinatario_id:a.id,titulo:`ALERTA UBICACIÓN: ${nombre}`,mensaje:`El alumno ${nombre} (DNI: ${dniAlumno}), hijo/a de ${nombrePadre} (DNI: ${dniPadre}), ${msgTexto}.`,tipo:'urgente',global:false})));
     sendFcmToUsers(admins.map(a=>a.id),`🚨 ALERTA UBICACIÓN: ${nombre}`,`${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
   }
+  // Crear mensaje automático en contacto_mensajes en nombre del padre
+  await sb.from('contacto_mensajes').insert({
+    padre_id:sol.padre_id,
+    alumno_id:perfilData?.id||null,
+    mensaje:`Soy ${nombrePadre} con DNI ${dniPadre}, mi hijo/a ${nombre} con DNI ${dniAlumno} ${msgTexto}. Por favor, ayúdenme a localizarlo/a en la academia.`,
+    leido:false
+  });
 }
 
 init();

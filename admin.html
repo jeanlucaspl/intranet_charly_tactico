@@ -1831,7 +1831,19 @@ async function sendNotif(){
   await loadNotifHist();
 }
 async function markLeido(id){
+  const{data:msg}=await sb.from('contacto_mensajes').select('padre_id,alumno_id,mensaje').eq('id',id).single();
   await sb.from('contacto_mensajes').update({leido:true}).eq('id',id);
+  if(msg?.padre_id){
+    const esUbicacion=msg.mensaje&&(msg.mensaje.includes('se rehúsa')||msg.mensaje.includes('rechazó compartir')||msg.mensaje.includes('no respondió a la solicitud')||msg.mensaje.includes('GPS falso')||msg.mensaje.includes('opciones de desarrollador')||msg.mensaje.includes('app de GPS falso')||msg.mensaje.includes('no tiene GPS')||msg.mensaje.includes('tuvo un error al obtener'));
+    if(esUbicacion){
+      sendFcmToUsers([msg.padre_id],'✅ Academia al tanto','La academia está al tanto de que tu hijo/a se rehúsa a compartir su ubicación. Estamos gestionando la situación.');
+      if(msg.alumno_id){
+        sendFcmToUsers([msg.alumno_id],'📢 Academia informada','La academia está al tanto de que te rehusás a compartir tu ubicación.');
+      }
+    } else {
+      sendFcmToUsers([msg.padre_id],'✅ Mensaje leído','La academia ha leído tu mensaje y está al tanto de tu consulta.');
+    }
+  }
   await loadContacto();
 }
 
