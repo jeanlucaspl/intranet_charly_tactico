@@ -1178,10 +1178,17 @@ async function init(){
   sb.channel('admin-contacto').on('postgres_changes',{event:'INSERT',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
 }
 async function saveFcmToken(){
+  console.log('saveFcmToken admin - AndroidNative:',!!window.AndroidNative,'uid:',uid);
   if(!window.AndroidNative||!uid)return;
   for(let i=0;i<10;i++){
     const token=AndroidNative.getFcmToken();
-    if(token){await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});return;}
+    console.log('fcm intento',i,'token:',token?token.slice(0,20)+'...':'null');
+    if(token){
+      const{error}=await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      if(error)console.error('fcm upsert error:',error.message,error.code);
+      else console.log('FCM token guardado OK');
+      return;
+    }
     await new Promise(r=>setTimeout(r,2000));
   }
 }
