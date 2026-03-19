@@ -1174,6 +1174,8 @@ async function init(){
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
   populateSelects();
   saveFcmToken();
+  // Realtime: auto-refresh contacto cuando llega un mensaje nuevo
+  sb.channel('admin-contacto').on('postgres_changes',{event:'INSERT',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;
@@ -1483,7 +1485,7 @@ async function loadContacto(){
           <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI padre: ${m.perfiles?.dni||'--'}</span>
         </div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="markLeido('${m.id}')">✓ Leído</button>`:'<span class="badge bg">Leído</span>'}
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')">✓ Leído</button>`:'<span class="badge bg">Leído</span>'}
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.08em">
         Alumno: <strong style="color:var(--white)">${al?.perfiles?.nombre||'No vinculado'} ${al?.perfiles?.apellido||''}</strong>

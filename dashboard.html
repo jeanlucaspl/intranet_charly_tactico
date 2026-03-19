@@ -289,6 +289,7 @@ window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().the
 
 let uid=null,alumnoId=null,alumnoData=null,perfilData=null,solucionFiles={};
 let pendingSolicitudId=null,dlgCountdownTimer=null,dlgCountdownSec=600;
+const _solProcesadas=new Set();
 
 function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
 function todayISO(){return new Date().toISOString().split('T')[0]}
@@ -588,6 +589,8 @@ function setDlgStatus(msg,showBtns=false){
   document.getElementById('dlg-btn-retry').style.display=showBtns?'block':'none';
 }
 function mostrarDialogoUbicacion(solicitudId){
+  if(_solProcesadas.has(solicitudId))return;
+  _solProcesadas.add(solicitudId);
   pendingSolicitudId=solicitudId;
   // Si el dispositivo está limpio → compartir silenciosamente sin mostrar diálogo
   if(window.AndroidNative){
