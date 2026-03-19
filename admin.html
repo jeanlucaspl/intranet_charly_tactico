@@ -1834,14 +1834,24 @@ async function markLeido(id){
   if(msg?.padre_id){
     const esUbicacion=msg.mensaje&&(msg.mensaje.includes('se rehúsa')||msg.mensaje.includes('rechazó compartir')||msg.mensaje.includes('no respondió a la solicitud')||msg.mensaje.includes('GPS falso')||msg.mensaje.includes('opciones de desarrollador')||msg.mensaje.includes('app de GPS falso')||msg.mensaje.includes('no tiene GPS')||msg.mensaje.includes('tuvo un error al obtener'));
     if(esUbicacion){
-      sendFcmToUsers([msg.padre_id],'✅ Academia al tanto','La academia está al tanto de que tu hijo/a se rehúsa a compartir su ubicación. Estamos gestionando la situación.');
+      const tPadre='✅ Academia al tanto';
+      const bPadre='La academia está al tanto de que tu hijo/a se rehúsa a compartir su ubicación. Estamos gestionando la situación.';
+      sendFcmToUsers([msg.padre_id],tPadre,bPadre);
+      await sb.from('notificaciones').insert({destinatario_id:msg.padre_id,titulo:tPadre,mensaje:bPadre,tipo:'urgente',global:false});
       if(msg.alumno_id){
-        // alumno_id es alumnos.id — necesito el perfil_id para FCM
         const{data:alRec}=await sb.from('alumnos').select('perfil_id').eq('id',msg.alumno_id).single();
-        if(alRec?.perfil_id)sendFcmToUsers([alRec.perfil_id],'📢 Academia informada','La academia está al tanto de que te rehusás a compartir tu ubicación.');
+        if(alRec?.perfil_id){
+          const tHijo='📢 Academia informada';
+          const bHijo='La academia está al tanto de que te rehusás a compartir tu ubicación.';
+          sendFcmToUsers([alRec.perfil_id],tHijo,bHijo);
+          await sb.from('notificaciones').insert({destinatario_id:alRec.perfil_id,titulo:tHijo,mensaje:bHijo,tipo:'urgente',global:false});
+        }
       }
     } else {
-      sendFcmToUsers([msg.padre_id],'✅ Mensaje leído','La academia ha leído tu mensaje y está al tanto de tu consulta.');
+      const tPadre='✅ Mensaje leído';
+      const bPadre='La academia ha leído tu mensaje y está al tanto de tu consulta.';
+      sendFcmToUsers([msg.padre_id],tPadre,bPadre);
+      await sb.from('notificaciones').insert({destinatario_id:msg.padre_id,titulo:tPadre,mensaje:bPadre,tipo:'urgente',global:false});
     }
   }
   await loadContacto();
