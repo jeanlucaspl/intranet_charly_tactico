@@ -1,9 +1,10 @@
 // Supabase Edge Function: send-fcm
-// Envía una notificación push via Firebase Cloud Messaging HTTP v1 API
-// usando una service account de Firebase.
+// Envía notificaciones push via Firebase Cloud Messaging HTTP v1 API.
 //
-// Variable de entorno requerida en Supabase:
-//   FIREBASE_SERVICE_ACCOUNT  →  contenido del archivo JSON de service account (como string)
+// Variables de entorno requeridas en Supabase:
+//   FIREBASE_SERVICE_ACCOUNT  →  contenido del archivo JSON de service account
+//   SUPABASE_URL              →  automática en Edge Functions
+//   SUPABASE_SERVICE_ROLE_KEY →  automática en Edge Functions
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,10 +17,36 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, body, data } = await req.json();
-    if (!token || !title) {
-      return new Response(JSON.stringify({ error: "token y title son requeridos" }), {
+    // Acepta:
+    //   { user_ids, title, body, data } — lookup de tokens server-side (recomendado)
+    //   { token, title, body, data }    — token único directo (usado por location_request)
+    const { token, user_ids, title, body, data } = await req.json();
+
+    if ((!user_ids?.length && !token) || !title) {
+      return new Response(JSON.stringify({ error: "token o user_ids requerido, mas title" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Lookup de tokens con service_role (bypassa RLS) cuando se usan user_ids
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    let tokens: string[];
+    if (token) {
+      tokens = [token];
+    } else {
+      const ids = user_ids.join(",");
+      const tokensRes = await fetch(
+        `${supabaseUrl}/rest/v1/fcm_tokens?user_id=in.(${ids})&select=token`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+      );
+      const tokenRows: { token: string }[] = await tokensRes.json();
+      tokens = tokenRows.map((r) => r.token).filter(Boolean);
+    }
+
+    if (!tokens.length) {
+      return new Response(JSON.stringify({ sent: 0, reason: "no tokens found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -28,26 +55,24 @@ Deno.serve(async (req) => {
 
     // Siempre data-only para que onMessageReceived se llame en foreground/background/killed.
     // Esto garantiza que Android use el canal personalizado con ringtone.
-    const message = {
-      token,
-      android: { priority: "HIGH" },
-      data: { title, body: body ?? "", ...(data ?? {}) },
-    };
-
-    const res = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
-      {
+    const results = await Promise.all(tokens.map((token) =>
+      fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message }),
-      }
-    );
+        body: JSON.stringify({
+          message: {
+            token,
+            android: { priority: "HIGH" },
+            data: { title, body: body ?? "", ...(data ?? {}) },
+          },
+        }),
+      }).then((r) => r.json()).catch((e) => ({ error: String(e) }))
+    ));
 
-    const result = await res.json();
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify({ sent: tokens.length, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
