@@ -289,7 +289,10 @@
     </div>
     <!-- HISTORIAL -->
     <div style="background:var(--navy2);border:1px solid var(--border);padding:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:14px">📜 Mis Mensajes</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px">📜 Mis Mensajes</div>
+        <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllMensajes()">🗑️ Borrar todo</button>
+      </div>
       <div id="d-c-hist"><div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div></div>
     </div>
   </div>
@@ -490,11 +493,12 @@ async function deleteAllNotifs(){
 async function loadContactoHist(){
   if(!uid)return;
   const {data}=await sb.from('contacto_mensajes').select('*').eq('padre_id',uid).order('creado_en',{ascending:false});
-  if(!data?.length)return;
+  if(!data?.length){document.getElementById('d-c-hist').innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div>`;return;}
   document.getElementById('d-c-hist').innerHTML=data.map(m=>{
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--blue);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:5px">📎 Ver adjunto</a>`:'';
     return`<div style="background:var(--navy);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--blue)'};padding:12px 14px;margin-bottom:4px">
+      <button onclick="deleteMensaje('${m.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>
       <div style="font-size:13px;color:var(--white)">${m.mensaje||'(sin mensaje)'}</div>
       ${adj}
       <div style="display:flex;justify-content:space-between;margin-top:6px">
@@ -503,6 +507,15 @@ async function loadContactoHist(){
       </div>
     </div>`;
   }).join('');
+}
+async function deleteMensaje(id){
+  await sb.from('contacto_mensajes').delete().eq('id',id);
+  loadContactoHist();
+}
+async function deleteAllMensajes(){
+  if(!confirm('¿Borrar todos tus mensajes enviados?'))return;
+  await sb.from('contacto_mensajes').delete().eq('padre_id',uid);
+  loadContactoHist();
 }
 
 // ── SOLICITUD UBICACIÓN TIEMPO REAL ──
