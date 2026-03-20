@@ -338,7 +338,7 @@ async function init(){
   await Promise.all([loadHijo(),loadAsistencias(),loadNotas(),loadNotifs(),loadUbicacion(),loadContactoHist()]);
   saveFcmToken();
   sb.channel('padres-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
-  setInterval(loadNotifs,30000);
+  setInterval(loadNotifs,10000);
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;

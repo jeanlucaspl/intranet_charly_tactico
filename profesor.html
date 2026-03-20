@@ -390,7 +390,7 @@ async function init(){
   checkYaMarcado();
   saveFcmToken();
   sb.channel('prof-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
-  setInterval(loadNotifs,30000);
+  setInterval(loadNotifs,10000);
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;

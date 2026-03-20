@@ -315,7 +315,7 @@ async function init(){
   setupLocationRequestListener();
   saveFcmToken();
   sb.channel('dash-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
-  setInterval(loadNotifs,30000);
+  setInterval(loadNotifs,10000);
   checkPendingSolicitud();
   checkDeviceStatus();
 }
