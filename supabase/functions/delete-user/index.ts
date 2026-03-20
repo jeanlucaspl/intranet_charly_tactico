@@ -9,13 +9,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { perfil_id, alumno_id } = await req.json()
+    const { perfil_id, alumno_id, profesor_id } = await req.json()
 
     const sb = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // Eliminar datos específicos de alumno
     if (alumno_id) {
       await sb.from('soluciones').delete().eq('alumno_id', alumno_id)
       await sb.from('asistencias').delete().eq('alumno_id', alumno_id)
@@ -25,7 +26,16 @@ Deno.serve(async (req) => {
       await sb.from('alumnos').delete().eq('id', alumno_id)
     }
 
+    // Eliminar datos específicos de profesor
+    if (profesor_id) {
+      await sb.from('asistencias_profesores').delete().eq('profesor_id', profesor_id)
+      await sb.from('profesores').delete().eq('id', profesor_id)
+    }
+
+    // Eliminar perfil y auth (aplica a cualquier tipo de usuario)
     if (perfil_id) {
+      await sb.from('padres_alumnos').delete().eq('padre_id', perfil_id)
+      await sb.from('contacto_mensajes').delete().eq('padre_id', perfil_id)
       await sb.from('fcm_tokens').delete().eq('user_id', perfil_id)
       await sb.from('notificaciones_ocultas').delete().eq('user_id', perfil_id)
       await sb.from('notificaciones').delete().eq('destinatario_id', perfil_id)

@@ -284,12 +284,13 @@
   <div class="sb-section">
     <div class="sb-label">Gestión</div>
     <button class="sb-link" onclick="showPanel('aulas',this)"><span class="ic">🏫</span>Aulas</button>
-    <button class="sb-link" onclick="showPanel('alumnos',this)"><span class="ic">👮</span>Alumnos</button>
+    <button class="sb-link" onclick="showPanel('alumnos',this)"><span class="ic">👮</span>Gestión Alumnos</button>
     <button class="sb-link" onclick="showPanel('materias',this)"><span class="ic">📚</span>Materias</button>
     <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Horario Semanal</button>
     <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
     <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none"><span class="ic">👩‍🏫</span>Gestión Profesores</button>
-    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Usuarios</button>
+    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Gestión Administradores</button>
+    <button class="sb-link sb-dueno" onclick="showPanel('academia',this)" style="display:none"><span class="ic">🏛️</span>Datos de la Academia</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Asistencia</div>
@@ -342,7 +343,7 @@
 <!-- ══ ALUMNOS ══ -->
 <div class="panel" id="panel-alumnos">
   <div class="ph">
-    <div class="ph-left"><div class="eye">Gestión de cadetes</div><div class="ttl">ALUMNOS</div></div>
+    <div class="ph-left"><div class="eye">Gestión de cadetes</div><div class="ttl">GESTIÓN ALUMNOS</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-gold" onclick="openMd('md-alumno')">+ Nuevo Alumno</button>
     </div>
@@ -610,38 +611,49 @@
 <!-- ══ GESTIÓN PADRES ══ -->
 <div class="panel" id="panel-padres">
   <div class="ph">
-    <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN DE PADRES</div></div>
+    <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN PADRES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <input type="text" id="q-padre-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
     <input type="text" id="q-padre-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
   </div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="padtab-activos" onclick="showPadTab('activos')">✅ Activos</div>
+    <div class="aula-tab" id="padtab-deshabilitados" onclick="showPadTab('deshabilitados')">🚫 Deshabilitados</div>
+  </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Padres Registrados</span></div>
-    <div id="d-padres"><div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Cargando...</div></div></div>
+    <div id="d-padres-activos"><div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Cargando...</div></div></div>
+    <div id="d-padres-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
-<!-- ══ GESTIÓN USUARIOS (solo dueño) ══ -->
+<!-- ══ GESTIÓN ADMINISTRADORES (solo dueño) ══ -->
 <div class="panel" id="panel-usuarios">
   <div class="ph">
-    <div class="ph-left"><div class="eye">Solo acceso dueño</div><div class="ttl">GESTIÓN DE USUARIOS</div></div>
+    <div class="ph-left"><div class="eye">Solo acceso dueño</div><div class="ttl">GESTIÓN ADMINISTRADORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-admin')">+ Nuevo Admin</button>
   </div>
-  <div id="d-usuarios-aviso" style="background:var(--navy2);border:1px solid var(--yellow);padding:12px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--yellow);text-transform:uppercase">
-    ⚠️ Esta sección solo es visible para el dueño de la academia
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+    <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+  </div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="admtab-activos" onclick="showAdmTab('activos')">✅ Activos</div>
+    <div class="aula-tab" id="admtab-deshabilitados" onclick="showAdmTab('deshabilitados')">🚫 Deshabilitados</div>
   </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Administradores</span></div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
-      <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
-    </div>
-    <div id="d-admins"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
+    <div id="d-admins-activos"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
+    <div id="d-admins-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
   </div>
-  <!-- CONFIG UBICACIÓN ACADEMIA -->
-  <div style="margin-top:28px;background:var(--navy2);border:1px solid var(--border);padding:20px 22px">
+</div>
+
+<!-- ══ DATOS DE LA ACADEMIA (solo dueño) ══ -->
+<div class="panel" id="panel-academia">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Configuración</div><div class="ttl">DATOS DE LA ACADEMIA</div></div>
+  </div>
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:10px">📍 Ubicación de la Academia</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:14px">
       Los admins solo pueden tomar asistencia dentro de <strong id="acad-radio-lbl">200</strong>m de la academia.<br>
@@ -698,16 +710,20 @@
 <!-- ══ GESTIÓN PROFESORES ══ -->
 <div class="panel" id="panel-profesores">
   <div class="ph">
-    <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN DE PROFESORES</div></div>
+    <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN PROFESORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <input type="text" id="q-prof-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
     <input type="text" id="q-prof-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
   </div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="proftab-activos" onclick="showProfTab('activos')">✅ Activos</div>
+    <div class="aula-tab" id="proftab-deshabilitados" onclick="showProfTab('deshabilitados')">🚫 Deshabilitados</div>
+  </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Profesores Activos</span></div>
-    <div id="d-profesores"><div class="empty"><div class="ei">📚</div><div class="et">Cargando...</div></div></div>
+    <div id="d-profesores-activos"><div class="empty"><div class="ei">👩‍🏫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-profesores-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -1349,54 +1365,78 @@ async function deleteAllNotif(){
   await loadNotifHist();
 }
 let allPadresData=[];
+let allPadresActivos=[],allPadresDeshabilitados=[];
 async function loadPadres(){
-  const el=document.getElementById('d-padres');
-  if(!el)return;
-  // Query all padres from perfiles first
+  const elA=document.getElementById('d-padres-activos');
+  const elD=document.getElementById('d-padres-deshabilitados');
+  if(!elA)return;
   const {data:padres}=await sb.from('perfiles')
-    .select('id,nombre,apellido,dni,telefono,email_ref')
-    .eq('rol','padre').order('nombre');
-  if(!padres?.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
-  // Get all links
+    .select('id,nombre,apellido,dni,telefono,email_ref,activo')
+    .eq('rol','padre').order('apellido');
   const {data:links}=await sb.from('padres_alumnos')
     .select('padre_id,parentesco,alumnos(id,perfiles(nombre,apellido,dni))');
   const linkMap={};
   links?.forEach(l=>{ if(!linkMap[l.padre_id]) linkMap[l.padre_id]=[]; linkMap[l.padre_id].push(l); });
-  allPadresData=padres.map(p=>({...p,_hijos:linkMap[p.id]||[]}));
-  renderPadres(allPadresData);
+  const todos=(padres||[]).map(p=>({...p,_hijos:linkMap[p.id]||[]}));
+  allPadresData=todos;
+  allPadresActivos=todos.filter(p=>p.activo!==false);
+  allPadresDeshabilitados=todos.filter(p=>p.activo===false);
+  renderPadresActivos(allPadresActivos);
+  renderPadresDeshabilitados(allPadresDeshabilitados);
 }
-function renderPadres(padres){
-  const el=document.getElementById('d-padres');
-  if(!el)return;
-  if(!padres.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre Padre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${padres.map(p=>{
-    const hijos=p._hijos||[];
-    const hijosHtml=hijos.length
-      ? hijos.map(l=>`<div>${l.alumnos?.perfiles?.nombre||'--'} ${l.alumnos?.perfiles?.apellido||''} · <span class="badge by">${l.alumnos?.perfiles?.dni||'--'}</span></div>`).join('')
-      : '<span style="color:var(--muted);font-size:11px">Sin alumno vinculado</span>';
-    return`<tr>
-      <td><strong>${p.nombre} ${p.apellido}</strong></td>
-      <td><span class="badge bb">${p.dni||'--'}</span></td>
-      <td>${p.telefono||'--'}</td>
-      <td style="font-size:12px;color:var(--muted)">${p.email_ref||'--'}</td>
-      <td>${hijosHtml}</td>
-      <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deletePadre('${p.id}')">Dar de baja</button></td>
-    </tr>`;
-  }).join('')}</tbody></table>`;
+function _padreRow(p,deshabilitado=false){
+  const hijos=p._hijos||[];
+  const hijosHtml=hijos.length
+    ? hijos.map(l=>`<div>${l.alumnos?.perfiles?.nombre||'--'} ${l.alumnos?.perfiles?.apellido||''} · <span class="badge by">${l.alumnos?.perfiles?.dni||'--'}</span></div>`).join('')
+    : '<span style="color:var(--muted);font-size:11px">Sin alumno vinculado</span>';
+  const acciones=deshabilitado
+    ? `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarPadre('${p.id}')">Reactivar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.id}','','${p.nombre}','${p.apellido}','padre')">Eliminar</button>`
+    : `<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarPadre('${p.id}')">Inhabilitar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.id}','','${p.nombre}','${p.apellido}','padre')">Eliminar</button>`;
+  return`<tr>
+    <td><strong>${p.nombre} ${p.apellido}</strong></td>
+    <td><span class="badge bb">${p.dni||'--'}</span></td>
+    <td>${p.telefono||'--'}</td>
+    <td style="font-size:12px;color:var(--muted)">${p.email_ref||'--'}</td>
+    <td>${hijosHtml}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
+  </tr>`;
+}
+function renderPadresActivos(data){
+  const el=document.getElementById('d-padres-activos');if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres activos</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_padreRow(p,false)).join('')}</tbody></table>`;
+}
+function renderPadresDeshabilitados(data){
+  const el=document.getElementById('d-padres-deshabilitados');if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin padres deshabilitados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_padreRow(p,true)).join('')}</tbody></table>`;
 }
 function filterPadres(){
   const qApe=(document.getElementById('q-padre-ape')?.value||'').toLowerCase();
   const qDni=(document.getElementById('q-padre-dni')?.value||'').toLowerCase();
-  const filtered=allPadresData.filter(p=>`${p.apellido} ${p.nombre}`.toLowerCase().includes(qApe)&&(p.dni||'').toLowerCase().includes(qDni));
-  renderPadres(filtered);
+  renderPadresActivos(allPadresActivos.filter(p=>`${p.apellido} ${p.nombre}`.toLowerCase().includes(qApe)&&(p.dni||'').toLowerCase().includes(qDni)));
+  renderPadresDeshabilitados(allPadresDeshabilitados.filter(p=>`${p.apellido} ${p.nombre}`.toLowerCase().includes(qApe)&&(p.dni||'').toLowerCase().includes(qDni)));
+}
+function showPadTab(tab){
+  document.getElementById('d-padres-activos').style.display=tab==='activos'?'block':'none';
+  document.getElementById('d-padres-deshabilitados').style.display=tab==='deshabilitados'?'block':'none';
+  document.getElementById('padtab-activos').classList.toggle('active',tab==='activos');
+  document.getElementById('padtab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
+}
+async function inhabilitarPadre(id){
+  if(!confirm('¿Inhabilitar a este padre? No podrá iniciar sesión.'))return;
+  await sb.from('perfiles').update({activo:false}).eq('id',id);
+  await loadPadres();
+}
+async function reactivarPadre(id){
+  if(!confirm('¿Reactivar a este padre?'))return;
+  await sb.from('perfiles').update({activo:true}).eq('id',id);
+  await loadPadres();
 }
 async function deletePadre(id){
-  if(!confirm('¿Dar de baja a este padre?'))return;
-  // Remove links first
-  await sb.from('padres_alumnos').delete().eq('padre_id',id);
-  // Deactivate by changing role (keep record)
-  await sb.from('perfiles').update({rol:'alumno'}).eq('id',id);
-  await loadPadres();
+  await inhabilitarPadre(id);
 }
 // ── BÚSQUEDA POR DNI ──
 async function buscarAlumnoPorDNI(contexto){
@@ -1463,37 +1503,67 @@ async function saveAdmin(){
 }
 
 // ── CARGAR ADMINS ──
-let allAdminsData=[];
+let allAdminsData=[],allAdminsActivos=[],allAdminsDeshabilitados=[];
 async function loadAdmins(){
-  const el=document.getElementById('d-admins');
-  if(!el) return;
-  const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol,email_ref')
-    .in('rol',['admin','profesor','dueno']).order('nombre');
+  const elA=document.getElementById('d-admins-activos');
+  if(!elA)return;
+  const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol,email_ref,activo')
+    .in('rol',['admin','dueno','instructor']).order('apellido');
   allAdminsData=data||[];
-  renderAdminsFiltrados(allAdminsData);
+  allAdminsActivos=allAdminsData.filter(a=>a.activo!==false);
+  allAdminsDeshabilitados=allAdminsData.filter(a=>a.activo===false);
+  renderAdminsActivos(allAdminsActivos);
+  renderAdminsDeshabilitados(allAdminsDeshabilitados);
 }
-function renderAdminsFiltrados(data){
-  const el=document.getElementById('d-admins');
-  if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin admins registrados</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+function _adminRow(a,deshabilitado=false){
+  const badgeCls=a.rol==='dueno'?'bgold':a.rol==='admin'?'bg':'bb';
+  const acciones=deshabilitado
+    ? `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAdmin('${a.id}')">Reactivar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${a.id}','','${a.nombre}','${a.apellido}','admin')">Eliminar</button>`
+    : `<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAdmin('${a.id}')">Inhabilitar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${a.id}','','${a.nombre}','${a.apellido}','admin')">Eliminar</button>`;
+  return`<tr>
     <td><strong>${a.nombre} ${a.apellido}</strong></td>
-    <td>${a.dni||'--'}</td>
-    <td>${a.email_ref||'--'}</td>
-    <td><span class="badge ${a.rol==='dueno'?'bgold':a.rol==='admin'?'bg':'bb'}">${a.rol}</span></td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAdmin('${a.id}')">Dar de baja</button></td>
-  </tr>`).join('')}</tbody></table>`;
+    <td><span class="badge bb">${a.dni||'--'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${a.email_ref||'--'}</td>
+    <td><span class="badge ${badgeCls}">${a.rol}</span></td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
+  </tr>`;
 }
+function renderAdminsActivos(data){
+  const el=document.getElementById('d-admins-activos');if(!el)return;
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin administradores activos</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>_adminRow(a,false)).join('')}</tbody></table>`;
+}
+function renderAdminsDeshabilitados(data){
+  const el=document.getElementById('d-admins-deshabilitados');if(!el)return;
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin administradores deshabilitados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>_adminRow(a,true)).join('')}</tbody></table>`;
+}
+function renderAdminsFiltrados(data){ renderAdminsActivos(data); }
 function filterAdmins(){
   const qApe=(document.getElementById('q-adm-ape')?.value||'').toLowerCase();
   const qDni=(document.getElementById('q-adm-dni')?.value||'').toLowerCase();
-  renderAdminsFiltrados(allAdminsData.filter(a=>`${a.apellido} ${a.nombre}`.toLowerCase().includes(qApe)&&(a.dni||'').toLowerCase().includes(qDni)));
+  renderAdminsActivos(allAdminsActivos.filter(a=>`${a.apellido} ${a.nombre}`.toLowerCase().includes(qApe)&&(a.dni||'').toLowerCase().includes(qDni)));
+  renderAdminsDeshabilitados(allAdminsDeshabilitados.filter(a=>`${a.apellido} ${a.nombre}`.toLowerCase().includes(qApe)&&(a.dni||'').toLowerCase().includes(qDni)));
 }
-async function deleteAdmin(id){
-  if(!confirm('¿Dar de baja a este administrador?'))return;
-  await sb.from('perfiles').update({rol:'alumno'}).eq('id',id);
+function showAdmTab(tab){
+  document.getElementById('d-admins-activos').style.display=tab==='activos'?'block':'none';
+  document.getElementById('d-admins-deshabilitados').style.display=tab==='deshabilitados'?'block':'none';
+  document.getElementById('admtab-activos').classList.toggle('active',tab==='activos');
+  document.getElementById('admtab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
+}
+async function inhabilitarAdmin(id){
+  if(!confirm('¿Inhabilitar a este administrador? No podrá iniciar sesión.'))return;
+  await sb.from('perfiles').update({activo:false}).eq('id',id);
   await loadAdmins();
 }
+async function reactivarAdmin(id){
+  if(!confirm('¿Reactivar a este administrador?'))return;
+  await sb.from('perfiles').update({activo:true}).eq('id',id);
+  await loadAdmins();
+}
+async function deleteAdmin(id){ await inhabilitarAdmin(id); }
 
 // ── GESTIÓN DE CONTRASEÑAS ──
 async function buscarUsuarioPorDNI(){
@@ -1906,16 +1976,26 @@ async function reactivarAlumno(id){
   await loadAlumnos();
 }
 function confirmarEliminarAlumno(alumnoId,perfilId,nombre,apellido){
-  if(!confirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos y no se puede deshacer.`))return;
-  eliminarAlumno(alumnoId,perfilId);
+  confirmarEliminarUsuario(perfilId,alumnoId,nombre,apellido,'alumno');
 }
-async function eliminarAlumno(alumnoId,perfilId){
+function confirmarEliminarUsuario(perfilId,extraId,nombre,apellido,tipo){
+  const tipos={alumno:'alumno',padre:'padre',profesor:'profesor',admin:'administrador'};
+  if(!confirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos de la base de datos y del sistema de autenticación. No se puede deshacer.`))return;
+  eliminarUsuario(perfilId,extraId,tipo);
+}
+async function eliminarUsuario(perfilId,extraId,tipo){
   const FNURL=`https://jfczouzgikqxcnotukag.supabase.co/functions/v1/delete-user`;
   const {data:{session}}=await sb.auth.getSession();
-  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token}`},body:JSON.stringify({alumno_id:alumnoId,perfil_id:perfilId})});
+  const body={perfil_id:perfilId};
+  if(tipo==='alumno'&&extraId) body.alumno_id=extraId;
+  if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
+  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token}`},body:JSON.stringify(body)});
   const json=await res.json();
   if(json.error){alert('Error al eliminar: '+json.error);return;}
-  await loadAlumnos();
+  if(tipo==='alumno') await loadAlumnos();
+  else if(tipo==='padre') await loadPadres();
+  else if(tipo==='profesor') await loadProfesores();
+  else if(tipo==='admin') await loadAdmins();
 }
 async function saveMateria(){
   const nombre=document.getElementById('m-nombre').value.trim();
@@ -2335,36 +2415,65 @@ function renderChips(){
 
 // ── POPULATE SELECTS ──
 let allProfesoresData=[];
+let allProfesoresData=[],allProfesoresActivos=[],allProfesoresDeshabilitados=[];
 async function loadProfesores(){
-  const el=document.getElementById('d-profesores');
-  if(!el)return;
-  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref)').eq('activo',true).order('creado_en');
+  const elA=document.getElementById('d-profesores-activos');
+  if(!elA)return;
+  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref)').order('creado_en');
   allProfesoresData=data||[];
-  renderProfesoresFiltrados(allProfesoresData);
+  allProfesoresActivos=allProfesoresData.filter(p=>p.activo!==false);
+  allProfesoresDeshabilitados=allProfesoresData.filter(p=>p.activo===false);
+  renderProfesoresActivos(allProfesoresActivos);
+  renderProfesoresDeshabilitados(allProfesoresDeshabilitados);
 }
-function renderProfesoresFiltrados(data){
-  const el=document.getElementById('d-profesores');
-  if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin profesores</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`<tr>
+function _profesorRow(p,deshabilitado=false){
+  const acciones=deshabilitado
+    ? `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarProfesor('${p.id}')">Reactivar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`
+    : `<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarProfesor('${p.id}')">Inhabilitar</button>
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`;
+  return`<tr>
     <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
     <td><span class="badge bb">${p.perfiles?.dni||'--'}</span></td>
     <td style="font-size:12px;color:var(--muted)">${p.perfiles?.email_ref||'--'}</td>
     <td>${p.especialidad||'--'}</td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteProfesor('${p.id}','${p.perfil_id}')">Dar de baja</button></td>
-  </tr>`).join('')}</tbody></table>`;
+    <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
+  </tr>`;
 }
+function renderProfesoresActivos(data){
+  const el=document.getElementById('d-profesores-activos');if(!el)return;
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👩‍🏫</div><div class="et">Sin profesores activos</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,false)).join('')}</tbody></table>`;
+}
+function renderProfesoresDeshabilitados(data){
+  const el=document.getElementById('d-profesores-deshabilitados');if(!el)return;
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin profesores deshabilitados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,true)).join('')}</tbody></table>`;
+}
+function renderProfesoresFiltrados(data){ renderProfesoresActivos(data); }
 function filterProfesores(){
   const qApe=(document.getElementById('q-prof-ape')?.value||'').toLowerCase();
   const qDni=(document.getElementById('q-prof-dni')?.value||'').toLowerCase();
-  renderProfesoresFiltrados(allProfesoresData.filter(p=>`${p.perfiles?.apellido} ${p.perfiles?.nombre}`.toLowerCase().includes(qApe)&&(p.perfiles?.dni||'').toLowerCase().includes(qDni)));
+  renderProfesoresActivos(allProfesoresActivos.filter(p=>`${p.perfiles?.apellido} ${p.perfiles?.nombre}`.toLowerCase().includes(qApe)&&(p.perfiles?.dni||'').toLowerCase().includes(qDni)));
+  renderProfesoresDeshabilitados(allProfesoresDeshabilitados.filter(p=>`${p.perfiles?.apellido} ${p.perfiles?.nombre}`.toLowerCase().includes(qApe)&&(p.perfiles?.dni||'').toLowerCase().includes(qDni)));
 }
-async function deleteProfesor(id,perfilId){
-  if(!confirm('¿Dar de baja a este profesor?'))return;
+function showProfTab(tab){
+  document.getElementById('d-profesores-activos').style.display=tab==='activos'?'block':'none';
+  document.getElementById('d-profesores-deshabilitados').style.display=tab==='deshabilitados'?'block':'none';
+  document.getElementById('proftab-activos').classList.toggle('active',tab==='activos');
+  document.getElementById('proftab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
+}
+async function inhabilitarProfesor(id){
+  if(!confirm('¿Inhabilitar a este profesor? No podrá iniciar sesión.'))return;
   await sb.from('profesores').update({activo:false}).eq('id',id);
-  await sb.from('perfiles').update({rol:'alumno'}).eq('id',perfilId);
   await loadProfesores();
 }
+async function reactivarProfesor(id){
+  if(!confirm('¿Reactivar a este profesor?'))return;
+  await sb.from('profesores').update({activo:true}).eq('id',id);
+  await loadProfesores();
+}
+async function deleteProfesor(id,perfilId){ await inhabilitarProfesor(id); }
 
 let prStream=null,prPhotoBlob=null,prFotoFile=null;
 async function startProfesorCam(){
