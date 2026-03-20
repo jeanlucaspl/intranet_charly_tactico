@@ -350,12 +350,18 @@
       <button class="btn btn-gold" onclick="openMd('md-alumno')">+ Nuevo Alumno</button>
     </div>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <input type="text" id="q-al-apellido" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
+    <input type="text" id="q-al-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
+    <button class="btn btn-outline" onclick="filterAlumnos()">Buscar</button>
+  </div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')">👮 Activos</div>
+    <div class="aula-tab" id="altab-inactivos" onclick="showAlTab('inactivos')">🚫 Inactivos</div>
+  </div>
   <div class="tw">
-    <div class="th">
-      <span class="th-ttl">Listado</span>
-      <div class="srch"><input type="text" id="q-alumno" placeholder="Buscar..." oninput="filterAlumnos()"/></div>
-    </div>
-    <div id="d-alumnos"><div class="empty"><div class="ei">👮</div><div class="et">Cargando...</div></div></div>
+    <div id="d-alumnos-activos"><div class="empty"><div class="ei">👮</div><div class="et">Cargando...</div></div></div>
+    <div id="d-alumnos-inactivos" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -598,6 +604,9 @@
     <div class="aula-tab" id="ctab-leidos" onclick="showContactoTab('leidos')">✅ Leídos</div>
   </div>
   <div id="d-contacto-noleidos"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px" id="del-all-leidos-wrap">
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px;display:none" id="btn-del-all-leidos" onclick="deleteAllMensajesLeidos()">🗑️ Borrar todos los leídos</button>
+  </div>
   <div id="d-contacto-leidos" style="display:none"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
 </div>
 
@@ -606,6 +615,10 @@
   <div class="ph">
     <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN DE PADRES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <input type="text" id="q-padre-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
+    <input type="text" id="q-padre-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Padres Registrados</span></div>
@@ -624,6 +637,10 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Administradores</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+      <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+    </div>
     <div id="d-admins"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
   </div>
   <!-- CONFIG UBICACIÓN ACADEMIA -->
@@ -674,6 +691,9 @@
   </div>
   <div style="margin-top:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">Todas las contraseñas registradas</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="q-pass-ape" placeholder="Filtrar por apellido..." style="flex:1;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterContrasenas()">
+    </div>
     <div id="d-contrasenas"><div class="empty"><div class="ei">🔑</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -683,6 +703,10 @@
   <div class="ph">
     <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN DE PROFESORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <input type="text" id="q-prof-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
+    <input type="text" id="q-prof-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Profesores Activos</span></div>
@@ -722,7 +746,9 @@
         <div class="fg"><label>Nombre</label><input type="text" id="al-nombre" placeholder="Juan"/></div>
         <div class="fg"><label>Apellido</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
         <div class="fg"><label>DNI</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
-        <div class="fg"><label>Código</label><input type="text" id="al-codigo" placeholder="CAD-2026-001"/></div>
+        <div class="fg"><label>Sexo</label><select id="al-sexo"><option value="">--</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+        <div class="fg"><label>Peso (kg)</label><input type="number" id="al-peso" step="0.1" min="30" max="200" placeholder="65.5"/></div>
+        <div class="fg"><label>Talla (cm)</label><input type="number" id="al-talla" step="0.1" min="100" max="220" placeholder="170"/></div>
         <div class="fg full"><label>Email (acceso al sistema)</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
         <div class="fg full"><label>Contraseña inicial</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
       </div>
@@ -1246,10 +1272,13 @@ function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setD
 function fmtDate(d){return d?new Date(d).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--'}
 
 // ── LOADERS ──
+let allAlumnosInactivos=[];
 async function loadAlumnos(){
-  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni),alumno_aula(aulas(nombre))').eq('activo',true).order('creado_en');
-  allAlumnos = data||[];
+  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni),alumno_aula(aulas(nombre))').order('creado_en');
+  allAlumnos=(data||[]).filter(a=>a.activo!==false);
+  allAlumnosInactivos=(data||[]).filter(a=>a.activo===false);
   renderAlumnos(allAlumnos);
+  renderAlumnosInactivos(allAlumnosInactivos);
   renderAttGrid(allAlumnos);
 }
 async function loadMaterias(){
@@ -1323,6 +1352,7 @@ async function deleteAllNotif(){
   await sb.from('notificaciones').delete().neq('id','00000000-0000-0000-0000-000000000000');
   await loadNotifHist();
 }
+let allPadresData=[];
 async function loadPadres(){
   const el=document.getElementById('d-padres');
   if(!el)return;
@@ -1333,13 +1363,20 @@ async function loadPadres(){
   if(!padres?.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
   // Get all links
   const {data:links}=await sb.from('padres_alumnos')
-    .select('padre_id,parentesco,alumnos(id,codigo,perfiles(nombre,apellido,dni))');
+    .select('padre_id,parentesco,alumnos(id,perfiles(nombre,apellido,dni))');
   const linkMap={};
   links?.forEach(l=>{ if(!linkMap[l.padre_id]) linkMap[l.padre_id]=[]; linkMap[l.padre_id].push(l); });
+  allPadresData=padres.map(p=>({...p,_hijos:linkMap[p.id]||[]}));
+  renderPadres(allPadresData);
+}
+function renderPadres(padres){
+  const el=document.getElementById('d-padres');
+  if(!el)return;
+  if(!padres.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres registrados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre Padre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${padres.map(p=>{
-    const hijos=linkMap[p.id]||[];
+    const hijos=p._hijos||[];
     const hijosHtml=hijos.length
-      ? hijos.map(l=>`<div>${l.alumnos?.perfiles?.nombre||'--'} ${l.alumnos?.perfiles?.apellido||''} · <span class="badge by">${l.alumnos?.perfiles?.dni||'--'}</span> · <strong>${l.alumnos?.codigo||'--'}</strong></div>`).join('')
+      ? hijos.map(l=>`<div>${l.alumnos?.perfiles?.nombre||'--'} ${l.alumnos?.perfiles?.apellido||''} · <span class="badge by">${l.alumnos?.perfiles?.dni||'--'}</span></div>`).join('')
       : '<span style="color:var(--muted);font-size:11px">Sin alumno vinculado</span>';
     return`<tr>
       <td><strong>${p.nombre} ${p.apellido}</strong></td>
@@ -1350,6 +1387,12 @@ async function loadPadres(){
       <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deletePadre('${p.id}')">Dar de baja</button></td>
     </tr>`;
   }).join('')}</tbody></table>`;
+}
+function filterPadres(){
+  const qApe=(document.getElementById('q-padre-ape')?.value||'').toLowerCase();
+  const qDni=(document.getElementById('q-padre-dni')?.value||'').toLowerCase();
+  const filtered=allPadresData.filter(p=>`${p.apellido} ${p.nombre}`.toLowerCase().includes(qApe)&&(p.dni||'').toLowerCase().includes(qDni));
+  renderPadres(filtered);
 }
 async function deletePadre(id){
   if(!confirm('¿Dar de baja a este padre?'))return;
@@ -1377,12 +1420,12 @@ async function buscarAlumnoPorDNI(contexto){
     return;
   }
   // Get alumno id
-  const {data:al} = await sb.from('alumnos').select('id,codigo').eq('perfil_id',data.id).single();
+  const {data:al} = await sb.from('alumnos').select('id').eq('perfil_id',data.id).single();
   document.getElementById(hiddenId).value = al?.id || '';
   document.getElementById(infoId).style.display='block';
   document.getElementById(infoId).style.borderColor='var(--green)';
   document.getElementById(infoId).style.color='var(--green)';
-  document.getElementById(infoId).textContent=`✅ ${data.nombre} ${data.apellido} · DNI: ${data.dni} · Código: ${al?.codigo||'--'}`;
+  document.getElementById(infoId).textContent=`✅ ${data.nombre} ${data.apellido} · DNI: ${data.dni}`;
 }
 
 // ── GENERADORES DE CONTRASEÑA ──
@@ -1424,11 +1467,18 @@ async function saveAdmin(){
 }
 
 // ── CARGAR ADMINS ──
+let allAdminsData=[];
 async function loadAdmins(){
   const el=document.getElementById('d-admins');
   if(!el) return;
   const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol,email_ref')
     .in('rol',['admin','profesor','dueno']).order('nombre');
+  allAdminsData=data||[];
+  renderAdminsFiltrados(allAdminsData);
+}
+function renderAdminsFiltrados(data){
+  const el=document.getElementById('d-admins');
+  if(!el)return;
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin admins registrados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td><strong>${a.nombre} ${a.apellido}</strong></td>
@@ -1437,6 +1487,11 @@ async function loadAdmins(){
     <td><span class="badge ${a.rol==='dueno'?'bgold':a.rol==='admin'?'bg':'bb'}">${a.rol}</span></td>
     <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAdmin('${a.id}')">Dar de baja</button></td>
   </tr>`).join('')}</tbody></table>`;
+}
+function filterAdmins(){
+  const qApe=(document.getElementById('q-adm-ape')?.value||'').toLowerCase();
+  const qDni=(document.getElementById('q-adm-dni')?.value||'').toLowerCase();
+  renderAdminsFiltrados(allAdminsData.filter(a=>`${a.apellido} ${a.nombre}`.toLowerCase().includes(qApe)&&(a.dni||'').toLowerCase().includes(qDni)));
 }
 async function deleteAdmin(id){
   if(!confirm('¿Dar de baja a este administrador?'))return;
@@ -1470,10 +1525,17 @@ async function cambiarContrasena(){
   // With anon key we can only store the new password for reference
   showMsg(msg,'✅ Contraseña actualizada en registros. Para aplicarla en el sistema de auth, usa el panel de Supabase → Authentication → Users','ok');
 }
+let allContrasenaData=[];
 async function loadContrasenas(){
   const el=document.getElementById('d-contrasenas');
   if(!el)return;
   const {data}=await sb.from('gestion_contrasenas').select('*,perfiles(nombre,apellido,dni,rol)').order('actualizado_en',{ascending:false});
+  allContrasenaData=data||[];
+  renderContrasenasFiltradas(allContrasenaData);
+}
+function renderContrasenasFiltradas(data){
+  const el=document.getElementById('d-contrasenas');
+  if(!el)return;
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🔑</div><div class="et">Sin registros</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Usuario</th><th>DNI</th><th>Rol</th><th>Contraseña</th><th>Actualizado</th></tr></thead><tbody>${data.map(c=>{
     const fecha=new Date(c.actualizado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
@@ -1485,6 +1547,10 @@ async function loadContrasenas(){
       <td style="font-size:12px;color:var(--muted)">${fecha}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
+}
+function filterContrasenas(){
+  const q=(document.getElementById('q-pass-ape')?.value||'').toLowerCase();
+  renderContrasenasFiltradas(allContrasenaData.filter(c=>`${c.perfiles?.apellido} ${c.perfiles?.nombre}`.toLowerCase().includes(q)));
 }
 
 async function savePadre(){
@@ -1547,7 +1613,7 @@ async function loadContacto(){
   if(!data?.length){noLeidosEl.innerHTML=empty;leidosEl.innerHTML=empty;document.getElementById('s-msgs').textContent='0';return}
   const enriched=await Promise.all(data.map(async m=>{
     const {data:link}=await sb.from('padres_alumnos')
-      .select('alumnos(id,codigo,perfiles(nombre,apellido,dni))')
+      .select('alumnos(id,perfiles(nombre,apellido,dni))')
       .eq('padre_id',m.padre_id).maybeSingle();
     return{...m,al:link?.alumnos};
   }));
@@ -1555,7 +1621,9 @@ async function loadContacto(){
     const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const al=m.al;
+    const delBtn=m.leido&&esDueno?`<button onclick="deleteMensajeContacto('${m.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
     return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
+      ${delBtn}
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
@@ -1565,7 +1633,7 @@ async function loadContacto(){
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.08em">
         Alumno: <strong style="color:var(--white)">${al?.perfiles?.nombre||'No vinculado'} ${al?.perfiles?.apellido||''}</strong>
-        ${al?`· DNI: <strong style="color:var(--gold)">${al.perfiles?.dni||'--'}</strong> · Código: <strong style="color:var(--gold)">${al.codigo||'--'}</strong>`:''}
+        ${al?`· DNI: <strong style="color:var(--gold)">${al.perfiles?.dni||'--'}</strong>`:''}
       </div>
       <div style="font-size:13px;color:var(--white);margin-top:8px">${m.mensaje||'(sin mensaje)'}</div>
       ${adj}
@@ -1581,6 +1649,20 @@ async function loadContacto(){
   const badge=document.getElementById('ctab-count');
   if(badge){badge.textContent=count;badge.style.display=count?'inline':'none';}
   document.getElementById('s-msgs').textContent=count;
+  // Mostrar/ocultar botón borrar todos los leídos
+  const delAllBtn=document.getElementById('btn-del-all-leidos');
+  if(delAllBtn)delAllBtn.style.display=esDueno&&leidos.length?'block':'none';
+}
+async function deleteMensajeContacto(id){
+  if(!esDueno)return;
+  await sb.from('contacto_mensajes').delete().eq('id',id);
+  loadContacto();
+}
+async function deleteAllMensajesLeidos(){
+  if(!esDueno)return;
+  if(!confirm('¿Borrar todos los mensajes leídos?'))return;
+  await sb.from('contacto_mensajes').delete().eq('leido',true);
+  loadContacto();
 }
 async function loadHorario(){
   const semana=document.getElementById('hor-semana')?.value;
@@ -1655,13 +1737,34 @@ async function loadSoluciones(){
 
 // ── RENDERERS ──
 function renderAlumnos(data){
-  if(!data.length){document.getElementById('d-alumnos').innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos registrados</div></div>`;return}
-  document.getElementById('d-alumnos').innerHTML=`<table><thead><tr><th>Código</th><th>Nombre</th><th>DNI</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
-    <td><strong>${a.codigo}</strong></td>
+  const el=document.getElementById('d-alumnos-activos')||document.getElementById('d-alumnos');
+  if(!data.length){if(el)el.innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos activos</div></div>`;return}
+  if(el)el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
-    <td><span class="badge ${a.activo?'bg':'br'}">${a.activo?'Activo':'Inactivo'}</span></td>
-    <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAlumno('${a.id}')">Dar de baja</button></td>
+    <td>${a.sexo||'--'}</td>
+    <td>${a.peso?a.peso+' kg':'--'}</td>
+    <td>${a.talla?a.talla+' cm':'--'}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAlumno('${a.id}')">Inhabilitar</button>
+      ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+function renderAlumnosInactivos(data){
+  const el=document.getElementById('d-alumnos-inactivos');
+  if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin alumnos inactivos</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+    <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
+    <td>${a.perfiles?.dni||'--'}</td>
+    <td>${a.sexo||'--'}</td>
+    <td>${a.peso?a.peso+' kg':'--'}</td>
+    <td>${a.talla?a.talla+' cm':'--'}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
+      ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
+    </td>
   </tr>`).join('')}</tbody></table>`;
 }
 function renderAulas(){
@@ -1746,12 +1849,11 @@ async function saveAlumno(){
   const nombre  = document.getElementById('al-nombre').value.trim();
   const apellido= document.getElementById('al-apellido').value.trim();
   const dni     = document.getElementById('al-dni').value.trim();
-  const codigo  = document.getElementById('al-codigo').value.trim();
   const email   = document.getElementById('al-email').value.trim();
   const pass    = document.getElementById('al-pass').value;
   const msg     = document.getElementById('msg-alumno');
 
-  if(!nombre||!apellido||!dni||!codigo||!email||!pass)
+  if(!nombre||!apellido||!dni||!email||!pass)
     return showMsg(msg,'Completa todos los campos obligatorios','err');
 
   const btn=document.getElementById('btn-crear-alumno');
@@ -1768,7 +1870,7 @@ async function saveAlumno(){
   if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
   // 3. Insertar alumno (sin foto por ahora)
-  const {data:alData,error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,codigo,activo:true}).select('id').single();
+  const {data:alData,error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,activo:true,sexo:document.getElementById('al-sexo').value||null,peso:parseFloat(document.getElementById('al-peso').value)||null,talla:parseFloat(document.getElementById('al-talla').value)||null}).select('id').single();
   if(alErr){showMsg(msg,'Error en alumno: '+alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
   // 4. Subir foto si existe (opcional)
@@ -1791,14 +1893,32 @@ async function saveAlumno(){
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
   // Reset form
-  ['al-nombre','al-apellido','al-dni','al-codigo','al-email','al-pass'].forEach(id=>{
+  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('al-sexo').value='';
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
-async function deleteAlumno(id){
-  if(!confirm('¿Dar de baja a este alumno?'))return;
+async function inhabilitarAlumno(id){
+  if(!confirm('¿Inhabilitar a este alumno?'))return;
   await sb.from('alumnos').update({activo:false}).eq('id',id);
+  await loadAlumnos();
+}
+async function reactivarAlumno(id){
+  if(!confirm('¿Reactivar a este alumno?'))return;
+  await sb.from('alumnos').update({activo:true}).eq('id',id);
+  await loadAlumnos();
+}
+function confirmarEliminarAlumno(alumnoId,perfilId,nombre,apellido){
+  if(!confirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos y no se puede deshacer.`))return;
+  eliminarAlumno(alumnoId,perfilId);
+}
+async function eliminarAlumno(alumnoId,perfilId){
+  const FNURL=`https://jfczouzgikqxcnotukag.supabase.co/functions/v1/delete-user`;
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token}`},body:JSON.stringify({alumno_id:alumnoId,perfil_id:perfilId})});
+  const json=await res.json();
+  if(json.error){alert('Error al eliminar: '+json.error);return;}
   await loadAlumnos();
 }
 async function saveMateria(){
@@ -2218,10 +2338,17 @@ function renderChips(){
 }
 
 // ── POPULATE SELECTS ──
+let allProfesoresData=[];
 async function loadProfesores(){
   const el=document.getElementById('d-profesores');
   if(!el)return;
   const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref)').eq('activo',true).order('creado_en');
+  allProfesoresData=data||[];
+  renderProfesoresFiltrados(allProfesoresData);
+}
+function renderProfesoresFiltrados(data){
+  const el=document.getElementById('d-profesores');
+  if(!el)return;
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin profesores</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`<tr>
     <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
@@ -2230,6 +2357,11 @@ async function loadProfesores(){
     <td>${p.especialidad||'--'}</td>
     <td><button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteProfesor('${p.id}','${p.perfil_id}')">Dar de baja</button></td>
   </tr>`).join('')}</tbody></table>`;
+}
+function filterProfesores(){
+  const qApe=(document.getElementById('q-prof-ape')?.value||'').toLowerCase();
+  const qDni=(document.getElementById('q-prof-dni')?.value||'').toLowerCase();
+  renderProfesoresFiltrados(allProfesoresData.filter(p=>`${p.perfiles?.apellido} ${p.perfiles?.nombre}`.toLowerCase().includes(qApe)&&(p.perfiles?.dni||'').toLowerCase().includes(qDni)));
 }
 async function deleteProfesor(id,perfilId){
   if(!confirm('¿Dar de baja a este profesor?'))return;
@@ -2312,7 +2444,22 @@ function populateSelects(){
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
-function filterAlumnos(){const q=document.getElementById('q-alumno').value.toLowerCase();renderAlumnos(allAlumnos.filter(a=>`${a.perfiles?.nombre} ${a.perfiles?.apellido} ${a.codigo}`.toLowerCase().includes(q)))}
+function filterAlumnos(){
+  const qApe=(document.getElementById('q-al-apellido')?.value||'').toLowerCase();
+  const qDni=(document.getElementById('q-al-dni')?.value||document.getElementById('q-alumno')?.value||'').toLowerCase();
+  const filtered=allAlumnos.filter(a=>`${a.perfiles?.apellido} ${a.perfiles?.nombre}`.toLowerCase().includes(qApe)&&`${a.perfiles?.dni||''}`.toLowerCase().includes(qDni));
+  renderAlumnos(filtered);
+}
+function showAlTab(tab){
+  const actEl=document.getElementById('d-alumnos-activos');
+  const inEl=document.getElementById('d-alumnos-inactivos');
+  const tabAct=document.getElementById('altab-activos');
+  const tabIn=document.getElementById('altab-inactivos');
+  if(actEl)actEl.style.display=tab==='activos'?'block':'none';
+  if(inEl)inEl.style.display=tab==='inactivos'?'block':'none';
+  if(tabAct)tabAct.classList.toggle('active',tab==='activos');
+  if(tabIn)tabIn.classList.toggle('active',tab==='inactivos');
+}
 function filterNotas(){const m=document.getElementById('q-nota-materia').value;renderNotas(m?allNotas.filter(n=>n.materia_id===m):allNotas)}
 
 // ── DNI AUTOCOMPLETE ──
