@@ -1990,7 +1990,8 @@ async function eliminarUsuario(perfilId,extraId,tipo){
   if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
   const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token}`},body:JSON.stringify(body)});
   const json=await res.json();
-  if(json.error){alert('Error al eliminar: '+json.error);return;}
+  alert('DEBUG respuesta (borrar después):\nStatus: '+res.status+'\n'+JSON.stringify(json));
+  if(json.error){return;}
   if(tipo==='alumno') await loadAlumnos();
   else if(tipo==='padre') await loadPadres();
   else if(tipo==='profesor') await loadProfesores();
