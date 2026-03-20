@@ -1364,8 +1364,7 @@ async function deleteAllNotif(){
   await sb.from('notificaciones').delete().neq('id','00000000-0000-0000-0000-000000000000');
   await loadNotifHist();
 }
-let allPadresData=[];
-let allPadresActivos=[],allPadresDeshabilitados=[];
+let allPadresData=[],allPadresActivos=[],allPadresDeshabilitados=[];
 async function loadPadres(){
   const elA=document.getElementById('d-padres-activos');
   const elD=document.getElementById('d-padres-deshabilitados');
@@ -2414,7 +2413,6 @@ function renderChips(){
 }
 
 // ── POPULATE SELECTS ──
-let allProfesoresData=[];
 let allProfesoresData=[],allProfesoresActivos=[],allProfesoresDeshabilitados=[];
 async function loadProfesores(){
   const elA=document.getElementById('d-profesores-activos');
