@@ -327,6 +327,7 @@ async function saveFcmToken(){
     const token=AndroidNative.getFcmToken();
     console.log('intento',i,'token:',token?token.slice(0,20)+'...':'vacío');
     if(token){
+      await sb.from('fcm_tokens').delete().eq('token',token).neq('user_id',uid);
       const {error}=await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
       if(error)console.error('FCM upsert error:',error.message,error.code);
       else console.log('FCM token guardado OK');

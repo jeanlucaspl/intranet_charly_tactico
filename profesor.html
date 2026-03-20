@@ -396,7 +396,7 @@ async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;
   for(let i=0;i<10;i++){
     const token=AndroidNative.getFcmToken();
-    if(token){await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});return;}
+    if(token){await sb.from('fcm_tokens').delete().eq('token',token).neq('user_id',uid);await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});return;}
     await new Promise(r=>setTimeout(r,2000));
   }
 }

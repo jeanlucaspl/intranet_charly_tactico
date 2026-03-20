@@ -1223,6 +1223,7 @@ async function saveFcmToken(){
     const token=AndroidNative.getFcmToken();
     console.log('fcm intento',i,'token:',token?token.slice(0,20)+'...':'null');
     if(token){
+      await sb.from('fcm_tokens').delete().eq('token',token).neq('user_id',uid);
       const{error}=await sb.from('fcm_tokens').upsert({user_id:uid,token,updated_at:new Date().toISOString()},{onConflict:'user_id'});
       if(error)console.error('fcm upsert error:',error.message,error.code);
       else console.log('FCM token guardado OK');
@@ -1528,14 +1529,13 @@ async function loadContacto(){
     .order('creado_en',{ascending:false});
   const el=document.getElementById('d-contacto');
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
-  // Enrich each message with the alumno linked to that padre
   const enriched=await Promise.all(data.map(async m=>{
     const {data:link}=await sb.from('padres_alumnos')
       .select('alumnos(id,codigo,perfiles(nombre,apellido,dni))')
       .eq('padre_id',m.padre_id).maybeSingle();
     return{...m,al:link?.alumnos};
   }));
-  el.innerHTML=enriched.map(m=>{
+  const renderMsg=m=>{
     const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const al=m.al;
@@ -1543,7 +1543,7 @@ async function loadContacto(){
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI padre: ${m.perfiles?.dni||'--'}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI: ${m.perfiles?.dni||'--'}</span>
         </div>
         ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')">✓ Leído</button>`:'<span class="badge bg">Leído</span>'}
       </div>
@@ -1555,7 +1555,14 @@ async function loadContacto(){
       ${adj}
       <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div>
     </div>`;
-  }).join('');
+  };
+  const noLeidos=enriched.filter(m=>!m.leido);
+  const leidos=enriched.filter(m=>m.leido);
+  const secHeader=(txt,count)=>`<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px">${txt} <span style="color:var(--gold)">(${count})</span></div>`;
+  let html='';
+  if(noLeidos.length)html+=secHeader('🟡 No leídos',noLeidos.length)+noLeidos.map(renderMsg).join('');
+  if(leidos.length)html+=secHeader('✅ Leídos',leidos.length)+leidos.map(renderMsg).join('');
+  el.innerHTML=html;
 }
 async function loadHorario(){
   const semana=document.getElementById('hor-semana')?.value;
