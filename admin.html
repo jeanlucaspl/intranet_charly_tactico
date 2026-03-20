@@ -287,6 +287,9 @@
     <button class="sb-link" onclick="showPanel('alumnos',this)"><span class="ic">👮</span>Alumnos</button>
     <button class="sb-link" onclick="showPanel('materias',this)"><span class="ic">📚</span>Materias</button>
     <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Horario Semanal</button>
+    <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
+    <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none"><span class="ic">👩‍🏫</span>Gestión Profesores</button>
+    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Usuarios</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Asistencia</div>
@@ -304,12 +307,6 @@
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
     <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
     <button class="sb-link" onclick="showPanel('contrasenas',this)"><span class="ic">🔑</span>Contraseñas</button>
-  </div>
-  <div class="sb-section" id="sb-gestion" style="display:none">
-    <div class="sb-label">Gestión</div>
-    <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
-    <button class="sb-link" id="sb-profesores" onclick="showPanel('profesores',this)"><span class="ic">📚</span>Gestión Profesores</button>
-    <button class="sb-link" id="sb-usuarios" onclick="showPanel('usuarios',this)"><span class="ic">👤</span>Usuarios</button>
   </div>
 </div>
 
@@ -1223,8 +1220,7 @@ async function init(){
   esDueno = (pf?.rol==='dueno');
   // Show dueno-only sections
   if(esDueno){
-    const sbG=document.getElementById('sb-gestion');
-    if(sbG) sbG.style.display='block';
+    document.querySelectorAll('.sb-dueno').forEach(el=>el.style.display='flex');
     const bA=document.getElementById('btn-nueva-aula');
     if(bA) bA.style.display='inline-flex';
     const bM=document.getElementById('btn-nueva-materia');
