@@ -298,6 +298,7 @@ async function init(){
   const session=await checkAuth();
   if(!session)return;
   uid=session.user.id;
+  if(window.AndroidNative&&session.access_token)AndroidNative.storeJwt(session.access_token);
   const {data:perfil}=await sb.from('perfiles').select('*').eq('id',uid).single();
   if(perfil){
     perfilData=perfil;
