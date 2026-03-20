@@ -1793,7 +1793,15 @@ async function savePractica(){
   const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url,activa:true});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   showMsg(msg,'Práctica subida ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);});
+  sb.from('perfiles').select('id,rol').in('rol',['alumno','padre','admin']).then(({data})=>{
+    if(!data?.length)return;
+    const alIds=data.filter(p=>p.rol==='alumno').map(p=>p.id);
+    const paIds=data.filter(p=>p.rol==='padre').map(p=>p.id);
+    const adIds=data.filter(p=>p.rol==='admin').map(p=>p.id);
+    if(alIds.length)sendFcmToUsers(alIds,'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);
+    if(paIds.length)sendFcmToUsers(paIds,'📄 Nueva práctica para tu hijo/a',`Tu hijo/a tiene una nueva práctica disponible: ${titulo}.`);
+    if(adIds.length)sendFcmToUsers(adIds,'📄 Práctica subida',`Se publicó la práctica: ${titulo}.`);
+  });
   practicaFile=null; document.getElementById('p-fname').textContent='';
   await loadPracticas();
   btn.disabled=false; btn.textContent='SUBIR PRÁCTICA';
@@ -2219,10 +2227,15 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+function handleAndroidBack(){
+  const sb_el=document.getElementById('sidebar');
+  if(sb_el&&!sb_el.classList.contains('open')){toggleSb();}
+  else{closeSb();if(window.AndroidNative)AndroidNative.requestExit();}
+}
 // Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
 (function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
-async function doLogout(){ await sb.auth.signOut(); location.replace('index.html'); }
+function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 
 // ── HORARIO PLANTILLA ──
 const HOR_SLOTS=[

@@ -705,9 +705,14 @@ async function alertarAdminGPS(motivo='GPS denegado'){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+function handleAndroidBack(){
+  const sb_el=document.getElementById('sidebar');
+  if(sb_el&&!sb_el.classList.contains('open')){toggleSb();}
+  else{closeSb();if(window.AndroidNative)AndroidNative.requestExit();}
+}
 // Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
 (function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
-async function doLogout(){await sb.auth.signOut();}
+function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 
 // ── NOTAS ──
 let pnAlumnos=[],pnMaterias=[];
