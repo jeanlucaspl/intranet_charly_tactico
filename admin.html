@@ -1785,7 +1785,7 @@ async function savePractica(){
   const {data:upData,error:upErr}=await sb.storage.from('practicas').upload(path,practicaFile,{contentType:'application/pdf'});
   if(upErr){showMsg(msg,upErr.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   const url=STORAGE+'practicas/'+upData.path;
-  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url});
+  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url,activa:true});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   showMsg(msg,'Práctica subida ✅','ok');
   sb.from('perfiles').select('id').eq('rol','alumno').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);});

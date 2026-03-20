@@ -341,7 +341,7 @@ async function checkPendingSolicitud(){
 }
 
 async function loadNotas(){
-  if(!alumnoId)return;
+  if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
   const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
   document.getElementById('s-mat').textContent=data?.length||0;
   if(data?.length){
@@ -365,7 +365,7 @@ function renderNotasTable(data){
 }
 
 async function loadAsistencias(){
-  if(!alumnoId)return;
+  if(!alumnoId){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin datos de alumno</div></div>`;return;}
   const {data}=await sb.from('asistencias').select('*,materias(nombre)').eq('alumno_id',alumnoId).order('fecha',{ascending:false});
   const p=data?.filter(a=>a.estado==='presente').length||0;
   const t=data?.filter(a=>a.estado==='tardanza').length||0;
@@ -409,8 +409,9 @@ async function loadNotifs(){
 }
 
 async function loadPracticas(){
+  if(!alumnoId){document.getElementById('d-practicas').innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin datos de alumno</div></div>`;return;}
   // Get materias of this alumno
-  const {data:mats}=alumnoId?await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId):{data:[]};
+  const {data:mats}=await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId);
   const matIds=mats?.map(m=>m.materia_id)||[];
   let query=sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
   if(matIds.length)query=query.in('materia_id',matIds);
@@ -491,10 +492,15 @@ const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 
 let horCurrentAulaId=null,horAulasData=[];
 async function loadHorario(){
-  const {data:aulas}=await sb.from('aulas').select('id,nombre').eq('activa',true).order('nombre');
+  const {data:aulas}=await sb.from('aulas').select('id,nombre').order('nombre');
   horAulasData=aulas||[];
   renderHorAulaTabs();
-  if(horAulasData.length)selectHorAulaTab(horAulasData[0].id);
+  if(horAulasData.length){
+    selectHorAulaTab(horAulasData[0].id);
+  }else{
+    const wrap=document.getElementById('d-horario');
+    if(wrap)wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">Sin horario disponible</div></div>`;
+  }
 }
 function renderHorAulaTabs(){
   const cont=document.getElementById('hor-aula-tabs');
