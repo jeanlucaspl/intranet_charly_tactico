@@ -271,30 +271,31 @@
 <!-- CONTACTO -->
 <div class="panel" id="panel-contacto">
   <div class="ph"><div class="eye">Comunicación directa</div><div class="ttl">CONTACTAR ACADEMIA</div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="contacto-grid">
-    <!-- FORM -->
-    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:16px">✉️ Enviar Mensaje</div>
-      <div class="msg" id="c-msg"></div>
-      <div class="fg"><label>Mensaje</label><textarea id="c-texto" rows="4" placeholder="Escribe tu consulta o comunicado..."></textarea></div>
-      <div class="fg"><label>Adjunto (imagen o PDF, opcional)</label>
-        <div class="file-drop">
-          <input type="file" accept="image/*,.pdf" onchange="setContactoFile(this)"/>
-          <div class="fd-icon">📎</div>
-          <div class="fd-txt">Imagen o PDF</div>
-          <div class="fd-name" id="c-fname"></div>
-        </div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="ctab-enviar" onclick="showContactoTab('enviar')">✉️ Enviar Mensaje</div>
+    <div class="aula-tab" id="ctab-hist" onclick="showContactoTab('hist')">📜 Mis Mensajes</div>
+  </div>
+  <!-- Tab: Enviar -->
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:20px" id="ctab-enviar-content">
+    <div class="msg" id="c-msg"></div>
+    <div class="fg"><label>Mensaje</label><textarea id="c-texto" rows="5" placeholder="Escribe tu consulta o comunicado..."></textarea></div>
+    <div class="fg"><label>Adjunto (imagen o PDF, opcional)</label>
+      <div class="file-drop">
+        <input type="file" accept="image/*,.pdf" onchange="setContactoFile(this)"/>
+        <div class="fd-icon">📎</div>
+        <div class="fd-txt">Imagen o PDF</div>
+        <div class="fd-name" id="c-fname"></div>
       </div>
-      <button class="btn btn-blue" style="width:100%" onclick="sendContacto()">ENVIAR MENSAJE</button>
     </div>
-    <!-- HISTORIAL -->
-    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px">📜 Mis Mensajes</div>
-        <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllMensajes()">🗑️ Borrar todo</button>
-      </div>
-      <div id="d-c-hist"><div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div></div>
+    <button class="btn btn-blue" style="width:100%" onclick="sendContacto()">ENVIAR MENSAJE</button>
+  </div>
+  <!-- Tab: Historial -->
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:20px;display:none" id="ctab-hist-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px">Mensajes enviados</div>
+      <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllMensajes()">🗑️ Borrar todo</button>
     </div>
+    <div id="d-c-hist"><div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div></div>
   </div>
 </div>
 
@@ -663,6 +664,13 @@ async function selectHorAulaTab(aulaId){
   wrap.innerHTML=html;
 }
 
+function showContactoTab(tab){
+  document.getElementById('ctab-enviar-content').style.display=tab==='enviar'?'block':'none';
+  document.getElementById('ctab-hist-content').style.display=tab==='hist'?'block':'none';
+  document.getElementById('ctab-enviar').classList.toggle('active',tab==='enviar');
+  document.getElementById('ctab-hist').classList.toggle('active',tab==='hist');
+  if(tab==='hist')loadContactoHist();
+}
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 function showPanel(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
