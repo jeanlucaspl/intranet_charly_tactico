@@ -390,27 +390,37 @@ async function loadAsistencias(){
 
 async function loadNotifs(){
   if(!uid)return;
-  const {data}=await sb.from('notificaciones').select('*').or(`destinatario_id.eq.${uid},global.eq.true`).order('creado_en',{ascending:false});
-  const unread=data?.filter(n=>!n.leida).length||0;
+  const [{data},{data:ocultas}]=await Promise.all([
+    sb.from('notificaciones').select('*').or(`destinatario_id.eq.${uid},global.eq.true`).order('creado_en',{ascending:false}),
+    sb.from('notificaciones_ocultas').select('notificacion_id').eq('user_id',uid)
+  ]);
+  const ocultasIds=new Set((ocultas||[]).map(o=>o.notificacion_id));
+  const visible=(data||[]).filter(n=>!ocultasIds.has(n.id));
+  const unread=visible.filter(n=>!n.leida).length;
   document.getElementById('s-notif').textContent=unread;
-  if(!data?.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
+  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
   const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
-  document.getElementById('d-notifs').innerHTML=data.map(n=>{
+  document.getElementById('d-notifs').innerHTML=visible.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
       :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
-    const delBtn=n.destinatario_id===uid?`<button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
-    return`<div class="nitem ${n.tipo}">${delBtn}<div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
+    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar">🗑️</button><div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
 }
 async function deleteNotif(id){
-  await sb.from('notificaciones').delete().eq('id',id);
+  await sb.from('notificaciones_ocultas').upsert({user_id:uid,notificacion_id:id},{onConflict:'user_id,notificacion_id'});
   loadNotifs();
 }
 async function deleteAllNotifs(){
-  if(!confirm('¿Borrar todas tus notificaciones?'))return;
-  await sb.from('notificaciones').delete().eq('destinatario_id',uid);
+  if(!confirm('¿Ocultar todas tus notificaciones?'))return;
+  const [{data},{ data:ocultas}]=await Promise.all([
+    sb.from('notificaciones').select('id').or(`destinatario_id.eq.${uid},global.eq.true`),
+    sb.from('notificaciones_ocultas').select('notificacion_id').eq('user_id',uid)
+  ]);
+  const ocultasIds=new Set((ocultas||[]).map(o=>o.notificacion_id));
+  const toHide=(data||[]).filter(n=>!ocultasIds.has(n.id)).map(n=>({user_id:uid,notificacion_id:n.id}));
+  if(toHide.length)await sb.from('notificaciones_ocultas').insert(toHide);
   loadNotifs();
 }
 
