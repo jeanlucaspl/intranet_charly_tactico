@@ -326,6 +326,7 @@
     <div class="sc"><div class="sc-lbl">Presentes Hoy</div><div class="sc-val" id="s-pres" style="color:var(--green)">--</div><div class="sc-sub">Verificados</div></div>
     <div class="sc"><div class="sc-lbl">Ausentes</div><div class="sc-val" id="s-aus" style="color:var(--red)">--</div><div class="sc-sub">Hoy</div></div>
     <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--</div><div class="sc-sub">Hoy</div></div>
+    <div class="sc" style="cursor:pointer" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))"><div class="sc-lbl">Mensajes</div><div class="sc-val" id="s-msgs" style="color:var(--gold)">--</div><div class="sc-sub">No leídos</div></div>
   </div>
 </div>
 
@@ -592,7 +593,12 @@
 <!-- ══ CONTACTO PADRES ══ -->
 <div class="panel" id="panel-contacto">
   <div class="ph"><div class="ph-left"><div class="eye">Mensajes entrantes</div><div class="ttl">CONTACTO PADRES</div></div></div>
-  <div id="d-contacto"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="ctab-noleidos" onclick="showContactoTab('noleidos')">🟡 No leídos <span id="ctab-count" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 6px;margin-left:4px;display:none"></span></div>
+    <div class="aula-tab" id="ctab-leidos" onclick="showContactoTab('leidos')">✅ Leídos</div>
+  </div>
+  <div id="d-contacto-noleidos"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
+  <div id="d-contacto-leidos" style="display:none"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- ══ GESTIÓN PADRES ══ -->
@@ -1213,7 +1219,7 @@ async function init(){
   populateSelects();
   saveFcmToken();
   // Realtime: auto-refresh contacto cuando llega un mensaje nuevo
-  sb.channel('admin-contacto').on('postgres_changes',{event:'INSERT',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
+  sb.channel('admin-contacto').on('postgres_changes',{event:'*',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
   sb.channel('admin-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifHist()).subscribe();
 }
 async function saveFcmToken(){
@@ -1523,12 +1529,22 @@ async function savePadre(){
   btn.disabled=false; btn.textContent='CREAR PADRE';
   setTimeout(()=>closeMd('md-padre'),2500);
 }
+let _contactoTab='noleidos';
+function showContactoTab(tab){
+  _contactoTab=tab;
+  document.getElementById('d-contacto-noleidos').style.display=tab==='noleidos'?'block':'none';
+  document.getElementById('d-contacto-leidos').style.display=tab==='leidos'?'block':'none';
+  document.getElementById('ctab-noleidos').classList.toggle('active',tab==='noleidos');
+  document.getElementById('ctab-leidos').classList.toggle('active',tab==='leidos');
+}
 async function loadContacto(){
   const {data}=await sb.from('contacto_mensajes')
     .select('*,perfiles!padre_id(nombre,apellido,dni)')
     .order('creado_en',{ascending:false});
-  const el=document.getElementById('d-contacto');
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes de padres aún</div></div>`;return}
+  const noLeidosEl=document.getElementById('d-contacto-noleidos');
+  const leidosEl=document.getElementById('d-contacto-leidos');
+  const empty=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div>`;
+  if(!data?.length){noLeidosEl.innerHTML=empty;leidosEl.innerHTML=empty;document.getElementById('s-msgs').textContent='0';return}
   const enriched=await Promise.all(data.map(async m=>{
     const {data:link}=await sb.from('padres_alumnos')
       .select('alumnos(id,codigo,perfiles(nombre,apellido,dni))')
@@ -1545,7 +1561,7 @@ async function loadContacto(){
           <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI: ${m.perfiles?.dni||'--'}</span>
         </div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')">✓ Leído</button>`:'<span class="badge bg">Leído</span>'}
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')">✓ Leído</button>`:''}
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.08em">
         Alumno: <strong style="color:var(--white)">${al?.perfiles?.nombre||'No vinculado'} ${al?.perfiles?.apellido||''}</strong>
@@ -1558,11 +1574,13 @@ async function loadContacto(){
   };
   const noLeidos=enriched.filter(m=>!m.leido);
   const leidos=enriched.filter(m=>m.leido);
-  const secHeader=(txt,count)=>`<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px">${txt} <span style="color:var(--gold)">(${count})</span></div>`;
-  let html='';
-  if(noLeidos.length)html+=secHeader('🟡 No leídos',noLeidos.length)+noLeidos.map(renderMsg).join('');
-  if(leidos.length)html+=secHeader('✅ Leídos',leidos.length)+leidos.map(renderMsg).join('');
-  el.innerHTML=html;
+  noLeidosEl.innerHTML=noLeidos.length?noLeidos.map(renderMsg).join(''):empty;
+  leidosEl.innerHTML=leidos.length?leidos.map(renderMsg).join(''):empty;
+  // Badge contadores
+  const count=noLeidos.length;
+  const badge=document.getElementById('ctab-count');
+  if(badge){badge.textContent=count;badge.style.display=count?'inline':'none';}
+  document.getElementById('s-msgs').textContent=count;
 }
 async function loadHorario(){
   const semana=document.getElementById('hor-semana')?.value;
