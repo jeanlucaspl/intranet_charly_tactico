@@ -1213,6 +1213,7 @@ async function init(){
   saveFcmToken();
   // Realtime: auto-refresh contacto cuando llega un mensaje nuevo
   sb.channel('admin-contacto').on('postgres_changes',{event:'INSERT',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
+  sb.channel('admin-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifHist()).subscribe();
 }
 async function saveFcmToken(){
   console.log('saveFcmToken admin - AndroidNative:',!!window.AndroidNative,'uid:',uid);

@@ -101,6 +101,13 @@
     .cs-ok{color:var(--green);border-color:var(--green);background:rgba(76,175,125,.07)}
     .cs-fail{color:var(--red);border-color:var(--red);background:rgba(224,85,85,.07)}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+    .nlist{display:flex;flex-direction:column;gap:3px}
+    .nitem{background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px 18px;display:flex;gap:14px;align-items:flex-start}
+    .nitem.alerta{border-left-color:var(--yellow)}.nitem.urgente{border-left-color:var(--red)}.nitem.info{border-left-color:var(--blue)}
+    .nico{font-size:20px;flex-shrink:0;margin-top:2px}
+    .n-ttl{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+    .n-msg{font-size:13px;color:var(--muted);line-height:1.5}
+    .n-time{font-size:10px;color:var(--muted);margin-top:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em}
 
     /* RESULTADO FACIAL */
     .result-box{background:var(--navy);border:1px solid var(--border);padding:20px;text-align:center;display:none}
@@ -151,6 +158,7 @@
     <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Mi Horario</button>
     <button class="sb-link" onclick="showPanel('historial',this)"><span class="ic">📅</span>Mi Historial</button>
     <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📝</span>Notas</button>
+    <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones <span id="s-notif" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px;display:none"></span></button>
   </div>
 </div>
 
@@ -285,6 +293,15 @@
   </div>
 </div>
 
+<!-- NOTIFICACIONES -->
+<div class="panel" id="panel-notificaciones">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Comunicados</div><div class="ttl">NOTIFICACIONES</div></div>
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()">🗑️ Borrar todo</button>
+  </div>
+  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei">🔔</div><div class="et">Cargando...</div></div></div>
+</div>
+
 </div></div>
 
 <script>
@@ -317,6 +334,33 @@ function todayISO(){return new Date().toISOString().split('T')[0]}
 function nowTime(){return new Date().toTimeString().slice(0,8)}
 function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
 
+async function loadNotifs(){
+  if(!uid)return;
+  const {data}=await sb.from('notificaciones').select('*').or(`destinatario_id.eq.${uid},global.eq.true`).order('creado_en',{ascending:false});
+  const unread=data?.filter(n=>!n.leida).length||0;
+  const badge=document.getElementById('s-notif');
+  if(badge){badge.textContent=unread;badge.style.display=unread?'inline':'none';}
+  if(!data?.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
+  const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
+  document.getElementById('d-notifs').innerHTML=data.map(n=>{
+    const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
+      ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
+    const delBtn=n.destinatario_id===uid?`<button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
+    return`<div class="nitem ${n.tipo}">${delBtn}<div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span style="background:var(--yellow);color:#000;font-size:8px;padding:1px 4px;border-radius:2px;margin-left:4px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
+  }).join('');
+}
+async function deleteNotif(id){
+  await sb.from('notificaciones').delete().eq('id',id);
+  loadNotifs();
+}
+async function deleteAllNotifs(){
+  if(!confirm('¿Borrar todas tus notificaciones?'))return;
+  await sb.from('notificaciones').delete().eq('destinatario_id',uid);
+  loadNotifs();
+}
+
 async function init(){
   const session=await checkAuth();
   if(!session)return;
@@ -331,10 +375,11 @@ async function init(){
   const{data:prof}=await sb.from('profesores').select('*').eq('perfil_id',uid).single();
   if(prof){profesorId=prof.id;profesorData=prof;}
 
-  await Promise.all([loadDashboard(),loadHorario(),loadHistorial()]);
+  await Promise.all([loadDashboard(),loadHorario(),loadHistorial(),loadNotifs()]);
   loadFaceApi();
   checkYaMarcado();
   saveFcmToken();
+  sb.channel('prof-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;

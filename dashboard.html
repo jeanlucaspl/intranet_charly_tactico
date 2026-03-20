@@ -258,7 +258,10 @@
 
 <!-- NOTIFICACIONES -->
 <div class="panel" id="panel-notificaciones">
-  <div class="ph"><div class="eye">Comunicados institucionales</div><div class="ttl">NOTIFICACIONES</div></div>
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Comunicados institucionales</div><div class="ttl">NOTIFICACIONES</div></div>
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()">🗑️ Borrar todo</button>
+  </div>
   <div class="nlist" id="d-notifs"><div class="empty"><div class="ei">🔔</div><div class="et">Cargando...</div></div></div>
 </div>
 
@@ -311,6 +314,7 @@ async function init(){
   await Promise.all([loadNotas(),loadAsistencias(),loadNotifs(),loadPracticas(),loadHorario()]);
   setupLocationRequestListener();
   saveFcmToken();
+  sb.channel('dash-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
   checkPendingSolicitud();
   checkDeviceStatus();
 }
@@ -396,16 +400,18 @@ async function loadNotifs(){
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
       :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
-    return`<div class="nitem ${n.tipo}">
-      <div class="nico">${icons[n.tipo]||'📢'}</div>
-      <div style="flex:1">
-        <div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div>
-        <div class="n-msg">${n.mensaje}</div>
-        ${adj}
-        <div class="n-time">${fecha}</div>
-      </div>
-    </div>`;
+    const delBtn=n.destinatario_id===uid?`<button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
+    return`<div class="nitem ${n.tipo}">${delBtn}<div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
+}
+async function deleteNotif(id){
+  await sb.from('notificaciones').delete().eq('id',id);
+  loadNotifs();
+}
+async function deleteAllNotifs(){
+  if(!confirm('¿Borrar todas tus notificaciones?'))return;
+  await sb.from('notificaciones').delete().eq('destinatario_id',uid);
+  loadNotifs();
 }
 
 async function loadPracticas(){
