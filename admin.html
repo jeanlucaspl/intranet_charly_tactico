@@ -1207,7 +1207,8 @@ async function loadAlumnos(){
   renderAttGrid(allAlumnos);
 }
 async function loadMaterias(){
-  const {data} = await sb.from('materias').select('*,perfiles(nombre,apellido)').order('nombre');
+  const {data,error} = await sb.from('materias').select('*,perfiles!profesor_id(nombre,apellido)').order('nombre');
+  if(error)console.error('loadMaterias error:',error.message,error.code);
   allMaterias = data||[];
   renderMaterias();
 }
