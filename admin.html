@@ -517,9 +517,11 @@
 <!-- ══ NOTIFICACIONES ══ -->
 <div class="panel" id="panel-notificaciones">
   <div class="ph"><div class="ph-left"><div class="eye">Comunicados</div><div class="ttl">NOTIFICACIONES</div></div></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="notif-grid">
-    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:16px">📢 Enviar Comunicado</div>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="ntab-enviar" onclick="showNotifTab('enviar')">📢 Enviar Comunicado</div>
+    <div class="aula-tab" id="ntab-hist" onclick="showNotifTab('hist')">📜 Historial</div>
+  </div>
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:20px" id="ntab-enviar-content">
       <div class="msg" id="n-msg"></div>
       <div class="fg"><label>Tipo</label>
         <div class="ntypes">
@@ -577,14 +579,13 @@
         </div>
       </div>
       <button class="btn btn-gold" style="width:100%" onclick="sendNotif()">ENVIAR NOTIFICACIÓN</button>
+  </div>
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:20px;display:none" id="ntab-hist-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px">Historial de comunicados</div>
+      <button id="btn-del-all-notif" class="btn btn-red" style="display:none;font-size:10px;padding:5px 10px" onclick="deleteAllNotif()">🗑️ Borrar todo</button>
     </div>
-    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px">📜 Historial</div>
-        <button id="btn-del-all-notif" class="btn btn-red" style="display:none;font-size:10px;padding:5px 10px" onclick="deleteAllNotif()">🗑️ Borrar todo</button>
-      </div>
-      <div id="d-notif-hist"><div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div></div>
-    </div>
+    <div id="d-notif-hist"><div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div></div>
   </div>
 </div>
 
@@ -2123,6 +2124,15 @@ function loadDniFile(input){
     document.getElementById('dni-name').textContent=`${lines.length} DNIs cargados`;
   };
   reader.readAsText(file);
+}
+
+// ── NOTIF TABS ──
+function showNotifTab(tab){
+  document.getElementById('ntab-enviar-content').style.display=tab==='enviar'?'block':'none';
+  document.getElementById('ntab-hist-content').style.display=tab==='hist'?'block':'none';
+  document.getElementById('ntab-enviar').classList.toggle('active',tab==='enviar');
+  document.getElementById('ntab-hist').classList.toggle('active',tab==='hist');
+  if(tab==='hist')loadNotifHist();
 }
 
 // ── NOTIF TYPE ──
