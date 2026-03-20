@@ -2070,7 +2070,7 @@ function setNType(tipo,btn){nTypeCur=tipo;document.querySelectorAll('.ntype').fo
 async function loadProfesores(){
   const el=document.getElementById('d-profesores');
   if(!el)return;
-  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref),materias(nombre)').eq('activo',true).order('creado_en');
+  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref)').eq('activo',true).order('creado_en');
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin profesores</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`<tr>
     <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
