@@ -303,10 +303,13 @@
     <div class="sb-label">Comunicación</div>
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
     <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
-    <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
-    <button class="sb-link" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none"><span class="ic">📚</span>Gestión Profesores</button>
-    <button class="sb-link" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Usuarios</button>
     <button class="sb-link" onclick="showPanel('contrasenas',this)"><span class="ic">🔑</span>Contraseñas</button>
+  </div>
+  <div class="sb-section" id="sb-gestion" style="display:none">
+    <div class="sb-label">Gestión</div>
+    <button class="sb-link" onclick="showPanel('padres',this)"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
+    <button class="sb-link" id="sb-profesores" onclick="showPanel('profesores',this)"><span class="ic">📚</span>Gestión Profesores</button>
+    <button class="sb-link" id="sb-usuarios" onclick="showPanel('usuarios',this)"><span class="ic">👤</span>Usuarios</button>
   </div>
 </div>
 
@@ -1153,10 +1156,8 @@ async function init(){
   esDueno = (pf?.rol==='dueno');
   // Show dueno-only sections
   if(esDueno){
-    const sbU=document.getElementById('sb-usuarios');
-    if(sbU) sbU.style.display='flex';
-    const sbP=document.getElementById('sb-profesores');
-    if(sbP) sbP.style.display='flex';
+    const sbG=document.getElementById('sb-gestion');
+    if(sbG) sbG.style.display='block';
     const bA=document.getElementById('btn-nueva-aula');
     if(bA) bA.style.display='inline-flex';
     const bM=document.getElementById('btn-nueva-materia');
@@ -2093,6 +2094,8 @@ async function saveProfesor(){
   if(!nombre||!apellido||!dni||!email||!pass)return showMsg(msg,'Todos los campos marcados son obligatorios','err');
   const btn=document.getElementById('btn-crear-profesor');
   btn.disabled=true;btn.textContent='CREANDO...';
+  // Guardar sesión del dueño antes de signUp (que cambia la sesión activa)
+  const{data:{session:duSession}}=await sb.auth.getSession();
   const{data,error}=await sb.auth.signUp({email,password:pass});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
   const uid=data?.user?.id;
@@ -2113,6 +2116,8 @@ async function saveProfesor(){
     await sb.from('materias').update({profesor_id:uid}).eq('id',materiaId);
   }
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+  // Restaurar sesión del dueño
+  if(duSession)await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
   showMsg(msg,`✅ Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
