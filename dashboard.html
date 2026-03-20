@@ -315,6 +315,7 @@ async function init(){
   setupLocationRequestListener();
   saveFcmToken();
   sb.channel('dash-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
+  setInterval(loadNotifs,30000);
   checkPendingSolicitud();
   checkDeviceStatus();
 }
@@ -590,6 +591,7 @@ function showPanel(id,btn){
   document.getElementById(`panel-${id}`).classList.add('active');
   if(btn)btn.classList.add('active');
   closeSb();
+  if(id==='notificaciones')loadNotifs();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}

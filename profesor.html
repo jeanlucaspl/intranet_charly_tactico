@@ -390,6 +390,7 @@ async function init(){
   checkYaMarcado();
   saveFcmToken();
   sb.channel('prof-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
+  setInterval(loadNotifs,30000);
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;
@@ -734,6 +735,7 @@ function showPanel(id,btn){
   if(id==='historial')loadHistorial();
   if(id==='asistencia')checkYaMarcado();
   if(id==='notas')loadNotasSelects();
+  if(id==='notificaciones')loadNotifs();
 }
 async function alertarAdminGPS(motivo='GPS denegado'){
   const nombre=document.getElementById('tb-nombre').textContent;

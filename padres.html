@@ -338,6 +338,7 @@ async function init(){
   await Promise.all([loadHijo(),loadAsistencias(),loadNotas(),loadNotifs(),loadUbicacion(),loadContactoHist()]);
   saveFcmToken();
   sb.channel('padres-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
+  setInterval(loadNotifs,30000);
 }
 async function saveFcmToken(){
   if(!window.AndroidNative||!uid)return;
@@ -658,6 +659,7 @@ function showPanel(id,btn){
   closeSb();
   if(id==='ubicacion')loadUbicacion();
   if(id==='horario')loadHorario();
+  if(id==='notificaciones')loadNotifs();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
