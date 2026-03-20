@@ -745,8 +745,11 @@ async function saveNotaProfesor(){
   showMsg(msg,'Nota guardada ✅','ok');
   // FCM al alumno y sus padres
   const _matNota=document.getElementById('pn-materia')?.selectedOptions[0]?.text||'una materia';
-  sendFcmToUsers([alumnoId],'📝 Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
+  sb.from('alumnos').select('perfil_id').eq('id',alumnoId).single().then(({data:al})=>{
+    if(!al?.perfil_id)return;
+    sendFcmToUsers([al.perfil_id],'📝 Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
+    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
+  });
   loadNotasAlumno(alumnoId);
 }
 

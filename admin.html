@@ -1657,6 +1657,7 @@ async function saveAula(){
   const {error}=await sb.from('aulas').insert({nombre,capacidad:cap});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Aula creada ✅','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🏫 Nueva aula disponible',`Se incorporó el aula "${nombre}" a la academia. Revisá el horario.`);});
   await loadAulas(); populateSelects();
   setTimeout(()=>closeMd('md-aula'),1200);
 }
@@ -1732,6 +1733,7 @@ async function saveMateria(){
   const {error}=await sb.from('materias').insert({nombre,codigo:codigo||null,creditos:3});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Materia creada ✅','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📚 Nueva materia',`Se incorporó la materia "${nombre}" a la academia.`);});
   await loadMaterias(); populateSelects();
   setTimeout(()=>closeMd('md-materia'),1200);
 }
@@ -1766,8 +1768,11 @@ async function saveNota(){
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Nota guardada ✅','ok');
   const _matNota=document.getElementById('n-materia')?.selectedOptions[0]?.text||'una materia';
-  sendFcmToUsers([alumnoId],'📝 Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}. Revisalas en la app.`);});
+  sb.from('alumnos').select('perfil_id').eq('id',alumnoId).single().then(({data:al})=>{
+    if(!al?.perfil_id)return;
+    sendFcmToUsers([al.perfil_id],'📝 Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
+    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}. Revisalas en la app.`);});
+  });
   await loadNotas();
   setTimeout(()=>closeMd('md-nota'),1200);
 }
@@ -1788,7 +1793,7 @@ async function savePractica(){
   const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url,activa:true});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   showMsg(msg,'Práctica subida ✅','ok');
-  sb.from('perfiles').select('id').eq('rol','alumno').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);});
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);});
   practicaFile=null; document.getElementById('p-fname').textContent='';
   await loadPracticas();
   btn.disabled=false; btn.textContent='SUBIR PRÁCTICA';
@@ -1887,7 +1892,8 @@ async function saveAllAtt(){
   if(error)alert('Error: '+error.message);
   else{alert(`✅ ${rows.length} asistencias guardadas.`);
   const _aMat=document.getElementById('a-materia')?.selectedOptions[0]?.text||'clase',_aHora=nowTime(),_aIds=rows.map(r=>r.alumno_id);
-  sendFcmToUsers(_aIds,'✅ Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
+  const _aPerfIds=_aIds.map(id=>allAlumnos.find(a=>a.id===id)?.perfil_id).filter(Boolean);
+  if(_aPerfIds.length)sendFcmToUsers(_aPerfIds,'✅ Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
   sb.from('padres_alumnos').select('padre_id').in('alumno_id',_aIds).then(({data})=>{if(data?.length)sendFcmToUsers([...new Set(data.map(l=>l.padre_id))],'📋 Asistencia registrada',`Tu hijo se presentó a ${_aMat} a las ${_aHora}.`);});
   loadDashboard()}
 }
@@ -1944,7 +1950,7 @@ async function confirmAtt(estado){
   const mid=document.getElementById('f-materia').value||null;
   await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
   const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_cHora=nowTime();
-  sendFcmToUsers([_cAlumno.id],'✅ Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
+  if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
   addFacialLog(verifyAlumno,estado,true);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
@@ -2000,7 +2006,7 @@ async function saveManual(){
   if(error){alert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
   const _mMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_mHora=nowTime();
-  sendFcmToUsers([alumnoId],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
+  if(a?.perfil_id)sendFcmToUsers([a.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
   closeMd('md-manual');loadDashboard();
@@ -2315,6 +2321,7 @@ async function saveCellHorario(){
   );
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Guardado ✅','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🗓️ Horario actualizado','El horario de clases fue modificado. Revisalo en la app.');});
   await loadHorarioPlantilla(aulaId);
   setTimeout(()=>closeCellEditor(),600);
 }
@@ -2326,6 +2333,7 @@ async function clearCellHorario(){
   const{error}=await sb.from('horario_plantilla').delete().eq('aula_id',aulaId).eq('dia',dia).eq('hora_slot',slot);
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Eliminado ✅','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🗓️ Horario actualizado','El horario de clases fue modificado. Revisalo en la app.');});
   await loadHorarioPlantilla(aulaId);
   setTimeout(()=>closeCellEditor(),600);
 }
