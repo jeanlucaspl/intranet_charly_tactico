@@ -1055,10 +1055,10 @@
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:5px">Si lo dejas vacío se usará el DNI como contraseña</div>
         </div>
         <div class="fg full">
-          <label>Buscar alumno vinculado por DNI</label>
+          <label>Buscar alumno vinculado por DNI o apellido</label>
           <div style="display:flex;gap:8px">
             <div class="dni-wrap" style="flex:1">
-              <input type="text" id="pad-alumno-dni" placeholder="DNI del alumno..." maxlength="8" inputmode="numeric" style="width:100%" onblur="setTimeout(()=>hideSug('sug-padre'),200)" oninput="dniSuggest(this,'sug-padre','alumnos')"/>
+              <input type="text" id="pad-alumno-dni" placeholder="DNI o apellido del alumno..." style="width:100%" onblur="setTimeout(()=>hideSug('sug-padre'),200)" oninput="dniSuggest(this,'sug-padre','alumnos')"/>
               <div id="sug-padre" class="dni-sug"></div>
             </div>
             <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('padre')">Buscar</button>
@@ -1744,15 +1744,22 @@ async function buscarAlumnoPorDNI(contexto){
   const inputId = contexto==='nota' ? 'n-dni-search' : 'pad-alumno-dni';
   const infoId  = contexto==='nota' ? 'n-alumno-info' : 'pad-alumno-info';
   const hiddenId= contexto==='nota' ? 'n-alumno'      : 'pad-alumno';
-  const dni = document.getElementById(inputId).value.trim();
-  if(!dni) return await myAlert('Ingresa un DNI');
-  const {data} = await sb.from('perfiles').select('id,nombre,apellido,dni')
-    .eq('dni', dni).eq('rol','alumno').maybeSingle();
+  const q = document.getElementById(inputId).value.trim();
+  if(!q) return await myAlert('Ingresa un DNI o apellido');
+  let data;
+  if(/^\d+$/.test(q)){
+    // búsqueda por DNI exacto
+    ({data} = await sb.from('perfiles').select('id,nombre,apellido,dni').eq('dni',q).eq('rol','alumno').maybeSingle());
+  } else {
+    // búsqueda por apellido
+    const {data:rows} = await sb.from('perfiles').select('id,nombre,apellido,dni').ilike('apellido','%'+q+'%').eq('rol','alumno').limit(1);
+    data = rows?.[0] || null;
+  }
   if(!data){
     document.getElementById(infoId).style.display='block';
     document.getElementById(infoId).style.borderColor='var(--red)';
     document.getElementById(infoId).style.color='var(--red)';
-    document.getElementById(infoId).textContent='❌ No se encontró un alumno con ese DNI';
+    document.getElementById(infoId).textContent='❌ No se encontró un alumno con ese DNI o apellido';
     document.getElementById(hiddenId).value='';
     return;
   }
@@ -3129,7 +3136,8 @@ function dniSuggest(input,sugId,tipo){
   if(!q){box.innerHTML='';box.classList.remove('show');return}
   let fuente=[];
   if(tipo==='alumnos'){
-    fuente=allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q)).slice(0,8);
+    const ql=q.toLowerCase();
+    fuente=allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q)||a.perfiles?.apellido?.toLowerCase().includes(ql)||a.perfiles?.nombre?.toLowerCase().includes(ql)).slice(0,8);
     box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectDniSug('${sugId}','${a.perfiles?.dni}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&apos;')}')"><span class="dni-sug-dni">${a.perfiles?.dni}</span><span class="dni-sug-nom">${a.perfiles?.nombre} ${a.perfiles?.apellido}</span></div>`).join('');
   }else{
     // 'todos': buscar en allAlumnos + query dinámica
