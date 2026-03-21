@@ -1243,12 +1243,12 @@ async function saveAcademiaConfig(){
   document.getElementById('acad-radio-lbl').textContent=radio;
   showMsg(msg,'✅ Ubicación de la academia actualizada','ok');
 }
-function usarMiUbicacion(){
-  if(!navigator.geolocation)return alert('Tu dispositivo no soporta geolocalización');
+async function usarMiUbicacion(){
+  if(!navigator.geolocation)return await myAlert('Tu dispositivo no soporta geolocalización');
   navigator.geolocation.getCurrentPosition(pos=>{
     document.getElementById('acad-lat-input').value=pos.coords.latitude.toFixed(6);
     document.getElementById('acad-lng-input').value=pos.coords.longitude.toFixed(6);
-  },err=>alert('No se pudo obtener ubicación: '+err.message),{enableHighAccuracy:true,timeout:10000});
+  },async err=>await myAlert('No se pudo obtener ubicación: '+err.message),{enableHighAccuracy:true,timeout:10000});
 }
 function calcDistanciaMetros(lat1,lng1,lat2,lng2){
   const R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
@@ -1587,8 +1587,8 @@ async function onAulaChange(){
 
 async function abrirSesion(){
   const aulaId=document.getElementById('f-aula').value;
-  if(!aulaId)return alert('Seleccioná un aula primero.');
-  if(sesionActual)return alert('Ya hay una sesión abierta. Cerrala primero.');
+  if(!aulaId)return await myAlert('Seleccioná un aula primero.');
+  if(sesionActual)return await myAlert('Ya hay una sesión abierta. Cerrala primero.');
   const clase=await detectMateriaActual(aulaId);
   const aulaOpt=document.getElementById('f-aula').selectedOptions[0];
   const {data,error}=await sb.from('sesiones_asistencia').insert({
@@ -1598,7 +1598,7 @@ async function abrirSesion(){
     hora_apertura:nowTime(),
     creado_por:uid
   }).select().single();
-  if(error)return alert('Error al abrir sesión: '+error.message);
+  if(error)return await myAlert('Error al abrir sesión: '+error.message);
   sesionActual={id:data.id,aula_id:aulaId,materia_id:clase?.materia_id||null,aula_nombre:aulaOpt?.text||'',mat_nombre:clase?.materias?.nombre||'Sin materia asignada'};
   document.getElementById('btn-abrir-sesion').style.display='none';
   document.getElementById('btn-cerrar-sesion').style.display='';
@@ -1608,9 +1608,9 @@ async function abrirSesion(){
 
 async function cerrarSesion(){
   if(!sesionActual)return;
-  if(!confirm(`¿Cerrar la sesión de asistencia?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
+  if(!await myConfirm(`¿Cerrar la sesión de asistencia?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
   const {error}=await sb.from('sesiones_asistencia').update({hora_cierre:nowTime(),cerrada:true}).eq('id',sesionActual.id);
-  if(error)return alert('Error al cerrar sesión: '+error.message);
+  if(error)return await myAlert('Error al cerrar sesión: '+error.message);
   sesionActual=null;
   document.getElementById('btn-abrir-sesion').style.display='';
   document.getElementById('btn-cerrar-sesion').style.display='none';
@@ -1649,12 +1649,12 @@ async function loadNotifHist(){
   }).join('');
 }
 async function deleteNotif(id){
-  if(!confirm('¿Eliminar esta notificación del historial?'))return;
+  if(!await myConfirm('¿Eliminar esta notificación del historial?'))return;
   await sb.from('notificaciones').delete().eq('id',id);
   await loadNotifHist();
 }
 async function deleteAllNotif(){
-  if(!confirm('¿Borrar TODO el historial de notificaciones? Esta acción no se puede deshacer.'))return;
+  if(!await myConfirm('¿Borrar TODO el historial de notificaciones? Esta acción no se puede deshacer.'))return;
   await sb.from('notificaciones').delete().neq('id','00000000-0000-0000-0000-000000000000');
   await loadNotifHist();
 }
@@ -1719,12 +1719,12 @@ function showPadTab(tab){
   document.getElementById('padtab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
 }
 async function inhabilitarPadre(id){
-  if(!confirm('¿Inhabilitar a este padre? No podrá iniciar sesión.'))return;
+  if(!await myConfirm('¿Inhabilitar a este padre? No podrá iniciar sesión.'))return;
   await sb.from('perfiles').update({activo:false}).eq('id',id);
   await loadPadres();
 }
 async function reactivarPadre(id){
-  if(!confirm('¿Reactivar a este padre?'))return;
+  if(!await myConfirm('¿Reactivar a este padre?'))return;
   await sb.from('perfiles').update({activo:true}).eq('id',id);
   await loadPadres();
 }
@@ -1737,7 +1737,7 @@ async function buscarAlumnoPorDNI(contexto){
   const infoId  = contexto==='nota' ? 'n-alumno-info' : 'pad-alumno-info';
   const hiddenId= contexto==='nota' ? 'n-alumno'      : 'pad-alumno';
   const dni = document.getElementById(inputId).value.trim();
-  if(!dni) return alert('Ingresa un DNI');
+  if(!dni) return await myAlert('Ingresa un DNI');
   const {data} = await sb.from('perfiles').select('id,nombre,apellido,dni')
     .eq('dni', dni).eq('rol','alumno').maybeSingle();
   if(!data){
@@ -1847,12 +1847,12 @@ function showAdmTab(tab){
   document.getElementById('admtab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
 }
 async function inhabilitarAdmin(id){
-  if(!confirm('¿Inhabilitar a este administrador? No podrá iniciar sesión.'))return;
+  if(!await myConfirm('¿Inhabilitar a este administrador? No podrá iniciar sesión.'))return;
   await sb.from('perfiles').update({activo:false}).eq('id',id);
   await loadAdmins();
 }
 async function reactivarAdmin(id){
-  if(!confirm('¿Reactivar a este administrador?'))return;
+  if(!await myConfirm('¿Reactivar a este administrador?'))return;
   await sb.from('perfiles').update({activo:true}).eq('id',id);
   await loadAdmins();
 }
@@ -1863,7 +1863,7 @@ async function buscarUsuarioPorDNI(){
   const dni=document.getElementById('pass-dni-search').value.trim();
   if(!dni)return;
   const {data}=await sb.from('perfiles').select('id,nombre,apellido,dni,rol').eq('dni',dni).single();
-  if(!data){alert('No se encontró usuario con ese DNI');return}
+  if(!data){await myAlert('No se encontró usuario con ese DNI');return}
   const {data:gc}=await sb.from('gestion_contrasenas').select('contrasena_actual').eq('perfil_id',data.id).single();
   document.getElementById('pass-result').style.display='block';
   document.getElementById('pass-user-id').value=data.id;
@@ -2019,7 +2019,7 @@ async function deleteMensajeContacto(id){
 }
 async function deleteAllMensajesLeidos(){
   if(!esDueno)return;
-  if(!confirm('¿Borrar todos los mensajes leídos?'))return;
+  if(!await myConfirm('¿Borrar todos los mensajes leídos?'))return;
   await sb.from('contacto_mensajes').delete().eq('leido',true);
   loadContacto();
 }
@@ -2067,15 +2067,15 @@ async function updateHorario(){
 }
 async function deleteHorario(){
   const id=document.getElementById('edit-hor-id').value;
-  if(!confirm('¿Eliminar esta clase del horario?'))return;
+  if(!await myConfirm('¿Eliminar esta clase del horario?'))return;
   await sb.from('horario_semanal').delete().eq('id',id);
   closeMd('md-edit-horario');
   await loadHorario();
 }
 async function deleteMateria(id){
-  if(!confirm('¿Eliminar esta materia? Esta acción no se puede deshacer.'))return;
+  if(!await myConfirm('¿Eliminar esta materia? Esta acción no se puede deshacer.'))return;
   const {error}=await sb.from('materias').delete().eq('id',id);
-  if(error)return alert('No se puede eliminar: '+error.message);
+  if(error)return await myAlert('No se puede eliminar: '+error.message);
   await loadMaterias(); populateSelects();
 }
 async function loadSoluciones(){
@@ -2205,7 +2205,7 @@ async function saveAula(){
   setTimeout(()=>closeMd('md-aula'),1200);
 }
 async function deleteAula(id){
-  if(!confirm('¿Eliminar esta aula?'))return;
+  if(!await myConfirm('¿Eliminar esta aula?'))return;
   await sb.from('aulas').update({activa:false}).eq('id',id);
   await loadAulas();
 }
@@ -2264,21 +2264,21 @@ async function saveAlumno(){
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
 async function inhabilitarAlumno(id){
-  if(!confirm('¿Inhabilitar a este alumno?'))return;
+  if(!await myConfirm('¿Inhabilitar a este alumno?'))return;
   await sb.from('alumnos').update({activo:false}).eq('id',id);
   await loadAlumnos();
 }
 async function reactivarAlumno(id){
-  if(!confirm('¿Reactivar a este alumno?'))return;
+  if(!await myConfirm('¿Reactivar a este alumno?'))return;
   await sb.from('alumnos').update({activo:true}).eq('id',id);
   await loadAlumnos();
 }
 function confirmarEliminarAlumno(alumnoId,perfilId,nombre,apellido){
   confirmarEliminarUsuario(perfilId,alumnoId,nombre,apellido,'alumno');
 }
-function confirmarEliminarUsuario(perfilId,extraId,nombre,apellido,tipo){
+async function confirmarEliminarUsuario(perfilId,extraId,nombre,apellido,tipo){
   const tipos={alumno:'alumno',padre:'padre',profesor:'profesor',admin:'administrador'};
-  if(!confirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos de la base de datos y del sistema de autenticación. No se puede deshacer.`))return;
+  if(!await myConfirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos de la base de datos y del sistema de autenticación. No se puede deshacer.`))return;
   eliminarUsuario(perfilId,extraId,tipo);
 }
 async function eliminarUsuario(perfilId,extraId,tipo){
@@ -2289,7 +2289,7 @@ async function eliminarUsuario(perfilId,extraId,tipo){
   if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
   const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify(body)});
   const json=await res.json();
-  if(json.error){alert('Error al eliminar: '+json.error);return;}
+  if(json.error){await myAlert('Error al eliminar: '+json.error);return;}
   if(tipo==='alumno') await loadAlumnos();
   else if(tipo==='padre') await loadPadres();
   else if(tipo==='profesor') await loadProfesores();
@@ -2442,7 +2442,7 @@ async function savePractica(){
   setTimeout(()=>closeMd('md-practica'),1400);
 }
 async function deletePractica(id){
-  if(!confirm('¿Eliminar esta práctica?'))return;
+  if(!await myConfirm('¿Eliminar esta práctica?'))return;
   await sb.from('practicas').delete().eq('id',id);
   await loadPracticas();
 }
@@ -2545,13 +2545,13 @@ function markAtt(id,estado){
 }
 async function saveAllAtt(){
   const geo=await verificarUbicacionAdmin();
-  if(!geo.ok){alert('⛔ No puedes tomar asistencia\n\n'+geo.msg);return}
+  if(!geo.ok){await myAlert('⛔ No puedes tomar asistencia\n\n'+geo.msg);return}
   const materiaId=document.getElementById('a-materia').value||null;
   const rows=Object.entries(attState).filter(([,v])=>v!==null).map(([alumno_id,estado])=>({alumno_id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:materiaId,verificado_facial:false,latitud:geo.lat,longitud:geo.lng}));
-  if(!rows.length)return alert('No has marcado ningún alumno.');
+  if(!rows.length)return await myAlert('No has marcado ningún alumno.');
   const {error}=await sb.from('asistencias').upsert(rows,{onConflict:'alumno_id,fecha,materia_id'});
-  if(error)alert('Error: '+error.message);
-  else{alert(`✅ ${rows.length} asistencias guardadas.`);
+  if(error)await myAlert('Error: '+error.message);
+  else{await myAlert(`✅ ${rows.length} asistencias guardadas.`);
   const _aMat=document.getElementById('a-materia')?.selectedOptions[0]?.text||'clase',_aHora=nowTime(),_aIds=rows.map(r=>r.alumno_id);
   const _aPerfIds=_aIds.map(id=>allAlumnos.find(a=>a.id===id)?.perfil_id).filter(Boolean);
   if(_aPerfIds.length)sendFcmToUsers(_aPerfIds,'✅ Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
@@ -2575,7 +2575,7 @@ async function startCam(){
   if(!geo.ok){
     setCamSt('⛔ Fuera de rango — '+geo.msg,'cs-fail');
     document.getElementById('f-status-top').textContent='';
-    alert('⛔ No puedes tomar asistencia\n\n'+geo.msg);
+    await myAlert('⛔ No puedes tomar asistencia\n\n'+geo.msg);
     return;
   }
   document.getElementById('f-status-top').textContent=`✅ Ubicación OK (${geo.dist}m de la academia)`;
@@ -2599,7 +2599,7 @@ async function flipCam(){
 }
 function setCamSt(txt,cls){const el=document.getElementById('f-camst');el.textContent=txt;el.className='cam-status '+cls}
 async function captureVerify(){
-  if(!facialStream)return alert('Activa la cámara primero.');
+  if(!facialStream)return await myAlert('Activa la cámara primero.');
   const v=document.getElementById('f-video'),c=document.getElementById('f-canvas');
   c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
   setCamSt('🔍 Analizando rostro...','cs-scan');
@@ -2664,11 +2664,11 @@ function hideSug(id){const el=document.getElementById(id);if(el)el.style.display
 async function saveManual(){
   const alumnoId=document.getElementById('man-alumno').value;
   const estado=document.getElementById('man-estado').value;
-  if(!alumnoId)return alert('Selecciona un alumno primero buscando por apellido o DNI');
+  if(!alumnoId)return await myAlert('Selecciona un alumno primero buscando por apellido o DNI');
   const mid=sesionActual?.materia_id||null;
   const aulaId=sesionActual?.aula_id||null;
   const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
-  if(error){alert('Error al guardar asistencia: '+error.message);return;}
+  if(error){await myAlert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
   const _mMat=sesionActual?.mat_nombre||'clase',_mHora=nowTime();
   if(a?.perfil_id)sendFcmToUsers([a.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
@@ -2691,7 +2691,7 @@ async function startRegCam(){
     const v=document.getElementById('reg-video');v.srcObject=regStream;await v.play();
     v.style.display='block';document.getElementById('reg-canvas').style.display='none';document.getElementById('reg-placeholder').style.display='none';
     document.getElementById('reg-snap-btn').disabled=false;
-  }catch(e){alert('No se pudo acceder a la cámara: '+e.message)}
+  }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message)}
 }
 function snapPhoto(){
   const v=document.getElementById('reg-video'),c=document.getElementById('reg-canvas');
@@ -2833,12 +2833,12 @@ function showProfTab(tab){
   document.getElementById('proftab-deshabilitados').classList.toggle('active',tab==='deshabilitados');
 }
 async function inhabilitarProfesor(id){
-  if(!confirm('¿Inhabilitar a este profesor? No podrá iniciar sesión.'))return;
+  if(!await myConfirm('¿Inhabilitar a este profesor? No podrá iniciar sesión.'))return;
   await sb.from('profesores').update({activo:false}).eq('id',id);
   await loadProfesores();
 }
 async function reactivarProfesor(id){
-  if(!confirm('¿Reactivar a este profesor?'))return;
+  if(!await myConfirm('¿Reactivar a este profesor?'))return;
   await sb.from('profesores').update({activo:true}).eq('id',id);
   await loadProfesores();
 }
@@ -2853,7 +2853,7 @@ async function startProfesorCam(){
     const v=document.getElementById('pr-video');v.srcObject=prStream;await v.play();
     v.style.display='block';document.getElementById('pr-canvas').style.display='none';document.getElementById('pr-placeholder').style.display='none';
     document.getElementById('pr-snap-btn').disabled=false;
-  }catch(e){alert('No se pudo acceder a la cámara: '+e.message)}
+  }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message)}
 }
 function snapProfesor(){
   const v=document.getElementById('pr-video'),c=document.getElementById('pr-canvas');
@@ -3245,7 +3245,33 @@ function selectHorProf(nombre){
   document.getElementById('hor-sug-prof').style.display='none';
 }
 
+// ── DIALOGS PERSONALIZADOS ──
+let _dialogResolve=null;
+function _openDialog(msg,isConfirm){
+  return new Promise(resolve=>{
+    _dialogResolve=resolve;
+    document.getElementById('dlg-msg').textContent=msg;
+    document.getElementById('dlg-cancel').style.display=isConfirm?'':'none';
+    document.getElementById('dlg-overlay').style.display='flex';
+  });
+}
+function myAlert(msg){return _openDialog(msg,false);}
+function myConfirm(msg){return _openDialog(msg,true);}
+function _dlgOk(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(true);_dialogResolve=null;}}
+function _dlgCancel(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(false);_dialogResolve=null;}}
+
 init();
 </script>
+
+<!-- Modal de diálogo personalizado -->
+<div id="dlg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <div id="dlg-msg" style="font-family:'Barlow',sans-serif;font-size:15px;color:var(--white);line-height:1.5;margin-bottom:20px;white-space:pre-line"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button id="dlg-cancel" class="btn btn-outline" style="font-size:13px;padding:7px 18px" onclick="_dlgCancel()">Cancelar</button>
+      <button class="btn btn-gold" style="font-size:13px;padding:7px 18px" onclick="_dlgOk()">Aceptar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
