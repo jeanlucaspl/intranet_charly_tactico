@@ -653,9 +653,10 @@
         <div class="file-drop" id="n-adj-drop">
           <input type="file" accept="image/*,.pdf" onchange="setNotifFile(this)"/>
           <div class="fd-icon">📎</div>
-          <div class="fd-txt">Imagen o PDF</div>
+          <div class="fd-txt">Imagen o PDF · máx 20 MB</div>
           <div class="fd-name" id="n-adj-name"></div>
         </div>
+        <div id="n-warn-pdf" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.05em;line-height:1.6;color:var(--yellow)"></div>
       </div>
       <button class="btn btn-gold" style="width:100%" onclick="sendNotif()">ENVIAR NOTIFICACIÓN</button>
   </div>
@@ -981,13 +982,14 @@
         <div class="fg full"><label>Materia</label><select id="p-materia"><option value="">-- Selecciona --</option></select></div>
         <div class="fg full"><label>Título</label><input type="text" id="p-titulo" placeholder="Práctica N°1 - Razonamiento Verbal"/></div>
         <div class="fg full"><label>Descripción (opcional)</label><textarea id="p-desc" rows="2" placeholder="Instrucciones..."></textarea></div>
-        <div class="fg full"><label>Archivo PDF</label>
+        <div class="fg full"><label>Archivos PDF</label>
           <div class="file-drop">
-            <input type="file" accept=".pdf" onchange="setPracticaFile(this)"/>
+            <input type="file" accept=".pdf" multiple onchange="setPracticaFiles(this)"/>
             <div class="fd-icon">📄</div>
-            <div class="fd-txt">Arrastra el PDF aquí</div>
+            <div class="fd-txt">Arrastra uno o varios PDFs aquí</div>
             <div class="fd-name" id="p-fname"></div>
           </div>
+          <div id="p-warn-pdf" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.05em;line-height:1.6;color:var(--yellow)"></div>
         </div>
       </div>
     </div>
@@ -1199,7 +1201,7 @@ window.addEventListener('pageshow', (e) => {
 
 // ── STATE ──
 let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
-let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFile=null;
+let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFiles=[];
 let esDueno = false, uid = null;
 let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
@@ -2151,22 +2153,27 @@ function renderNotas(data){
   if(!data.length){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas</div></div>`;return}
   document.getElementById('d-notas').innerHTML=`<table><thead><tr><th>Alumno</th><th>Materia</th><th>Periodo</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th></tr></thead><tbody>${data.map(n=>{const p=n.promedio||0;const c=p>=14?'bg':p>=11?'by':'br';return`<tr><td>${n.alumnos?.perfiles?.nombre} ${n.alumnos?.perfiles?.apellido}</td><td>${n.materias?.nombre}</td><td>${n.periodo}</td><td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td><td><span class="badge ${c}">${p||'--'}</span></td></tr>`}).join('')}</tbody></table>`;
 }
+function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function renderPracticas(){
   const el=document.getElementById('d-practicas');
   if(!allPracticas.length){el.innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas</div></div>`;return}
-  el.innerHTML=allPracticas.map(p=>`<div class="prac-card">
-    <div class="prac-semana">Semana: ${p.semana_inicio}</div>
-    <div class="prac-titulo">${p.titulo}</div>
-    <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;margin-bottom:8px;color:${p.activa!==false?'var(--green)':'var(--red)'}">
-      ${p.activa!==false?'👁️ VISIBLE PARA ALUMNOS':'🙈 OCULTA PARA ALUMNOS'}
-    </div>
-    <div class="prac-btns">
-      ${p.archivo_url?`<a href="${p.archivo_url}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 Descargar PDF</a>`:'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}
-      <button class="btn btn-outline" style="font-size:10px;padding:7px 12px" onclick="togglePractica('${p.id}',${p.activa!==false})">${p.activa!==false?'Ocultar':'Mostrar'}</button>
-      <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')">🗑️</button>
-    </div>
-  </div>`).join('');
+  el.innerHTML=allPracticas.map(p=>{
+    const urls=parsePracUrls(p.archivo_url);
+    const links=urls.length?urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 PDF${urls.length>1?' '+(i+1):''}</a>`).join(''):'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>';
+    return`<div class="prac-card">
+      <div class="prac-semana">Semana: ${p.semana_inicio}</div>
+      <div class="prac-titulo">${p.titulo}</div>
+      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;margin-bottom:8px;color:${p.activa!==false?'var(--green)':'var(--red)'}">
+        ${p.activa!==false?'👁️ VISIBLE PARA ALUMNOS':'🙈 OCULTA PARA ALUMNOS'}
+      </div>
+      <div class="prac-btns">
+        ${links}
+        <button class="btn btn-outline" style="font-size:10px;padding:7px 12px" onclick="togglePractica('${p.id}',${p.activa!==false})">${p.activa!==false?'Ocultar':'Mostrar'}</button>
+        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 function renderAttGrid(data){
   const el=document.getElementById('d-att');if(!el)return;
@@ -2417,14 +2424,20 @@ async function savePractica(){
   const desc=document.getElementById('p-desc').value.trim();
   const msg=document.getElementById('msg-practica');
   if(!semana||!materiaId||!titulo)return showMsg(msg,'Completa semana, materia y título','err');
-  if(!practicaFile)return showMsg(msg,'Selecciona un archivo PDF','err');
+  if(!practicaFiles.length)return showMsg(msg,'Selecciona al menos un archivo PDF','err');
   const btn=document.getElementById('btn-subir-prac');
   btn.disabled=true; btn.textContent='SUBIENDO...';
-  const path=`${semana}/${materiaId}_${Date.now()}.pdf`;
-  const {data:upData,error:upErr}=await sb.storage.from('practicas').upload(path,practicaFile,{contentType:'application/pdf'});
-  if(upErr){showMsg(msg,upErr.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
-  const url=STORAGE+'practicas/'+upData.path;
-  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:url,activa:true});
+  const urls=[];
+  for(let i=0;i<practicaFiles.length;i++){
+    const f=practicaFiles[i];
+    showMsg(msg,`Subiendo ${i+1}/${practicaFiles.length}: ${f.name}...`,'ok');
+    const path=`${semana}/${materiaId}_${Date.now()}_${i}.pdf`;
+    const {data:upData,error:upErr}=await sb.storage.from('practicas').upload(path,f,{contentType:'application/pdf'});
+    if(upErr){showMsg(msg,`Error en ${f.name}: ${upErr.message}`,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
+    urls.push(STORAGE+'practicas/'+upData.path);
+  }
+  const archivoUrl=urls.length===1?urls[0]:JSON.stringify(urls);
+  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
   showMsg(msg,'Práctica subida ✅','ok');
   sb.from('perfiles').select('id,rol').in('rol',['alumno','padre','admin']).then(({data})=>{
@@ -2436,7 +2449,7 @@ async function savePractica(){
     if(paIds.length)sendFcmToUsers(paIds,'📄 Nueva práctica para tu hijo/a',`Tu hijo/a tiene una nueva práctica disponible: ${titulo}.`);
     if(adIds.length)sendFcmToUsers(adIds,'📄 Práctica subida',`Se publicó la práctica: ${titulo}.`);
   });
-  practicaFile=null; document.getElementById('p-fname').textContent='';
+  practicaFiles=[]; document.getElementById('p-fname').textContent=''; document.getElementById('p-warn-pdf').style.display='none';
   await loadPracticas();
   btn.disabled=false; btn.textContent='SUBIR PRÁCTICA';
   setTimeout(()=>closeMd('md-practica'),1400);
@@ -2702,9 +2715,31 @@ function snapPhoto(){
 function stopRegCam(){if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null}}
 
 // ── FILE HANDLERS ──
+const PDF_WARN_MB=10,PDF_MAX_MB=20;
+const PDF_WARN_MSG=`⚠️ Archivo pesado. Podés comprimirlo gratis en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;
+function checkPdfSize(files,warnElId){
+  const warn=document.getElementById(warnElId);
+  const pesados=[...files].filter(f=>f.size>PDF_WARN_MB*1024*1024);
+  const bloqueados=[...files].filter(f=>f.size>PDF_MAX_MB*1024*1024);
+  if(bloqueados.length){warn.style.display='block';warn.innerHTML=`⛔ El archivo <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;return false;}
+  if(pesados.length){warn.style.display='block';warn.innerHTML=`${PDF_WARN_MSG}<br>Archivos pesados: ${pesados.map(f=>`<strong>${f.name}</strong> (${(f.size/1024/1024).toFixed(1)} MB)`).join(', ')}`;return true;}
+  warn.style.display='none';return true;
+}
 function setFotoFile(input){fotoFile=input.files[0];if(fotoFile)document.getElementById('foto-name').textContent=fotoFile.name}
-function setPracticaFile(input){practicaFile=input.files[0];if(practicaFile)document.getElementById('p-fname').textContent=practicaFile.name}
-function setNotifFile(input){notifFile=input.files[0];if(notifFile)document.getElementById('n-adj-name').textContent=notifFile.name}
+function setPracticaFiles(input){
+  const files=[...input.files];
+  if(!files.length)return;
+  if(!checkPdfSize(files,'p-warn-pdf'))return;
+  practicaFiles=files;
+  document.getElementById('p-fname').textContent=files.length===1?files[0].name:`${files.length} archivos seleccionados`;
+}
+function setNotifFile(input){
+  notifFile=input.files[0];
+  if(!notifFile)return;
+  document.getElementById('n-adj-name').textContent=notifFile.name;
+  if(notifFile.type==='application/pdf')checkPdfSize([notifFile],'n-warn-pdf');
+  else document.getElementById('n-warn-pdf').style.display='none';
+}
 function loadDniFile(input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();

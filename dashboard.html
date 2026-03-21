@@ -473,28 +473,30 @@ async function loadPracticas(){
   const practicas=(practicasRaw||[]).filter(p=>p.activa!==false);
   // Get submitted solutions
   const {data:sols}=alumnoId?await sb.from('soluciones').select('*').eq('alumno_id',alumnoId):{data:[]};
-  const solMap={};sols?.forEach(s=>solMap[s.practica_id]=s);
+  const solMap={};sols?.forEach(s=>{if(!solMap[s.practica_id])solMap[s.practica_id]=[];solMap[s.practica_id].push(s);});
   const el=document.getElementById('d-practicas');
   if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas disponibles</div></div>`;return}
   el.innerHTML=practicas.map(p=>{
-    const sol=solMap[p.id];
-    const entregada=!!sol;
+    const pracUrls=parsePracUrls(p.archivo_url);
+    const solList=solMap[p.id]||[];
+    const entregada=solList.length>0;
     return`<div class="prac-card">
       <div class="prac-sem">Semana: ${p.semana_inicio}</div>
       <div class="prac-ttl">${p.titulo}</div>
       <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
       ${p.descripcion?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.descripcion}</div>`:''}
       <div class="prac-btns">
-        ${p.archivo_url?`<a href="${p.archivo_url}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 Descargar Práctica</a>`:''}
+        ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
         ${entregada
-          ?`<div class="entrega-ok">✅ Solución entregada <a href="${sol.archivo_url}" target="_blank" style="color:var(--gold);margin-left:8px">Ver</a></div>`
+          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<a href="${s.archivo_url}" target="_blank" style="color:var(--gold);margin-left:6px">Ver ${solList.length>1?i+1:''}</a>`).join('')}</div>`
           :`<div id="upzone-${p.id}" style="margin-top:4px">
               <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
-                <input type="file" id="file-${p.id}" accept="image/*,.pdf" style="display:none" onchange="setSolFile('${p.id}',this)"/>
-                <div class="fd-icon">📤</div>
-                <div class="fd-txt">Subir solución (imagen o PDF)</div>
+                <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="setSolFile('${p.id}',this)"/>
+                <div class="fd-icon">📷</div>
+                <div class="fd-txt">Subir fotos de tu solución (podés seleccionar varias)</div>
                 <div class="fd-name" id="fname-${p.id}"></div>
               </div>
+              <div id="swarn-${p.id}" style="display:none;margin-top:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--yellow)"></div>
               <div class="msg" id="smsg-${p.id}"></div>
               <button class="btn btn-green" style="width:100%;margin-top:6px;font-size:11px" onclick="submitSolucion('${p.id}')">ENTREGAR SOLUCIÓN</button>
             </div>`
@@ -504,28 +506,40 @@ async function loadPracticas(){
   }).join('');
 }
 
+const IMG_WARN_MB=5,IMG_MAX_MB=15;
+function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function setSolFile(pid,input){
-  solucionFiles[pid]=input.files[0];
-  if(solucionFiles[pid])document.getElementById(`fname-${pid}`).textContent=solucionFiles[pid].name;
+  const files=[...input.files];
+  if(!files.length)return;
+  const warnEl=document.getElementById(`swarn-${pid}`);
+  const pesadas=files.filter(f=>f.size>IMG_WARN_MB*1024*1024);
+  const bloqueadas=files.filter(f=>f.size>IMG_MAX_MB*1024*1024);
+  if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=`⛔ ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;return;}
+  if(pesadas.length){warnEl.style.display='block';warnEl.textContent=`⚠️ Algunas fotos son pesadas. Si podés, reducí la resolución antes de subir.`;}
+  else warnEl.style.display='none';
+  solucionFiles[pid]=files;
+  document.getElementById(`fname-${pid}`).textContent=files.length===1?files[0].name:`${files.length} fotos seleccionadas`;
 }
 
 async function submitSolucion(pid){
   if(!alumnoId)return;
-  const file=solucionFiles[pid];
+  const files=solucionFiles[pid];
   const msgEl=document.getElementById(`smsg-${pid}`);
-  if(!file){showMsg(msgEl,'Selecciona un archivo primero','err');return}
-  showMsg(msgEl,'Subiendo...','ok');
-  const ext=file.name.split('.').pop();
-  const tipo=file.type.includes('pdf')?'pdf':'imagen';
-  const path=`${alumnoId}/${pid}_${Date.now()}.${ext}`;
-  const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,file,{contentType:file.type});
-  if(upErr){showMsg(msgEl,upErr.message,'err');return}
-  // Get signed URL (private bucket)
-  const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(upData.path,60*60*24*30);
-  const url=signed?.signedUrl||'';
-  const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:url,tipo});
-  if(error){showMsg(msgEl,error.message,'err');return}
-  showMsg(msgEl,'Entregado correctamente ✅','ok');
+  if(!files||!files.length){showMsg(msgEl,'Selecciona al menos una foto','err');return}
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    showMsg(msgEl,`Subiendo ${i+1}/${files.length}...`,'ok');
+    const ext=file.name.split('.').pop();
+    const path=`${alumnoId}/${pid}_${Date.now()}_${i}.${ext}`;
+    const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,file,{contentType:file.type});
+    if(upErr){showMsg(msgEl,`Error: ${upErr.message}`,'err');return}
+    const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(upData.path,60*60*24*30);
+    const url=signed?.signedUrl||'';
+    const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:url,tipo:'imagen'});
+    if(error){showMsg(msgEl,error.message,'err');return}
+  }
+  showMsg(msgEl,`✅ ${files.length} foto${files.length>1?'s':''} entregada${files.length>1?'s':''}`,'ok');
+  solucionFiles[pid]=[];
   setTimeout(()=>loadPracticas(),1200);
 }
 
