@@ -564,12 +564,9 @@
     <button class="btn btn-gold" onclick="openMd('md-nota')">+ Cargar Nota</button>
   </div>
   <div class="tw">
-    <div class="th">
-      <span class="th-ttl">Notas Registradas</span>
-      <div class="srch">
-        <select id="q-nota-materia" onchange="filterNotas()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:7px 12px;font-family:'Barlow',sans-serif;font-size:12px;outline:none"><option value="">Todas las materias</option></select>
-      </div>
-    </div>
+    <div class="th"><span class="th-ttl">Notas Registradas</span></div>
+    <div id="notas-mat-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
+    <div id="notas-per-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-bottom:1px solid var(--border);background:var(--navy)"></div>
     <div id="d-notas"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -1371,10 +1368,11 @@ async function loadAulas(){
   allAulas = data||[];
   renderAulas();
 }
+let adminNotaMatTab=null,adminNotaPerTab=null;
 async function loadNotas(){
-  const {data} = await sb.from('notas').select('*,alumnos(perfiles(nombre,apellido)),materias(nombre)').order('creado_en',{ascending:false});
-  allNotas = data||[];
-  renderNotas(allNotas);
+  const {data}=await sb.from('notas').select('*,alumnos(perfiles(nombre,apellido,dni)),materias(nombre)').order('materia_id').order('periodo').order('creado_en',{ascending:false});
+  allNotas=data||[];
+  renderNotas();
 }
 async function loadPracticas(){
   const {data} = await sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
@@ -2210,9 +2208,59 @@ function renderMaterias(){
     <td style="display:flex;gap:4px;flex-wrap:wrap">${esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">👩‍🏫 Asignar</button><button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
   </tr>`;}).join('')}</tbody></table>`;
 }
-function renderNotas(data){
-  if(!data.length){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas</div></div>`;return}
-  document.getElementById('d-notas').innerHTML=`<table><thead><tr><th>Alumno</th><th>Materia</th><th>Periodo</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th></tr></thead><tbody>${data.map(n=>{const p=n.promedio||0;const c=p>=14?'bg':p>=11?'by':'br';return`<tr><td>${n.alumnos?.perfiles?.nombre} ${n.alumnos?.perfiles?.apellido}</td><td>${n.materias?.nombre}</td><td>${n.periodo}</td><td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td><td><span class="badge ${c}">${p||'--'}</span></td></tr>`}).join('')}</tbody></table>`;
+function renderNotas(){
+  const matTabsEl=document.getElementById('notas-mat-tabs');
+  const perTabsEl=document.getElementById('notas-per-tabs');
+  const el=document.getElementById('d-notas');
+  if(!allNotas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;return;}
+  // Agrupar por materia
+  const byMat={};
+  allNotas.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',notas:[]};byMat[k].notas.push(n);});
+  const matIds=Object.keys(byMat);
+  if(!adminNotaMatTab||!byMat[adminNotaMatTab])adminNotaMatTab=matIds[0];
+  // Tabs materia
+  matTabsEl.innerHTML=matIds.map(id=>`<div class="aula-tab${id===adminNotaMatTab?' active':''}" onclick="adminNotaShowMat('${id}')" style="font-size:12px;padding:6px 14px">${byMat[id].nombre}</div>`).join('');
+  // Agrupar por periodo dentro de la materia activa
+  const byPer={};
+  (byMat[adminNotaMatTab]?.notas||[]).forEach(n=>{const k=n.periodo||'Sin título';if(!byPer[k])byPer[k]=[];byPer[k].push(n);});
+  const periodos=Object.keys(byPer);
+  if(!adminNotaPerTab||!byPer[adminNotaPerTab])adminNotaPerTab=periodos[0];
+  // Tabs periodo
+  perTabsEl.innerHTML=periodos.map(p=>`<div class="aula-tab${p===adminNotaPerTab?' active':''}" onclick="adminNotaShowPer('${p.replace(/'/g,"\\'")}') " style="font-size:11px;padding:5px 12px">${p}</div>`).join('');
+  // Tabla
+  const rows=byPer[adminNotaPerTab]||[];
+  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th><th>Fecha</th><th></th></tr></thead><tbody>${
+    rows.map(n=>{const prom=n.promedio||0;const c=prom>=14?'bg':prom>=11?'by':'br';return`<tr>
+      <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
+      <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
+      <td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td>
+      <td><span class="badge ${c}">${prom||'--'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="adminEditarNota('${n.alumno_id}','${(n.alumnos?.perfiles?.apellido||'')+' '+(n.alumnos?.perfiles?.nombre||'')}','${n.materia_id}','${n.periodo}',${n.nota_1??'null'},${n.nota_2??'null'},${n.nota_3??'null'})">Editar</button>
+        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="adminEliminarNota('${n.id}')">Eliminar</button>
+      </td>
+    </tr>`;}).join('')
+  }</tbody></table>`;
+}
+function adminNotaShowMat(matId){adminNotaMatTab=matId;adminNotaPerTab=null;renderNotas();}
+function adminNotaShowPer(periodo){adminNotaPerTab=periodo;renderNotas();}
+async function adminEliminarNota(id){
+  if(!await myConfirm('¿Eliminar esta nota?'))return;
+  const{error}=await sb.from('notas').delete().eq('id',id);
+  if(error)return myAlert('Error: '+error.message);
+  await loadNotas();
+}
+function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1,n2,n3){
+  document.getElementById('n-alumno').value=alumnoId;
+  const info=document.getElementById('n-alumno-info');
+  info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';info.textContent='✅ '+nombre;
+  document.getElementById('n-materia').value=materiaId;
+  document.getElementById('n-periodo').value=periodo;
+  document.getElementById('n-n1').value=n1!=='null'?n1:'';
+  document.getElementById('n-n2').value=n2!=='null'?n2:'';
+  document.getElementById('n-n3').value=n3!=='null'?n3:'';
+  openMd('md-nota');
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function renderPracticas(){
@@ -3025,7 +3073,6 @@ function populateSelects(){
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   const fAula=document.getElementById('f-aula');if(fAula)fAula.innerHTML='<option value="">-- Selecciona aula --</option>'+aulaOpts;
   ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
-  const qNotaMat=document.getElementById('q-nota-materia');if(qNotaMat)qNotaMat.innerHTML='<option value="">Todas</option>'+matOpts;
   // man-alumno is now a hidden input populated via search — no select to fill
   const nDest=document.getElementById('n-dest');if(nDest)nDest.innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
@@ -3046,7 +3093,6 @@ function showAlTab(tab){
   if(tabAct)tabAct.classList.toggle('active',tab==='activos');
   if(tabIn)tabIn.classList.toggle('active',tab==='inactivos');
 }
-function filterNotas(){const m=document.getElementById('q-nota-materia').value;renderNotas(m?allNotas.filter(n=>n.materia_id===m):allNotas)}
 
 // ── DNI AUTOCOMPLETE ──
 function dniSuggest(input,sugId,tipo){
