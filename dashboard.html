@@ -532,13 +532,18 @@ function renderSolPreview(pid){
   const files=solucionFiles[pid]||[];
   const el=document.getElementById(`preview-${pid}`);
   if(!el)return;
-  el.innerHTML=files.map((f,i)=>{
-    const url=URL.createObjectURL(f);
-    return`<div style="position:relative;display:inline-block">
-      <img src="${url}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
-      <button onclick="removeSolFile('${pid}',${i})" style="position:absolute;top:-6px;right:-6px;background:var(--red,#e53935);border:none;border-radius:50%;color:#fff;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:20px;padding:0;text-align:center">✕</button>
-    </div>`;
-  }).join('');
+  if(!files.length){el.innerHTML='';return;}
+  el.innerHTML=`<div style="background:var(--navy2,#1a2236);border:1px solid var(--border);border-radius:6px;padding:8px;width:100%;box-sizing:border-box">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">ARCHIVOS SELECCIONADOS (${files.length})</div>
+    ${files.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);gap:8px">
+      <span style="font-size:12px;color:var(--text,#fff);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${f.name}</span>
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap">${(f.size/1024/1024).toFixed(1)} MB</span>
+      <button onclick="removeSolFile('${pid}',${i})" style="background:none;border:none;color:var(--red,#e53935);cursor:pointer;font-size:13px;padding:0 4px;flex-shrink:0">✕</button>
+    </div>`).join('')}
+    <div style="margin-top:8px;padding:7px 10px;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.3);border-radius:4px;font-size:11px;color:var(--yellow,#ffc107);font-family:'Barlow Condensed',sans-serif">
+      ⚠️ Revisá bien los archivos antes de entregar. Una vez enviado <strong>no podrás volver a entregar</strong>.
+    </div>
+  </div>`;
 }
 function removeSolFile(pid,idx){
   if(!solucionFiles[pid])return;
