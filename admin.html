@@ -348,10 +348,9 @@
       <button class="btn btn-gold" onclick="openMd('md-alumno')">+ Nuevo Alumno</button>
     </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-    <input type="text" id="q-al-apellido" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
-    <input type="text" id="q-al-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
-    <button class="btn btn-outline" onclick="filterAlumnos()">Buscar</button>
+  <div class="dni-wrap" style="margin-bottom:12px">
+    <input type="text" id="q-al-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-al','alumnos')" onblur="setTimeout(()=>hideSug('sug-al'),200)"/>
+    <div id="sug-al" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')">👮 Activos</div>
@@ -614,9 +613,9 @@
     <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN PADRES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
   </div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-    <input type="text" id="q-padre-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
-    <input type="text" id="q-padre-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
+  <div class="dni-wrap" style="margin-bottom:12px">
+    <input type="text" id="q-pad-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-pad','padres')" onblur="setTimeout(()=>hideSug('sug-pad'),200)"/>
+    <div id="sug-pad" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="padtab-activos" onclick="showPadTab('activos')">✅ Activos</div>
@@ -634,9 +633,9 @@
     <div class="ph-left"><div class="eye">Solo acceso dueño</div><div class="ttl">GESTIÓN ADMINISTRADORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-admin')">+ Nuevo Admin</button>
   </div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-    <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
-    <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+  <div class="dni-wrap" style="margin-bottom:12px">
+    <input type="text" id="q-adm-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-adm','admins')" onblur="setTimeout(()=>hideSug('sug-adm'),200)"/>
+    <div id="sug-adm" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="admtab-activos" onclick="showAdmTab('activos')">✅ Activos</div>
@@ -713,9 +712,9 @@
     <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN PROFESORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
   </div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-    <input type="text" id="q-prof-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
-    <input type="text" id="q-prof-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
+  <div class="dni-wrap" style="margin-bottom:12px">
+    <input type="text" id="q-prof-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-prof','profesores')" onblur="setTimeout(()=>hideSug('sug-prof'),200)"/>
+    <div id="sug-prof" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="proftab-activos" onclick="showProfTab('activos')">✅ Activos</div>
@@ -2602,6 +2601,62 @@ function selectDniSug(sugId,dni,nombre){
   else if(sugId==='sug-padre')buscarAlumnoPorDNI('padre');
 }
 function hideSug(sugId){const el=document.getElementById(sugId);if(el){el.classList.remove('show');}}
+
+// ── SUGERENCIAS PARA PANELES DE GESTIÓN ──
+function panelSuggest(input,sugId,tipo){
+  const q=input.value.trim().toLowerCase();
+  const box=document.getElementById(sugId);
+  if(!q){
+    box.innerHTML='';box.classList.remove('show');
+    if(tipo==='alumnos'){renderAlumnos(allAlumnos);renderAlumnosInactivos(allAlumnosInactivos);}
+    else if(tipo==='padres'){renderPadresActivos(allPadresActivos);renderPadresDeshabilitados(allPadresDeshabilitados);}
+    else if(tipo==='admins'){renderAdminsActivos(allAdminsActivos);renderAdminsDeshabilitados(allAdminsDeshabilitados);}
+    else if(tipo==='profesores'){renderProfesoresActivos(allProfesoresActivos);renderProfesoresDeshabilitados(allProfesoresDeshabilitados);}
+    return;
+  }
+  let fuente=[];
+  if(tipo==='alumnos'){
+    fuente=[...allAlumnos,...allAlumnosInactivos].filter(a=>
+      `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase().includes(q)||(a.perfiles?.dni||'').startsWith(q)
+    ).slice(0,8);
+    box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-al','alumnos','${a.perfiles?.dni}')"><span class="dni-sug-dni">${a.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${a.perfiles?.nombre} ${a.perfiles?.apellido}</span></div>`).join('');
+  }else if(tipo==='padres'){
+    fuente=allPadresData.filter(p=>`${p.apellido||''} ${p.nombre||''}`.toLowerCase().includes(q)||(p.dni||'').startsWith(q)).slice(0,8);
+    box.innerHTML=fuente.map(p=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-pad','padres','${p.dni}')"><span class="dni-sug-dni">${p.dni||'--'}</span><span class="dni-sug-nom">${p.nombre} ${p.apellido}</span></div>`).join('');
+  }else if(tipo==='admins'){
+    fuente=allAdminsData.filter(a=>`${a.apellido||''} ${a.nombre||''}`.toLowerCase().includes(q)||(a.dni||'').startsWith(q)).slice(0,8);
+    box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-adm','admins','${a.dni}')"><span class="dni-sug-dni">${a.dni||'--'}</span><span class="dni-sug-nom">${a.nombre} ${a.apellido} <span style="color:var(--muted);font-size:10px">${a.rol}</span></span></div>`).join('');
+  }else if(tipo==='profesores'){
+    fuente=allProfesoresData.filter(p=>`${p.perfiles?.apellido||''} ${p.perfiles?.nombre||''}`.toLowerCase().includes(q)||(p.perfiles?.dni||'').startsWith(q)).slice(0,8);
+    box.innerHTML=fuente.map(p=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-prof','profesores','${p.perfiles?.dni}')"><span class="dni-sug-dni">${p.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${p.perfiles?.nombre} ${p.perfiles?.apellido}</span></div>`).join('');
+  }
+  box.classList.toggle('show',fuente.length>0);
+}
+function selectPanelSug(sugId,tipo,dni){
+  const inputMap={'sug-al':'q-al-search','sug-pad':'q-pad-search','sug-adm':'q-adm-search','sug-prof':'q-prof-search'};
+  hideSug(sugId);
+  if(tipo==='alumnos'){
+    const a=[...allAlumnos,...allAlumnosInactivos].find(a=>a.perfiles?.dni===dni);
+    if(a&&document.getElementById('q-al-search'))document.getElementById('q-al-search').value=`${a.perfiles?.nombre} ${a.perfiles?.apellido}`;
+    renderAlumnos(allAlumnos.filter(a=>a.perfiles?.dni===dni));
+    renderAlumnosInactivos(allAlumnosInactivos.filter(a=>a.perfiles?.dni===dni));
+  }else if(tipo==='padres'){
+    const match=allPadresData.filter(p=>p.dni===dni);
+    const p=match[0];if(p)document.getElementById('q-pad-search').value=`${p.nombre} ${p.apellido}`;
+    renderPadresActivos(match.filter(p=>p.activo!==false));
+    renderPadresDeshabilitados(match.filter(p=>p.activo===false));
+  }else if(tipo==='admins'){
+    const match=allAdminsData.filter(a=>a.dni===dni);
+    const a=match[0];if(a)document.getElementById('q-adm-search').value=`${a.nombre} ${a.apellido}`;
+    renderAdminsActivos(match.filter(a=>a.activo!==false));
+    renderAdminsDeshabilitados(match.filter(a=>a.activo===false));
+  }else if(tipo==='profesores'){
+    const match=allProfesoresData.filter(p=>p.perfiles?.dni===dni);
+    const p=match[0];if(p)document.getElementById('q-prof-search').value=`${p.perfiles?.nombre} ${p.perfiles?.apellido}`;
+    renderProfesoresActivos(match.filter(p=>p.activo!==false));
+    renderProfesoresDeshabilitados(match.filter(p=>p.activo===false));
+  }
+}
 
 // ── MODAL ──
 function openMd(id){
