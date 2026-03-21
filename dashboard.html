@@ -362,11 +362,32 @@ async function loadNotas(){
 
 function renderNotasTable(data){
   if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
-  return`<table><thead><tr><th>Materia</th><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${data.map(n=>{
-    const nota=n.nota_1??'--';
-    const c=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
-    return`<tr><td><strong>${n.materias?.nombre||'--'}</strong></td><td>${n.periodo||'--'}</td><td class="${c}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
-  }).join('')}</tbody></table>`;
+  const byMat={};
+  data.forEach(n=>{
+    const key=n.materia_id||'sin';
+    if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};
+    byMat[key].notas.push(n);
+  });
+  return Object.entries(byMat).map(([key,mat],i)=>`
+    <div style="border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.nta').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'"
+        style="padding:12px 14px;background:var(--navy2);display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <strong style="font-family:'Barlow Condensed',sans-serif;font-size:16px">${mat.nombre}</strong>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--muted)">${mat.notas.length} nota${mat.notas.length!==1?'s':''}</span>
+          <span class="nta" style="color:var(--gold);font-size:12px">${i===0?'▼':'▶'}</span>
+        </div>
+      </div>
+      <div style="display:${i===0?'block':'none'}">
+        <table style="margin:0;border-radius:0"><thead><tr><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
+        ${mat.notas.map(n=>{
+          const nota=n.nota_1??'--';
+          const c=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
+          return`<tr><td>${n.periodo||'--'}</td><td class="${c}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
+        }).join('')}
+        </tbody></table>
+      </div>
+    </div>`).join('');
 }
 
 async function loadAsistencias(){
