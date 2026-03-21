@@ -898,7 +898,24 @@ async function saveNotaProfesor(){
   loadTodasNotas();
 }
 
+let _dialogResolve=null;
+function _openDialog(msg,isConfirm){return new Promise(resolve=>{_dialogResolve=resolve;document.getElementById('dlg-msg').textContent=msg;document.getElementById('dlg-cancel').style.display=isConfirm?'':'none';document.getElementById('dlg-overlay').style.display='flex';});}
+function myAlert(msg){return _openDialog(msg,false);}
+function myConfirm(msg){return _openDialog(msg,true);}
+function _dlgOk(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(true);_dialogResolve=null;}}
+function _dlgCancel(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(false);_dialogResolve=null;}}
+
 init();
 </script>
+
+<div id="dlg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <div id="dlg-msg" style="font-family:'Barlow',sans-serif;font-size:15px;color:var(--white);line-height:1.5;margin-bottom:20px;white-space:pre-line"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button id="dlg-cancel" class="btn btn-outline" style="font-size:13px;padding:7px 18px" onclick="_dlgCancel()">Cancelar</button>
+      <button class="btn btn-gold" style="font-size:13px;padding:7px 18px" onclick="_dlgOk()">Aceptar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
