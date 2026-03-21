@@ -1313,9 +1313,15 @@ async function init(){
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
   populateSelects();
   saveFcmToken();
-  // Realtime: auto-refresh contacto cuando llega un mensaje nuevo
-  sb.channel('admin-contacto').on('postgres_changes',{event:'*',schema:'public',table:'contacto_mensajes'},()=>loadContacto()).subscribe();
+  // Realtime: auto-refresh contacto y notificaciones
+  sb.channel('admin-contacto').on('postgres_changes',{event:'*',schema:'public',table:'contacto_mensajes'},()=>{loadContacto();if(esDueno)loadDashboardDueno();}).subscribe();
   sb.channel('admin-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifHist()).subscribe();
+  // Realtime: auto-refresh dashboard dueño cuando cambian asistencias o sesiones
+  if(esDueno){
+    sb.channel('dash-asist').on('postgres_changes',{event:'*',schema:'public',table:'asistencias'},()=>loadDashboardDueno()).subscribe();
+    sb.channel('dash-asist-prof').on('postgres_changes',{event:'*',schema:'public',table:'asistencias_profesores'},()=>loadDashboardDueno()).subscribe();
+    sb.channel('dash-sesiones').on('postgres_changes',{event:'*',schema:'public',table:'sesiones_asistencia'},()=>loadDashboardDueno()).subscribe();
+  }
 }
 async function saveFcmToken(){
   console.log('saveFcmToken admin - AndroidNative:',!!window.AndroidNative,'uid:',uid);
