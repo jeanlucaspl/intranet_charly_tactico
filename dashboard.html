@@ -514,7 +514,8 @@ async function openSolucion(pathOrUrl,btnEl){
       ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
       :pathOrUrl;
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(signErr||!data?.signedUrl){alert('Error al generar URL\nPath: '+path+'\nError: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!path){alert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
     const resp=await fetch(data.signedUrl);
     if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
     const blob=await resp.blob();

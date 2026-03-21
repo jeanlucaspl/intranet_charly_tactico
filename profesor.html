@@ -1144,7 +1144,8 @@ async function openSolucion(pathOrUrl,btnEl){
   try{
     const path=_solPath(pathOrUrl);
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(signErr||!data?.signedUrl){await myAlert('Error\nPath: '+path+'\nError: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
     const resp=await fetch(data.signedUrl);
     if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
     const blob=await resp.blob();
