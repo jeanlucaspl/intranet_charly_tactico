@@ -699,8 +699,9 @@
   </div>
   <div style="margin-top:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">Todas las contraseñas registradas</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <input type="text" id="q-pass-ape" placeholder="Filtrar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterContrasenas()">
+    <div class="dni-wrap" style="margin-bottom:12px">
+      <input type="text" id="q-pass-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-pass2','contrasenas')" onblur="setTimeout(()=>hideSug('sug-pass2'),200)"/>
+      <div id="sug-pass2" class="dni-sug"></div>
     </div>
     <div id="d-contrasenas"><div class="empty"><div class="ei">🔑</div><div class="et">Cargando...</div></div></div>
   </div>
@@ -2612,6 +2613,7 @@ function panelSuggest(input,sugId,tipo){
     else if(tipo==='padres'){renderPadresActivos(allPadresActivos);renderPadresDeshabilitados(allPadresDeshabilitados);}
     else if(tipo==='admins'){renderAdminsActivos(allAdminsActivos);renderAdminsDeshabilitados(allAdminsDeshabilitados);}
     else if(tipo==='profesores'){renderProfesoresActivos(allProfesoresActivos);renderProfesoresDeshabilitados(allProfesoresDeshabilitados);}
+    else if(tipo==='contrasenas'){renderContrasenasFiltradas(allContrasenaData);}
     return;
   }
   let fuente=[];
@@ -2629,6 +2631,9 @@ function panelSuggest(input,sugId,tipo){
   }else if(tipo==='profesores'){
     fuente=allProfesoresData.filter(p=>`${p.perfiles?.apellido||''} ${p.perfiles?.nombre||''}`.toLowerCase().includes(q)||(p.perfiles?.dni||'').startsWith(q)).slice(0,8);
     box.innerHTML=fuente.map(p=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-prof','profesores','${p.perfiles?.dni}')"><span class="dni-sug-dni">${p.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${p.perfiles?.nombre} ${p.perfiles?.apellido}</span></div>`).join('');
+  }else if(tipo==='contrasenas'){
+    fuente=(allContrasenaData||[]).filter(c=>`${c.perfiles?.apellido||''} ${c.perfiles?.nombre||''}`.toLowerCase().includes(q)||(c.perfiles?.dni||'').startsWith(q)).slice(0,8);
+    box.innerHTML=fuente.map(c=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-pass2','contrasenas','${c.perfiles?.dni}')"><span class="dni-sug-dni">${c.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${c.perfiles?.nombre} ${c.perfiles?.apellido} <span style="color:var(--muted);font-size:10px">${c.perfiles?.rol||''}</span></span></div>`).join('');
   }
   box.classList.toggle('show',fuente.length>0);
 }
@@ -2655,6 +2660,10 @@ function selectPanelSug(sugId,tipo,dni){
     const p=match[0];if(p)document.getElementById('q-prof-search').value=`${p.perfiles?.nombre} ${p.perfiles?.apellido}`;
     renderProfesoresActivos(match.filter(p=>p.activo!==false));
     renderProfesoresDeshabilitados(match.filter(p=>p.activo===false));
+  }else if(tipo==='contrasenas'){
+    const match=(allContrasenaData||[]).filter(c=>c.perfiles?.dni===dni);
+    const c=match[0];if(c)document.getElementById('q-pass-search').value=`${c.perfiles?.nombre} ${c.perfiles?.apellido}`;
+    renderContrasenasFiltradas(match.length?match:allContrasenaData);
   }
 }
 
