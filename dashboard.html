@@ -355,9 +355,8 @@ async function loadNotas(){
     const gen=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--';
     document.getElementById('s-prom').textContent=gen;
   }
-  const html=renderNotasTable(data||[]);
-  document.getElementById('d-notas').innerHTML=html;
-  document.getElementById('d-notas-res').innerHTML=html;
+  document.getElementById('d-notas').innerHTML=renderNotasTable(data||[]);
+  document.getElementById('d-notas-res').innerHTML=renderNotasResumen(data||[]);
 }
 
 function renderNotasTable(data){
@@ -368,27 +367,43 @@ function renderNotasTable(data){
     if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};
     byMat[key].notas.push(n);
   });
-  return Object.entries(byMat).map(([key,mat],i)=>`
-    <div style="border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden">
+  return Object.entries(byMat).map(([key,mat])=>{
+    const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
+    const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;
+    const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';
+    return`<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden">
       <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.nta').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'"
         style="padding:12px 14px;background:var(--navy2);display:flex;justify-content:space-between;align-items:center;cursor:pointer">
         <strong style="font-family:'Barlow Condensed',sans-serif;font-size:16px">${mat.nombre}</strong>
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-size:11px;color:var(--muted)">${mat.notas.length} nota${mat.notas.length!==1?'s':''}</span>
-          ${(()=>{const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';return prom?`<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${c}">${prom}</span>`:'';})()}
-          <span class="nta" style="color:var(--gold);font-size:12px">${i===0?'▼':'▶'}</span>
+          ${prom?`<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${c}">${prom}</span>`:''}
+          <span class="nta" style="color:var(--gold);font-size:12px">▶</span>
         </div>
       </div>
-      <div style="display:${i===0?'block':'none'}">
+      <div style="display:none">
         <table style="margin:0;border-radius:0"><thead><tr><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
-        ${mat.notas.map(n=>{
-          const nota=n.nota_1??'--';
-          const c=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
-          return`<tr><td>${n.periodo||'--'}</td><td class="${c}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
+        ${mat.notas.map(n=>{const nota=n.nota_1??'--';const cc=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
+          return`<tr><td>${n.periodo||'--'}</td><td class="${cc}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
         }).join('')}
         </tbody></table>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+function renderNotasResumen(data){
+  if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
+  const byMat={};
+  data.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
+  return`<div style="display:flex;flex-direction:column;gap:6px">${Object.values(byMat).map(mat=>{
+    const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
+    const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):'--';
+    const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:4px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px">${mat.nombre}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${c}">${prom}</span>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 async function loadAsistencias(){
