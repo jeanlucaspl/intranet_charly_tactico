@@ -2896,9 +2896,10 @@ async function saveProfesor(){
   }
   const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,especialidad:especialidad||null,activo:true,foto_url:fotoUrl});
   if(prErr){showMsg(msg,prErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
-  // Assign materia if selected
+  // Assign materia if selected → insertar en materia_profesor
   if(materiaId){
-    await sb.from('materias').update({profesor_id:uid}).eq('id',materiaId);
+    const {data:profRow}=await sb.from('profesores').select('id').eq('perfil_id',uid).single();
+    if(profRow) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
   }
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
   // Restaurar sesión del dueño
