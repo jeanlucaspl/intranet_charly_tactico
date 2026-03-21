@@ -201,13 +201,24 @@
   <!-- Formulario de asistencia -->
   <div id="form-asistencia">
     <!-- Pestañas -->
-    <div class="aula-tabs" style="margin-bottom:20px">
-      <button class="at active" id="tab-asist-facial" onclick="switchAsistTab('facial',this)">📸 Asistencia Facial</button>
-      <button class="at" id="tab-asist-manual" onclick="switchAsistTab('manual',this)">📍 Asistencia Manual</button>
+    <div class="aula-tabs" style="margin-bottom:0">
+      <button class="aula-tab active" id="tab-asist-facial" onclick="switchAsistTab('facial',this)">📸 Asistencia Facial</button>
+      <button class="aula-tab" id="tab-asist-manual" onclick="switchAsistTab('manual',this)">📍 Asistencia Manual</button>
+    </div>
+    <div style="background:var(--navy2);border:1px solid var(--border);border-top:none;padding:20px 20px 0;margin-bottom:20px">
+
+    <!-- Estado del dispositivo — solo visible en app Android -->
+    <div id="device-status-card" style="display:none;margin-bottom:18px;overflow:hidden;border:1px solid var(--border)">
+      <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+        <span id="device-status-badge" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
+      </div>
+      <div id="device-status-list" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;background:var(--navy2)"></div>
+      <div id="device-status-warn" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:rgba(224,85,85,.06);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;line-height:1.7;color:var(--yellow)"></div>
     </div>
 
     <!-- Aviso geofence -->
-    <div id="geo-warning" style="display:none;background:rgba(224,85,85,0.12);border:1px solid var(--red);padding:16px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.05em;color:var(--red)"></div>
+    <div id="geo-warning" style="display:none;background:rgba(224,85,85,0.10);border:1px solid var(--red);padding:14px 16px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.05em;color:var(--red)"></div>
 
     <!-- PESTAÑA 1: Facial -->
     <div id="tab-content-facial" class="facial-box">
@@ -253,6 +264,7 @@
       </div>
       <div class="msg" id="gps-msg"></div>
     </div>
+    </div><!-- /contenedor tabs -->
   </div>
 </div>
 
@@ -348,6 +360,8 @@ let uid=null, profesorId=null, profesorData=null;
 let camStream=null, gpsCoords=null;
 let faceApiLoaded=false, myDescriptor=null;
 let academiaConfig=null;
+let deviceOk=null,deviceWarnTimer=null,deviceWarnSec=600;
+const fmtCd=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 
 function todayISO(){return new Date().toISOString().split('T')[0]}
 function nowTime(){return new Date().toTimeString().slice(0,8)}
@@ -407,6 +421,7 @@ async function init(){
   await Promise.all([loadDashboard(),loadHorario(),loadHistorial(),loadNotifs(),loadConfiguracion()]);
   loadFaceApi();
   checkYaMarcado();
+  checkDeviceStatusProfesor();
   saveFcmToken();
   sb.channel('prof-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
   setInterval(loadNotifs,10000);
@@ -524,15 +539,58 @@ async function checkGeofence(){
 }
 
 function switchAsistTab(tab,btn){
-  document.querySelectorAll('.aula-tabs .at').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#panel-asistencia .aula-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-content-facial').style.display=tab==='facial'?'':'none';
   document.getElementById('tab-content-manual').style.display=tab==='manual'?'':'none';
   document.getElementById('geo-warning').style.display='none';
 }
 
+function checkDeviceStatusProfesor(){
+  if(!window.AndroidNative){deviceOk=true;return;}
+  document.getElementById('device-status-card').style.display='block';
+  const checks=[
+    {label:'GPS disponible',ok:!!navigator.geolocation,failMsg:'Tu dispositivo no tiene GPS.'},
+    {label:'Opciones de desarrollador',ok:!AndroidNative.isDeveloperOptionsEnabled(),failMsg:'Opciones de desarrollador activas. Desactívalas en Ajustes → Sistema → Opciones de desarrollador.'},
+    {label:'GPS simulado (mock)',ok:!AndroidNative.isMockLocationEnabled(),failMsg:'GPS falso detectado. Desactiva la ubicación simulada.'},
+    {label:'Apps de GPS falso',ok:!AndroidNative.hasMockLocationApps(),failMsg:'Tienes una app de GPS falso instalada. Desinstálala.'},
+  ];
+  const problemas=checks.filter(c=>!c.ok);
+  deviceOk=problemas.length===0;
+  const badge=document.getElementById('device-status-badge');
+  const list=document.getElementById('device-status-list');
+  const warn=document.getElementById('device-status-warn');
+  list.innerHTML=checks.map(c=>`<div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:16px">${c.ok?'✅':'❌'}</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;color:${c.ok?'var(--muted)':'var(--red)'};text-transform:uppercase">${c.label}</span>
+  </div>`).join('');
+  if(problemas.length){
+    badge.textContent='⚠️ PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.15)';
+    const motivo=problemas.map(p=>p.failMsg).join(' | ');
+    if(!deviceWarnTimer){
+      deviceWarnSec=600;
+      warn.style.display='block';
+      warn.innerHTML=`⚠️ <strong>No puedes registrar asistencia hasta resolver el problema.</strong><br>${problemas.map(p=>`• ${p.failMsg}`).join('<br>')}<br><br>⏱ Tiempo para resolverlo: <strong id="device-warn-countdown">${fmtCd(deviceWarnSec)}</strong>. Si no lo solucionas, se notificará a la dirección.`;
+      deviceWarnTimer=setInterval(()=>{
+        deviceWarnSec--;
+        const el=document.getElementById('device-warn-countdown');
+        if(el)el.textContent=fmtCd(deviceWarnSec);
+        if(deviceWarnSec<=0){
+          clearInterval(deviceWarnTimer);deviceWarnTimer=null;
+          alertarAdminGPS('Problema de dispositivo no resuelto en 10 min: '+motivo);
+        }
+      },1000);
+    }
+  }else{
+    badge.textContent='✅ TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.15)';
+    warn.style.display='none';
+    if(deviceWarnTimer){clearInterval(deviceWarnTimer);deviceWarnTimer=null;}
+  }
+}
+
 // ── CÁMARA ──
 async function startCam(){
+  if(deviceOk===false)return;
   const dentro=await checkGeofence();
   if(!dentro)return;
   try{
@@ -644,6 +702,7 @@ function showResultado(ok,titulo,sub){
 
 // ── GPS ──
 async function getGPS(){
+  if(deviceOk===false)return;
   const dentro=await checkGeofence();
   if(!dentro)return;
   if(!navigator.geolocation)return alert('Tu dispositivo no soporta GPS');
@@ -801,7 +860,7 @@ function showPanel(id,btn){
   closeSb();
   if(id==='horario')loadHorario();
   if(id==='historial')loadHistorial();
-  if(id==='asistencia')checkYaMarcado();
+  if(id==='asistencia'){checkYaMarcado();checkDeviceStatusProfesor();}
   if(id==='notas')loadNotasSelects();
   if(id==='notificaciones')loadNotifs();
 }
