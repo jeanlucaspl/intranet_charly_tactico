@@ -2145,7 +2145,7 @@ async function loadSoluciones(){
   const byAlumno={};
   data.forEach(s=>{if(!byAlumno[s.alumno_id]){byAlumno[s.alumno_id]={pf:s.alumnos?.perfiles,archivos:[]};}byAlumno[s.alumno_id].archivos.push(s);});
   document.getElementById('d-soluciones').innerHTML=
-    `<div style="margin-bottom:12px"><button class="btn btn-outline" style="font-size:11px;padding:8px 16px" onclick="downloadSolucionesZip('${pid}',${JSON.stringify(pracTitulo)},this)">📦 Descargar ZIP de todas las soluciones</button></div>`+
+    `<div style="margin-bottom:12px"><button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)">📦 Descargar ZIP de todas las soluciones</button></div>`+
     `<div style="background:var(--navy2);border:1px solid var(--border)">`+
     Object.values(byAlumno).map(a=>{
       const fecha=new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});

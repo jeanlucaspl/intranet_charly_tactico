@@ -1283,7 +1283,7 @@ async function loadProfSoluciones(){
   const pracOpt=document.getElementById('q-prof-sol-practica');
   const pracTitulo=pracOpt.options[pracOpt.selectedIndex]?.text||'practica';
   el.innerHTML=`<div style="margin-bottom:12px">
-    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" onclick="downloadSolucionesZip('${pid}',${JSON.stringify(pracTitulo)},this)">📦 Descargar ZIP de todas las soluciones</button>
+    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)">📦 Descargar ZIP de todas las soluciones</button>
   </div>
   <div style="background:var(--navy2);border:1px solid var(--border)">
     ${Object.values(byAlumno).map(a=>`<div class="sol-item">
