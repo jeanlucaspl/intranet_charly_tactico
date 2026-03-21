@@ -493,9 +493,9 @@ async function loadPracticas(){
               <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
                 <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="setSolFile('${p.id}',this)"/>
                 <div class="fd-icon">📷</div>
-                <div class="fd-txt">Subir fotos de tu solución (podés seleccionar varias)</div>
-                <div class="fd-name" id="fname-${p.id}"></div>
+                <div class="fd-txt">Tocá para agregar fotos (podés seleccionar varias)</div>
               </div>
+              <div id="preview-${p.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
               <div id="swarn-${p.id}" style="display:none;margin-top:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--yellow)"></div>
               <div class="msg" id="smsg-${p.id}"></div>
               <button class="btn btn-green" style="width:100%;margin-top:6px;font-size:11px" onclick="submitSolucion('${p.id}')">ENTREGAR SOLUCIÓN</button>
@@ -528,17 +528,37 @@ async function openSolucion(pathOrUrl,btnEl){
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
+function renderSolPreview(pid){
+  const files=solucionFiles[pid]||[];
+  const el=document.getElementById(`preview-${pid}`);
+  if(!el)return;
+  el.innerHTML=files.map((f,i)=>{
+    const url=URL.createObjectURL(f);
+    return`<div style="position:relative;display:inline-block">
+      <img src="${url}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+      <button onclick="removeSolFile('${pid}',${i})" style="position:absolute;top:-6px;right:-6px;background:var(--red,#e53935);border:none;border-radius:50%;color:#fff;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:20px;padding:0;text-align:center">✕</button>
+    </div>`;
+  }).join('');
+}
+function removeSolFile(pid,idx){
+  if(!solucionFiles[pid])return;
+  solucionFiles[pid]=solucionFiles[pid].filter((_,i)=>i!==idx);
+  renderSolPreview(pid);
+  if(!solucionFiles[pid].length)document.getElementById(`swarn-${pid}`).style.display='none';
+}
 function setSolFile(pid,input){
-  const files=[...input.files];
-  if(!files.length)return;
+  const nuevas=[...input.files];
+  input.value='';
+  if(!nuevas.length)return;
   const warnEl=document.getElementById(`swarn-${pid}`);
-  const pesadas=files.filter(f=>f.size>IMG_WARN_MB*1024*1024);
-  const bloqueadas=files.filter(f=>f.size>IMG_MAX_MB*1024*1024);
+  const bloqueadas=nuevas.filter(f=>f.size>IMG_MAX_MB*1024*1024);
   if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=`⛔ ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;return;}
+  if(!solucionFiles[pid])solucionFiles[pid]=[];
+  solucionFiles[pid]=[...solucionFiles[pid],...nuevas];
+  const pesadas=solucionFiles[pid].filter(f=>f.size>IMG_WARN_MB*1024*1024);
   if(pesadas.length){warnEl.style.display='block';warnEl.textContent=`⚠️ Algunas fotos son pesadas. Si podés, reducí la resolución antes de subir.`;}
   else warnEl.style.display='none';
-  solucionFiles[pid]=files;
-  document.getElementById(`fname-${pid}`).textContent=files.length===1?files[0].name:`${files.length} fotos seleccionadas`;
+  renderSolPreview(pid);
 }
 
 async function submitSolucion(pid){
