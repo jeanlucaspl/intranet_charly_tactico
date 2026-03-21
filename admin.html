@@ -294,7 +294,7 @@
   </div>
   <div class="sb-section">
     <div class="sb-label">Asistencia</div>
-    <button class="sb-link" onclick="showPanel('facial',this)"><span class="ic">📸</span>Verificación Facial</button>
+    <button class="sb-link" onclick="showPanel('facial',this)"><span class="ic">📸</span>Tomar Asistencia</button>
     <button class="sb-link" onclick="showPanel('reportes',this)"><span class="ic">📋</span>Reportes</button>
   </div>
   <div class="sb-section">
@@ -424,24 +424,34 @@
   </div>
 </div>
 
-<!-- ══ FACIAL ══ -->
+<!-- ══ TOMAR ASISTENCIA ══ -->
 <div class="panel" id="panel-facial">
-  <div class="ph"><div class="ph-left"><div class="eye">Reconocimiento biométrico</div><div class="ttl">VERIFICACIÓN FACIAL</div></div></div>
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+  <div class="ph"><div class="ph-left"><div class="eye">Control de presencia</div><div class="ttl">TOMAR ASISTENCIA</div></div></div>
+  <!-- Selector materia compartido -->
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
     <select id="f-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:240px"><option value="">-- Selecciona materia --</option></select>
-    <button class="btn btn-gold" onclick="startCam()">📷 Activar Cámara</button>
-    <button class="btn btn-outline" onclick="flipCam()" id="btn-flip" title="Cambiar cámara">🔄 Cambiar</button>
-    <button class="btn btn-outline" onclick="stopCam()">⏹ Detener</button>
     <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="facial-grid">
-    <!-- CAM -->
+  <!-- Tabs -->
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')">📸 Verificación Facial</div>
+    <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')">✏️ Asistencia Manual</div>
+    <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')">📋 Registros del Día</div>
+  </div>
+
+  <!-- TAB 1: Verificación Facial -->
+  <div id="ftab-content-facial">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;padding-top:16px">
+      <button class="btn btn-gold" onclick="startCam()">📷 Activar Cámara</button>
+      <button class="btn btn-outline" onclick="flipCam()" id="btn-flip" title="Cambiar cámara">🔄 Cambiar</button>
+      <button class="btn btn-outline" onclick="stopCam()">⏹ Detener</button>
+    </div>
     <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
       <div class="cam-wrap"><video id="f-video" autoplay muted playsinline></video><canvas id="f-canvas"></canvas></div>
       <div class="cam-status cs-idle" id="f-camst">Cámara detenida</div>
       <div style="display:flex;gap:8px;width:100%;max-width:400px">
         <button class="btn btn-green" style="flex:1" onclick="captureVerify()">📸 Capturar</button>
-        <button class="btn btn-outline" onclick="openMd('md-manual')">✏️ Manual</button>
+        <button class="btn btn-outline" onclick="showFacialTab('manual')">✏️ Ir a Manual</button>
       </div>
       <div class="verify-card" id="verify-card">
         <div class="verify-name" id="v-name"></div>
@@ -453,16 +463,44 @@
         </div>
       </div>
     </div>
-    <!-- LOG -->
-    <div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">📋 Registro del Día</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:12px">
-        <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)" id="f-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Total</div></div>
-        <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--blue)" id="f-facial-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Facial</div></div>
-        <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--yellow)" id="f-man-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Manual</div></div>
+  </div>
+
+  <!-- TAB 2: Asistencia Manual -->
+  <div id="ftab-content-manual" style="display:none;padding-top:16px">
+    <input type="hidden" id="man-alumno"/>
+    <div class="fg">
+      <label>Buscar alumno por apellido</label>
+      <div style="position:relative">
+        <input type="text" id="man-apellido-inp" placeholder="Escribe apellido..." autocomplete="off" oninput="manSuggest('apellido')" onfocus="manSuggest('apellido')" onblur="setTimeout(()=>{const e=document.getElementById('man-apellido-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
+        <div id="man-apellido-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
       </div>
-      <div class="flog" id="f-log"><div class="empty"><div class="ei">👁️</div><div class="et">Sin registros</div></div></div>
     </div>
+    <div class="fg">
+      <label>Buscar alumno por DNI</label>
+      <div style="position:relative">
+        <input type="text" id="man-dni-inp" placeholder="Escribe DNI..." autocomplete="off" oninput="manSuggest('dni')" onfocus="manSuggest('dni')" onblur="setTimeout(()=>{const e=document.getElementById('man-dni-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
+        <div id="man-dni-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:12px">✅ <span id="man-selected-name"></span></div>
+    <div class="fg"><label>Estado</label>
+      <select id="man-estado">
+        <option value="presente">✅ Presente</option>
+        <option value="tardanza">⏰ Tardanza</option>
+        <option value="ausente">❌ Ausente</option>
+      </select>
+    </div>
+    <button class="btn btn-gold" style="margin-top:8px" onclick="saveManual()">REGISTRAR ASISTENCIA</button>
+  </div>
+
+  <!-- TAB 3: Registros del Día -->
+  <div id="ftab-content-registros" style="display:none;padding-top:16px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:16px">
+      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)" id="f-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Total</div></div>
+      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--blue)" id="f-facial-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Facial</div></div>
+      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--yellow)" id="f-man-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Manual</div></div>
+    </div>
+    <div class="flog" id="f-log"><div class="empty"><div class="ei">👁️</div><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
 
@@ -920,42 +958,6 @@
       <button class="btn btn-red" onclick="deleteHorario()">🗑️ Eliminar</button>
       <button class="btn btn-outline" onclick="closeMd('md-edit-horario')">Cancelar</button>
       <button class="btn btn-gold" onclick="updateHorario()">GUARDAR CAMBIOS</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL MANUAL ATTENDANCE -->
-<div class="mo" id="md-manual">
-  <div class="md">
-    <div class="md-hd"><div class="md-ttl">MARCAR MANUAL</div><button class="md-x" onclick="closeMd('md-manual')">✕</button></div>
-    <div class="md-bd">
-      <input type="hidden" id="man-alumno"/>
-      <div class="fg">
-        <label>Buscar por Apellido</label>
-        <div style="position:relative">
-          <input type="text" id="man-apellido-inp" placeholder="Escribe apellido..." autocomplete="off" oninput="manSuggest('apellido')" onfocus="manSuggest('apellido')" onblur="setTimeout(()=>{const e=document.getElementById('man-apellido-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
-          <div id="man-apellido-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
-        </div>
-      </div>
-      <div class="fg">
-        <label>Buscar por DNI</label>
-        <div style="position:relative">
-          <input type="text" id="man-dni-inp" placeholder="Escribe DNI..." autocomplete="off" oninput="manSuggest('dni')" onfocus="manSuggest('dni')" onblur="setTimeout(()=>{const e=document.getElementById('man-dni-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
-          <div id="man-dni-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
-        </div>
-      </div>
-      <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:4px">✅ <span id="man-selected-name"></span></div>
-      <div class="fg"><label>Estado</label>
-        <select id="man-estado">
-          <option value="presente">✅ Presente</option>
-          <option value="tardanza">⏰ Tardanza</option>
-          <option value="ausente">❌ Ausente</option>
-        </select>
-      </div>
-    </div>
-    <div class="md-ft">
-      <button class="btn btn-outline" onclick="closeMd('md-manual')">Cancelar</button>
-      <button class="btn btn-gold" onclick="saveManual()">REGISTRAR</button>
     </div>
   </div>
 </div>
@@ -2186,6 +2188,14 @@ async function saveAllAtt(){
   loadDashboard()}
 }
 
+// ── FACIAL TABS ──
+function showFacialTab(tab){
+  ['facial','manual','registros'].forEach(t=>{
+    document.getElementById('ftab-content-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
+  });
+}
+
 // ── FACIAL ──
 async function startCam(){
   setCamSt('📍 Verificando ubicación...','cs-scan');
@@ -2297,7 +2307,12 @@ async function saveManual(){
   if(a?.perfil_id)sendFcmToUsers([a.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
-  closeMd('md-manual');loadDashboard();
+  document.getElementById('man-alumno').value='';
+  document.getElementById('man-apellido-inp').value='';
+  document.getElementById('man-dni-inp').value='';
+  document.getElementById('man-selected').style.display='none';
+  showFacialTab('registros');
+  loadDashboard();
 }
 
 // ── REGISTRATION CAMERA ──
@@ -2591,7 +2606,6 @@ function selectDniSug(sugId,dni,nombre){
   else if(sugId==='sug-nota')buscarAlumnoPorDNI('nota');
   else if(sugId==='sug-padre')buscarAlumnoPorDNI('padre');
 }
-function hideSug(sugId){const el=document.getElementById(sugId);if(el){el.classList.remove('show');}}
 
 // ── SUGERENCIAS PARA PANELES DE GESTIÓN ──
 function panelSuggest(input,sugId,tipo){
@@ -2660,12 +2674,6 @@ function selectPanelSug(sugId,tipo,dni){
 // ── MODAL ──
 function openMd(id){
   document.getElementById(id).classList.add('show');
-  if(id==='md-manual'){
-    document.getElementById('man-alumno').value='';
-    document.getElementById('man-apellido-inp').value='';
-    document.getElementById('man-dni-inp').value='';
-    document.getElementById('man-selected').style.display='none';
-  }
 }
 function closeMd(id){document.getElementById(id).classList.remove('show')}
 
