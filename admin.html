@@ -1948,17 +1948,28 @@ async function savePadre(){
   const btn=document.getElementById('btn-crear-padre');
   btn.disabled=true; btn.textContent='CREANDO...';
 
+  // Guardar sesión del dueño antes de signUp (que cambia la sesión activa)
+  const {data:{session:duSession}}=await sb.auth.getSession();
+
   const {data,error}=await sb.auth.signUp({email,password:pass});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
   const userId=data?.user?.id;
   if(!userId){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
 
-  await sb.from('perfiles').insert({
+  const {error:pfErr}=await sb.from('perfiles').upsert({
     id:userId, nombre, apellido, dni, rol:'padre',
     telefono:tel||null,
     email_ref:email
   });
-  if(alumnoId) await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
+  if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+
+  // Restaurar sesión del dueño para las siguientes operaciones
+  if(duSession) await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
+
+  if(alumnoId){
+    const {error:paErr}=await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
+    if(paErr) showMsg(msg,'Advertencia al vincular alumno: '+paErr.message,'err');
+  }
   await sb.from('gestion_contrasenas').insert({perfil_id:userId,contrasena_actual:pass});
 
   const acceso=emailInput
