@@ -200,9 +200,18 @@
 
   <!-- Formulario de asistencia -->
   <div id="form-asistencia">
-    <!-- OPCIÓN 1: Facial -->
-    <div class="facial-box">
-      <div class="facial-title">📸 Opción 1 — Reconocimiento Facial</div>
+    <!-- Pestañas -->
+    <div class="aula-tabs" style="margin-bottom:20px">
+      <button class="at active" id="tab-asist-facial" onclick="switchAsistTab('facial',this)">📸 Asistencia Facial</button>
+      <button class="at" id="tab-asist-manual" onclick="switchAsistTab('manual',this)">📍 Asistencia Manual</button>
+    </div>
+
+    <!-- Aviso geofence -->
+    <div id="geo-warning" style="display:none;background:rgba(224,85,85,0.12);border:1px solid var(--red);padding:16px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.05em;color:var(--red)"></div>
+
+    <!-- PESTAÑA 1: Facial -->
+    <div id="tab-content-facial" class="facial-box">
+      <div class="facial-title">📸 Asistencia Facial — Reconocimiento</div>
       <div id="facial-loading" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">
         ⏳ Cargando modelos de reconocimiento...
       </div>
@@ -231,9 +240,9 @@
       </div>
     </div>
 
-    <!-- OPCIÓN 2: GPS -->
-    <div class="facial-box">
-      <div class="facial-title">📍 Opción 2 — Registrar con GPS</div>
+    <!-- PESTAÑA 2: Manual GPS -->
+    <div id="tab-content-manual" class="facial-box" style="display:none">
+      <div class="facial-title">📍 Asistencia Manual — GPS</div>
       <div class="gps-box">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tu ubicación actual</div>
         <div class="gps-coords" id="gps-coords">Click en "Obtener ubicación"</div>
@@ -338,6 +347,7 @@ window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().the
 let uid=null, profesorId=null, profesorData=null;
 let camStream=null, gpsCoords=null;
 let faceApiLoaded=false, myDescriptor=null;
+let academiaConfig=null;
 
 function todayISO(){return new Date().toISOString().split('T')[0]}
 function nowTime(){return new Date().toTimeString().slice(0,8)}
@@ -394,7 +404,7 @@ async function init(){
   const{data:prof}=await sb.from('profesores').select('*').eq('perfil_id',uid).single();
   if(prof){profesorId=prof.id;profesorData=prof;}
 
-  await Promise.all([loadDashboard(),loadHorario(),loadHistorial(),loadNotifs()]);
+  await Promise.all([loadDashboard(),loadHorario(),loadHistorial(),loadNotifs(),loadConfiguracion()]);
   loadFaceApi();
   checkYaMarcado();
   saveFcmToken();
@@ -482,8 +492,49 @@ async function loadFaceApi(){
   }
 }
 
+// ── CONFIGURACIÓN ACADEMIA ──
+async function loadConfiguracion(){
+  const{data}=await sb.from('config_academia').select('*').limit(1).maybeSingle();
+  if(data)academiaConfig=data;
+}
+
+function haversineMetros(lat1,lng1,lat2,lng2){
+  const R=6371000,d=Math.PI/180;
+  const dLat=(lat2-lat1)*d,dLng=(lng2-lng1)*d;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*d)*Math.cos(lat2*d)*Math.sin(dLng/2)**2;
+  return R*2*Math.asin(Math.sqrt(a));
+}
+
+async function checkGeofence(){
+  if(!academiaConfig)return true;
+  return new Promise(resolve=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const dist=haversineMetros(pos.coords.latitude,pos.coords.longitude,academiaConfig.latitud,academiaConfig.longitud);
+      const radio=academiaConfig.radio_metros||200;
+      const w=document.getElementById('geo-warning');
+      if(dist<=radio){w.style.display='none';resolve(true);}
+      else{w.textContent=`⛔ Estás a ${Math.round(dist)}m de la academia. Debes estar dentro de ${radio}m para registrar asistencia.`;w.style.display='block';resolve(false);}
+    },()=>{
+      const w=document.getElementById('geo-warning');
+      w.textContent='⚠️ No se pudo verificar tu ubicación. Activa el GPS e intenta de nuevo.';
+      w.style.display='block';
+      resolve(false);
+    },{enableHighAccuracy:true,timeout:10000});
+  });
+}
+
+function switchAsistTab(tab,btn){
+  document.querySelectorAll('.aula-tabs .at').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-content-facial').style.display=tab==='facial'?'':'none';
+  document.getElementById('tab-content-manual').style.display=tab==='manual'?'':'none';
+  document.getElementById('geo-warning').style.display='none';
+}
+
 // ── CÁMARA ──
 async function startCam(){
+  const dentro=await checkGeofence();
+  if(!dentro)return;
   try{
     camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});
     const v=document.getElementById('cam-video');
@@ -592,7 +643,9 @@ function showResultado(ok,titulo,sub){
 }
 
 // ── GPS ──
-function getGPS(){
+async function getGPS(){
+  const dentro=await checkGeofence();
+  if(!dentro)return;
   if(!navigator.geolocation)return alert('Tu dispositivo no soporta GPS');
   // Detección nativa de trampa (solo disponible en la app Android)
   if(window.AndroidNative){
