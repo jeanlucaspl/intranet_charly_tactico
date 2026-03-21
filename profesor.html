@@ -844,18 +844,28 @@ async function loadTodasNotas(){
   tabsEl.innerHTML=tabs.map(t=>`<div class="aula-tab${t===pnTabActual?' active':''}" onclick="pnShowTab('${t.replace(/'/g,"\\'")}')" style="font-size:12px;padding:6px 14px">${t}</div>`).join('');
   // Render tabla del tab activo
   const rows=byTitulo[pnTabActual]||[];
-  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Materia</th><th>Nota</th><th></th></tr></thead><tbody>${
+  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Materia</th><th>Nota</th><th>Fecha</th><th></th></tr></thead><tbody>${
     rows.map(n=>`<tr>
       <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
       <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
       <td style="font-size:12px">${n.materias?.nombre||'--'}</td>
       <td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td>
-      <td><button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="pnEditarNota('${n.alumno_id}','${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}','${n.materia_id}','${n.periodo}',${n.nota_1??0})">Editar</button></td>
+      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="pnEditarNota('${n.alumno_id}','${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}','${n.materia_id}','${n.periodo}',${n.nota_1??0})">Editar</button>
+        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="pnEliminarNota('${n.id}')">Eliminar</button>
+      </td>
     </tr>`).join('')
   }</tbody></table>`;
 }
 function pnShowTab(titulo){
   pnTabActual=titulo;
+  loadTodasNotas();
+}
+async function pnEliminarNota(id){
+  if(!await myConfirm('¿Eliminar esta nota?'))return;
+  const{error}=await sb.from('notas').delete().eq('id',id);
+  if(error)return showMsg(document.getElementById('pn-msg'),error.message,'err');
   loadTodasNotas();
 }
 function pnEditarNota(alumnoId,nombreAlumno,materiaId,titulo,nota){
