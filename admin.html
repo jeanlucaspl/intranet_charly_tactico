@@ -1344,7 +1344,7 @@ function fmtDate(d){return d?new Date(d).toLocaleDateString('es-PE',{day:'2-digi
 // ── LOADERS ──
 let allAlumnosInactivos=[];
 async function loadAlumnos(){
-  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni),alumno_aula(aulas(nombre))').order('creado_en');
+  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni,telefono),alumno_aula(aulas(nombre))').order('creado_en');
   allAlumnos=(data||[]).filter(a=>a.activo!==false);
   allAlumnosInactivos=(data||[]).filter(a=>a.activo===false);
   renderAlumnos(allAlumnos);
@@ -1398,30 +1398,38 @@ async function loadDashboardDueno(){
   document.getElementById('d-dueno-dash').style.display='block';
   const today=todayISO();
 
-  // TAB CADETES — asistencia por materia
+  // TAB CADETES — asistencia por aula → materia
   const {data:asist}=await sb.from('asistencias')
-    .select('estado,materia_id,aula_id,materias(nombre)')
+    .select('estado,materia_id,aula_id,materias(nombre),aulas(nombre)')
     .eq('fecha',today);
   const asistEl=document.getElementById('d-dash-asist');
   if(!asist?.length){
     asistEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin registros de asistencia hoy</div></div>`;
   } else {
-    const byMat={};
+    // Agrupar por aula → materia
+    const byAula={};
     asist.forEach(a=>{
-      const key=a.materia_id||'sin';
-      if(!byMat[key])byMat[key]={nombre:a.materias?.nombre||'Sin materia',p:0,t:0,au:0};
-      if(a.estado==='presente')byMat[key].p++;
-      else if(a.estado==='tardanza')byMat[key].t++;
-      else byMat[key].au++;
+      const aulaKey=a.aula_id||'sin-aula';
+      const aulaNombre=a.aulas?.nombre||'Sin aula';
+      if(!byAula[aulaKey])byAula[aulaKey]={nombre:aulaNombre,mats:{}};
+      const matKey=a.materia_id||'sin-mat';
+      if(!byAula[aulaKey].mats[matKey])byAula[aulaKey].mats[matKey]={nombre:a.materias?.nombre||'Sin materia',p:0,t:0,au:0};
+      if(a.estado==='presente')byAula[aulaKey].mats[matKey].p++;
+      else if(a.estado==='tardanza')byAula[aulaKey].mats[matKey].t++;
+      else byAula[aulaKey].mats[matKey].au++;
     });
-    asistEl.innerHTML=`<table><thead><tr><th>Materia</th><th style="color:var(--green)">Presentes</th><th style="color:var(--yellow)">Tardanzas</th><th style="color:var(--red)">Ausentes</th></tr></thead><tbody>${
-      Object.values(byMat).map(m=>`<tr>
-        <td><strong>${m.nombre}</strong></td>
-        <td style="color:var(--green)">${m.p}</td>
-        <td style="color:var(--yellow)">${m.t}</td>
-        <td style="color:var(--red)">${m.au}</td>
-      </tr>`).join('')
-    }</tbody></table>`;
+    asistEl.innerHTML=Object.values(byAula).map(aula=>`
+      <div style="margin-bottom:16px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:6px">${aula.nombre}</div>
+        <table><thead><tr><th>Materia</th><th style="color:var(--green)">Pres.</th><th style="color:var(--yellow)">Tard.</th><th style="color:var(--red)">Aus.</th></tr></thead><tbody>${
+          Object.values(aula.mats).map(m=>`<tr>
+            <td>${m.nombre}</td>
+            <td style="color:var(--green)">${m.p}</td>
+            <td style="color:var(--yellow)">${m.t}</td>
+            <td style="color:var(--red)">${m.au}</td>
+          </tr>`).join('')
+        }</tbody></table>
+      </div>`).join('');
   }
 
   // Sesiones activas (dentro de cadetes)
@@ -2026,9 +2034,10 @@ async function loadSoluciones(){
 function renderAlumnos(data){
   const el=document.getElementById('d-alumnos-activos')||document.getElementById('d-alumnos');
   if(!data.length){if(el)el.innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos activos</div></div>`;return}
-  if(el)el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+  if(el)el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
+    <td>${a.perfiles?.telefono||'--'}</td>
     <td>${a.sexo||'--'}</td>
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
@@ -2042,9 +2051,10 @@ function renderAlumnosInactivos(data){
   const el=document.getElementById('d-alumnos-inactivos');
   if(!el)return;
   if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin alumnos inactivos</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
+    <td>${a.perfiles?.telefono||'--'}</td>
     <td>${a.sexo||'--'}</td>
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
