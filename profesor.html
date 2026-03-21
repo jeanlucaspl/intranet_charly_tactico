@@ -667,8 +667,10 @@ const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 
 let horCurrentAulaId=null,horAulasData=[];
 async function loadHorario(){
-  const {data:aulas}=await sb.from('aulas').select('id,nombre').eq('activa',true).order('nombre');
-  horAulasData=aulas||[];
+  // Solo aulas donde este profesor tiene slots asignados
+  const {data:slots}=await sb.from('horario_plantilla').select('aula_id,aulas(id,nombre)').eq('profesor_id',profesorId);
+  const seen=new Set();
+  horAulasData=(slots||[]).map(s=>s.aulas).filter(a=>{if(!a||seen.has(a.id))return false;seen.add(a.id);return true;});
   renderHorAulaTabs();
   if(horAulasData.length)selectHorAulaTab(horAulasData[0].id);
 }
@@ -681,7 +683,7 @@ async function selectHorAulaTab(aulaId){
   horCurrentAulaId=aulaId;
   renderHorAulaTabs();
   const wrap=document.getElementById('d-horario');
-  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId);
+  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId).eq('profesor_id',profesorId);
   const horData={};
   (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
   let html=`<table class="hor-table"><thead><tr><th style="width:72px">HORA/DÍA</th>${HOR_DIAS_LABEL.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
