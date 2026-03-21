@@ -469,17 +469,10 @@
   <div id="ftab-content-manual" style="display:none;padding-top:16px">
     <input type="hidden" id="man-alumno"/>
     <div class="fg">
-      <label>Buscar alumno por apellido</label>
+      <label>Buscar alumno por apellido o DNI</label>
       <div style="position:relative">
-        <input type="text" id="man-apellido-inp" placeholder="Escribe apellido..." autocomplete="off" oninput="manSuggest('apellido')" onfocus="manSuggest('apellido')" onblur="setTimeout(()=>{const e=document.getElementById('man-apellido-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
-        <div id="man-apellido-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
-      </div>
-    </div>
-    <div class="fg">
-      <label>Buscar alumno por DNI</label>
-      <div style="position:relative">
-        <input type="text" id="man-dni-inp" placeholder="Escribe DNI..." autocomplete="off" oninput="manSuggest('dni')" onfocus="manSuggest('dni')" onblur="setTimeout(()=>{const e=document.getElementById('man-dni-sug');if(e)e.style.display='none';},150)" style="width:100%"/>
-        <div id="man-dni-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
+        <input type="text" id="man-search-inp" placeholder="Escribe apellido o DNI..." autocomplete="off" oninput="manSuggest(this)" onfocus="manSuggest(this)" onblur="setTimeout(()=>hideSug('man-sug'),150)" style="width:100%"/>
+        <div id="man-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
       </div>
     </div>
     <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:12px">✅ <span id="man-selected-name"></span></div>
@@ -2265,34 +2258,28 @@ function addFacialLog(alumno,estado,facial){
   document.getElementById('f-log').innerHTML=[...facialLog].reverse().map(l=>`<div class="flog-item ${l.facial?'':'man'}"><span style="font-size:16px">${l.facial?'📸':'✏️'}</span><span style="flex:1">${l.nombre}</span><span style="color:var(--muted);font-size:10px">${l.hora}</span><span class="badge ${bc[l.estado]}">${l.estado}</span></div>`).join('');
 }
 // ── BÚSQUEDA MANUAL POR APELLIDO / DNI ──
-function manSuggest(campo){
-  const q=(campo==='apellido'
-    ?document.getElementById('man-apellido-inp').value
-    :document.getElementById('man-dni-inp').value).trim().toLowerCase();
-  const sugId='man-'+campo+'-sug';
-  const box=document.getElementById(sugId);
-  if(!q){box.style.display='none';return}
-  const filtro=campo==='apellido'
-    ?allAlumnos.filter(a=>a.perfiles?.apellido?.toLowerCase().startsWith(q))
-    :allAlumnos.filter(a=>a.perfiles?.dni?.startsWith(q));
-  if(!filtro.length){box.style.display='none';return}
+function manSuggest(inp){
+  const q=inp.value.trim().toLowerCase();
+  const box=document.getElementById('man-sug');
+  if(!q){box.style.display='none';return;}
+  const filtro=allAlumnos.filter(a=>
+    a.perfiles?.apellido?.toLowerCase().startsWith(q)||
+    a.perfiles?.dni?.startsWith(q)
+  );
+  if(!filtro.length){box.style.display='none';return;}
   box.innerHTML=filtro.slice(0,8).map(a=>`<div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.08em;border-bottom:1px solid var(--border)"
-    onmousedown="selectManAlumno('${a.id}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&#39;')}','${a.perfiles?.apellido||''}','${a.perfiles?.dni||''}')">
+    onmousedown="selectManAlumno('${a.id}','${(a.perfiles?.nombre+' '+a.perfiles?.apellido).replace(/'/g,'&#39;')}')">
     <span style="color:var(--gold)">${a.perfiles?.apellido||'--'}, ${a.perfiles?.nombre||'--'}</span>
     <span style="color:var(--muted);font-size:10px;margin-left:8px">DNI: ${a.perfiles?.dni||'--'}</span>
   </div>`).join('');
   box.style.display='block';
 }
-function selectManAlumno(id,nombre,apellido,dni){
+function selectManAlumno(id,nombre){
   document.getElementById('man-alumno').value=id;
-  document.getElementById('man-apellido-inp').value=apellido;
-  document.getElementById('man-dni-inp').value=dni;
+  document.getElementById('man-search-inp').value=nombre;
   document.getElementById('man-selected-name').textContent=nombre;
   document.getElementById('man-selected').style.display='block';
-  document.getElementById('man-apellido-sug').style.display='none';
-  document.getElementById('man-dni-sug').style.display='none';
-  document.getElementById('man-apellido-inp').blur();
-  document.getElementById('man-dni-inp').blur();
+  document.getElementById('man-sug').style.display='none';
 }
 function hideSug(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 async function saveManual(){
@@ -2308,8 +2295,7 @@ async function saveManual(){
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
   document.getElementById('man-alumno').value='';
-  document.getElementById('man-apellido-inp').value='';
-  document.getElementById('man-dni-inp').value='';
+  document.getElementById('man-search-inp').value='';
   document.getElementById('man-selected').style.display='none';
   showFacialTab('registros');
   loadDashboard();
