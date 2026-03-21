@@ -286,7 +286,10 @@
         </div>
       </div>
       <div class="fg"><label>Materia</label><select id="pn-materia"><option value="">Seleccionar materia...</option></select></div>
-      <div class="fg"><label>Título</label><input type="text" id="pn-titulo" placeholder="Ej: Práctica 1, Práctica de repaso..."/></div>
+      <div class="fg"><label>Título</label>
+        <input type="text" id="pn-titulo" placeholder="Ej: Práctica 1, Práctica de repaso..." list="pn-titulos-list" autocomplete="off"/>
+        <datalist id="pn-titulos-list"></datalist>
+      </div>
       <div class="fg"><label>Nota (0–20)</label><input type="number" id="pn-nota" min="0" max="20" step="0.5" placeholder="--"/></div>
       <button class="btn btn-gold" onclick="saveNotaProfesor()">GUARDAR NOTA</button>
       <div class="msg" id="pn-msg"></div>
@@ -294,7 +297,8 @@
   </div>
   <div class="tw" style="margin-top:12px">
     <div class="th"><span class="th-ttl">Notas registradas</span></div>
-    <div id="d-notas-prof"><div class="empty"><div class="ei">📝</div><div class="et">Selecciona alumno para ver notas</div></div></div>
+    <div id="pn-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
+    <div id="d-notas-prof"><div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div></div>
   </div>
 </div>
 
@@ -817,25 +821,51 @@ async function loadNotasAlumno(alumnoId){
   // solo refresca la tabla general, alumnoId ignorado
   await loadTodasNotas();
 }
+let pnTabActual=null;
 async function loadTodasNotas(){
   const el=document.getElementById('d-notas-prof');
-  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin materias asignadas</div></div>';return;}
+  const tabsEl=document.getElementById('pn-tabs');
+  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin materias asignadas</div></div>';tabsEl.innerHTML='';return;}
   const materiaIds=pnMaterias.map(m=>m.id);
   const{data}=await sb.from('notas')
     .select('*,materias(nombre),alumnos(perfiles(nombre,apellido,dni))')
     .in('materia_id',materiaIds)
-    .order('creado_en',{ascending:false});
-  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Materia</th><th>Alumno</th><th>DNI</th><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${
-    data.map(n=>`<tr>
-      <td>${n.materias?.nombre||'--'}</td>
+    .order('periodo').order('creado_en',{ascending:false});
+  // Actualizar datalist con títulos existentes
+  const titulos=[...new Set((data||[]).map(n=>n.periodo).filter(Boolean))];
+  document.getElementById('pn-titulos-list').innerHTML=titulos.map(t=>`<option value="${t}">`).join('');
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';tabsEl.innerHTML='';return;}
+  // Agrupar por título
+  const byTitulo={};
+  data.forEach(n=>{const t=n.periodo||'Sin título';if(!byTitulo[t])byTitulo[t]=[];byTitulo[t].push(n);});
+  const tabs=Object.keys(byTitulo);
+  if(!pnTabActual||!byTitulo[pnTabActual])pnTabActual=tabs[0];
+  // Render tabs
+  tabsEl.innerHTML=tabs.map(t=>`<div class="aula-tab${t===pnTabActual?' active':''}" onclick="pnShowTab('${t.replace(/'/g,"\\'")}')" style="font-size:12px;padding:6px 14px">${t}</div>`).join('');
+  // Render tabla del tab activo
+  const rows=byTitulo[pnTabActual]||[];
+  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Materia</th><th>Nota</th><th></th></tr></thead><tbody>${
+    rows.map(n=>`<tr>
       <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
-      <td style="color:var(--muted);font-size:11px">${n.alumnos?.perfiles?.dni||'--'}</td>
-      <td>${n.periodo||'--'}</td>
+      <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
+      <td style="font-size:12px">${n.materias?.nombre||'--'}</td>
       <td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td>
-      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+      <td><button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="pnEditarNota('${n.alumno_id}','${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}','${n.materia_id}','${n.periodo}',${n.nota_1??0})">Editar</button></td>
     </tr>`).join('')
   }</tbody></table>`;
+}
+function pnShowTab(titulo){
+  pnTabActual=titulo;
+  loadTodasNotas();
+}
+function pnEditarNota(alumnoId,nombreAlumno,materiaId,titulo,nota){
+  document.getElementById('pn-alumno').value=alumnoId;
+  document.getElementById('pn-alumno-inp').value=nombreAlumno;
+  document.getElementById('pn-materia').value=materiaId;
+  document.getElementById('pn-titulo').value=titulo;
+  document.getElementById('pn-nota').value=nota;
+  document.getElementById('pn-msg').innerHTML='';
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveNotaProfesor(){
   const alumnoId=document.getElementById('pn-alumno').value;
