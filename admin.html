@@ -320,23 +320,21 @@
 <div class="panel active" id="panel-inicio">
   <div class="ph"><div class="ph-left"><div class="eye">Panel de control</div><div class="ttl">DASHBOARD</div></div></div>
 
-  <!-- Stats base (admin y dueño) -->
-  <div class="cg">
-    <div class="sc"><div class="sc-lbl">Alumnos</div><div class="sc-val" id="s-alumnos">--</div><div class="sc-sub">Activos</div></div>
-    <div class="sc"><div class="sc-lbl">Presentes Hoy</div><div class="sc-val" id="s-pres" style="color:var(--green)">--</div><div class="sc-sub">Verificados</div></div>
-    <div class="sc"><div class="sc-lbl">Ausentes</div><div class="sc-val" id="s-aus" style="color:var(--red)">--</div><div class="sc-sub">Hoy</div></div>
-    <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--</div><div class="sc-sub">Hoy</div></div>
-    <div class="sc" style="cursor:pointer" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))"><div class="sc-lbl">Mensajes</div><div class="sc-val" id="s-msgs" style="color:var(--gold)">--</div><div class="sc-sub">No leídos</div></div>
-  </div>
+  <!-- elementos ocultos para compatibilidad con loadDashboard() -->
+  <span id="s-alumnos" style="display:none"></span>
+  <span id="s-pres" style="display:none"></span>
+  <span id="s-aus" style="display:none"></span>
+  <span id="s-tard" style="display:none"></span>
+  <span id="s-msgs" style="display:none"></span>
 
   <!-- Dashboard exclusivo dueño — 3 pestañas -->
   <div id="d-dueno-dash" style="display:none;margin-top:20px">
     <div class="aula-tabs">
-      <div class="aula-tab active" id="dtab-cadetes" onclick="showDashTab('cadetes')">🎓 Cadetes</div>
+      <div class="aula-tab active" id="dtab-cadetes" onclick="showDashTab('cadetes')">Cadetes</div>
       <div class="aula-tab" id="dtab-padres" onclick="showDashTab('padres')">
-        👨‍👩‍👧 Padres <span id="dtab-padres-badge" style="display:none;background:var(--gold);color:#000;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-family:'Barlow',sans-serif;font-weight:700">0</span>
+        Padres <span id="dtab-padres-badge" style="display:none;background:var(--gold);color:#000;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-family:'Barlow',sans-serif;font-weight:700">0</span>
       </div>
-      <div class="aula-tab" id="dtab-profesores" onclick="showDashTab('profesores')">👩‍🏫 Profesores</div>
+      <div class="aula-tab" id="dtab-profesores" onclick="showDashTab('profesores')">Profesores</div>
     </div>
 
     <!-- TAB CADETES -->
