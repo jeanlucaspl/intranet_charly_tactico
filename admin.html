@@ -319,12 +319,40 @@
 <!-- ══ INICIO ══ -->
 <div class="panel active" id="panel-inicio">
   <div class="ph"><div class="ph-left"><div class="eye">Panel de control</div><div class="ttl">DASHBOARD</div></div></div>
+  <!-- Stats base (admin y dueño) -->
   <div class="cg">
     <div class="sc"><div class="sc-lbl">Alumnos</div><div class="sc-val" id="s-alumnos">--</div><div class="sc-sub">Activos</div></div>
     <div class="sc"><div class="sc-lbl">Presentes Hoy</div><div class="sc-val" id="s-pres" style="color:var(--green)">--</div><div class="sc-sub">Verificados</div></div>
     <div class="sc"><div class="sc-lbl">Ausentes</div><div class="sc-val" id="s-aus" style="color:var(--red)">--</div><div class="sc-sub">Hoy</div></div>
     <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--</div><div class="sc-sub">Hoy</div></div>
     <div class="sc" style="cursor:pointer" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))"><div class="sc-lbl">Mensajes</div><div class="sc-val" id="s-msgs" style="color:var(--gold)">--</div><div class="sc-sub">No leídos</div></div>
+  </div>
+  <!-- Dashboard exclusivo dueño -->
+  <div id="d-dueno-dash" style="display:none">
+    <!-- Mensajes no leídos -->
+    <div class="th" style="margin-top:20px">
+      <span class="th-ttl">💬 Mensajes no leídos de padres</span>
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))">Ver todos →</button>
+    </div>
+    <div id="d-dash-msgs"><div class="empty"><div class="et">Cargando...</div></div></div>
+
+    <!-- Asistencia hoy por materia -->
+    <div class="th" style="margin-top:20px">
+      <span class="th-ttl">📋 Asistencia de alumnos hoy</span>
+    </div>
+    <div id="d-dash-asist"><div class="empty"><div class="et">Cargando...</div></div></div>
+
+    <!-- Sesiones activas -->
+    <div class="th" style="margin-top:20px">
+      <span class="th-ttl">🔴 Sesiones de asistencia activas</span>
+    </div>
+    <div id="d-dash-sesiones"><div class="empty"><div class="et">Sin sesiones abiertas</div></div></div>
+
+    <!-- Asistencia profesores hoy -->
+    <div class="th" style="margin-top:20px">
+      <span class="th-ttl">👩‍🏫 Asistencia de profesores hoy</span>
+    </div>
+    <div id="d-dash-profs"><div class="empty"><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
 
@@ -427,10 +455,21 @@
 <!-- ══ TOMAR ASISTENCIA ══ -->
 <div class="panel" id="panel-facial">
   <div class="ph"><div class="ph-left"><div class="eye">Control de presencia</div><div class="ttl">TOMAR ASISTENCIA</div></div></div>
-  <!-- Selector materia compartido -->
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-    <select id="f-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:240px"><option value="">-- Selecciona materia --</option></select>
-    <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
+  <!-- Selector aula + detección materia + controles sesión -->
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 16px;margin-bottom:16px">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <select id="f-aula" onchange="onAulaChange()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:220px"><option value="">-- Selecciona aula --</option></select>
+      <div id="f-mat-detectada" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase">
+        📚 <span id="f-mat-nombre" style="color:var(--gold)">--</span>
+        <span id="f-mat-horario" style="color:var(--muted);margin-left:6px"></span>
+      </div>
+      <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="f-sesion-estado" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Sin sesión activa</div>
+      <button id="btn-abrir-sesion" class="btn btn-green" style="font-size:11px;padding:6px 14px" onclick="abrirSesion()">▶ Abrir Asistencia</button>
+      <button id="btn-cerrar-sesion" class="btn btn-red" style="font-size:11px;padding:6px 14px;display:none" onclick="cerrarSesion()">⏹ Cerrar Asistencia</button>
+    </div>
   </div>
   <!-- Tabs -->
   <div class="aula-tabs">
@@ -1338,6 +1377,160 @@ async function loadDashboard(){
   document.getElementById('s-pres').textContent = data?.filter(a=>a.estado==='presente').length||0;
   document.getElementById('s-aus').textContent  = data?.filter(a=>a.estado==='ausente').length||0;
   document.getElementById('s-tard').textContent = data?.filter(a=>a.estado==='tardanza').length||0;
+  if(esDueno) loadDashboardDueno();
+}
+
+// ── DASHBOARD DUEÑO ──
+async function loadDashboardDueno(){
+  document.getElementById('d-dueno-dash').style.display='block';
+  const today=todayISO();
+
+  // 1. Mensajes no leídos
+  const {data:msgs}=await sb.from('contacto_mensajes')
+    .select('id,mensaje,creado_en,perfiles!padre_id(nombre,apellido)')
+    .eq('leido',false).order('creado_en',{ascending:false}).limit(5);
+  const msgsEl=document.getElementById('d-dash-msgs');
+  if(!msgs?.length){
+    msgsEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin mensajes no leídos ✅</div></div>`;
+  } else {
+    msgsEl.innerHTML=msgs.map(m=>`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</div>
+        <div style="font-size:12px;color:var(--white);margin-top:4px">${(m.mensaje||'').slice(0,80)}${m.mensaje?.length>80?'…':''}</div>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);white-space:nowrap">${new Date(m.creado_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+  }
+
+  // 2. Asistencia hoy por materia
+  const {data:asist}=await sb.from('asistencias')
+    .select('estado,materia_id,aula_id,materias(nombre),aulas(nombre)')
+    .eq('fecha',today);
+  const asistEl=document.getElementById('d-dash-asist');
+  if(!asist?.length){
+    asistEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin registros de asistencia hoy</div></div>`;
+  } else {
+    // Agrupar por materia
+    const byMat={};
+    asist.forEach(a=>{
+      const key=a.materia_id||'sin-materia';
+      if(!byMat[key])byMat[key]={nombre:a.materias?.nombre||'Sin materia',p:0,t:0,au:0};
+      if(a.estado==='presente')byMat[key].p++;
+      else if(a.estado==='tardanza')byMat[key].t++;
+      else byMat[key].au++;
+    });
+    asistEl.innerHTML=`<table><thead><tr><th>Materia</th><th style="color:var(--green)">Presentes</th><th style="color:var(--yellow)">Tardanzas</th><th style="color:var(--red)">Ausentes</th></tr></thead><tbody>${
+      Object.values(byMat).map(m=>`<tr>
+        <td><strong>${m.nombre}</strong></td>
+        <td style="color:var(--green)">${m.p}</td>
+        <td style="color:var(--yellow)">${m.t}</td>
+        <td style="color:var(--red)">${m.au}</td>
+      </tr>`).join('')
+    }</tbody></table>`;
+  }
+
+  // 3. Sesiones activas
+  const {data:sesiones}=await sb.from('sesiones_asistencia')
+    .select('*,aulas(nombre),materias(nombre)')
+    .eq('fecha',today).eq('cerrada',false);
+  const sesEl=document.getElementById('d-dash-sesiones');
+  if(!sesiones?.length){
+    sesEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin sesiones abiertas</div></div>`;
+  } else {
+    sesEl.innerHTML=sesiones.map(s=>`<div style="background:var(--navy2);border:1px solid var(--green);padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--green)">🔴 ABIERTA</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;margin-left:10px">${s.aulas?.nombre||'--'} · ${s.materias?.nombre||'Sin materia'}</span>
+      </div>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">Apertura: ${s.hora_apertura?.slice(0,5)}</span>
+    </div>`).join('');
+  }
+
+  // 4. Asistencia profesores hoy (tabla asistencias_profesores)
+  const {data:profAsist}=await sb.from('asistencias_profesores')
+    .select('estado,hora_ingreso,profesores(perfiles(nombre,apellido))')
+    .eq('fecha',today);
+  const profEl=document.getElementById('d-dash-profs');
+  if(!profAsist?.length){
+    profEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin registros de profesores hoy</div></div>`;
+  } else {
+    profEl.innerHTML=`<table><thead><tr><th>Profesor</th><th>Estado</th><th>Hora</th></tr></thead><tbody>${
+      profAsist.map(p=>{
+        const cls=p.estado==='presente'?'bg':p.estado==='tardanza'?'by':'br';
+        return`<tr><td>${p.profesores?.perfiles?.nombre||'--'} ${p.profesores?.perfiles?.apellido||''}</td><td><span class="badge ${cls}">${p.estado}</span></td><td>${p.hora_ingreso?.slice(0,5)||'--'}</td></tr>`;
+      }).join('')
+    }</tbody></table>`;
+  }
+}
+
+// ── SESIÓN DE ASISTENCIA ──
+let sesionActual=null; // {id, aula_id, materia_id, aula_nombre, mat_nombre}
+
+async function detectMateriaActual(aulaId){
+  if(!aulaId)return null;
+  const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const diaHoy=dias[new Date().getDay()];
+  const hora=nowTime().slice(0,5); // HH:MM
+  const semana=weekStart();
+  const {data}=await sb.from('horario_semanal')
+    .select('materia_id,materias(nombre),hora_inicio,hora_fin')
+    .eq('aula_id',aulaId).eq('dia',diaHoy).eq('semana_inicio',semana)
+    .lte('hora_inicio',hora).gte('hora_fin',hora);
+  return data?.[0]||null;
+}
+
+async function onAulaChange(){
+  const aulaId=document.getElementById('f-aula').value;
+  if(!aulaId){
+    document.getElementById('f-mat-detectada').style.display='none';
+    return;
+  }
+  const clase=await detectMateriaActual(aulaId);
+  if(clase){
+    document.getElementById('f-mat-nombre').textContent=clase.materias?.nombre||'--';
+    document.getElementById('f-mat-horario').textContent=`${clase.hora_inicio?.slice(0,5)}–${clase.hora_fin?.slice(0,5)}`;
+    document.getElementById('f-mat-detectada').style.display='';
+  } else {
+    document.getElementById('f-mat-nombre').textContent='Sin clase en este horario';
+    document.getElementById('f-mat-horario').textContent='';
+    document.getElementById('f-mat-detectada').style.display='';
+  }
+}
+
+async function abrirSesion(){
+  const aulaId=document.getElementById('f-aula').value;
+  if(!aulaId)return alert('Seleccioná un aula primero.');
+  if(sesionActual)return alert('Ya hay una sesión abierta. Cerrala primero.');
+  const clase=await detectMateriaActual(aulaId);
+  const aulaOpt=document.getElementById('f-aula').selectedOptions[0];
+  const {data,error}=await sb.from('sesiones_asistencia').insert({
+    aula_id:aulaId,
+    materia_id:clase?.materia_id||null,
+    fecha:todayISO(),
+    hora_apertura:nowTime(),
+    creado_por:uid
+  }).select().single();
+  if(error)return alert('Error al abrir sesión: '+error.message);
+  sesionActual={id:data.id,aula_id:aulaId,materia_id:clase?.materia_id||null,aula_nombre:aulaOpt?.text||'',mat_nombre:clase?.materias?.nombre||'Sin materia asignada'};
+  document.getElementById('btn-abrir-sesion').style.display='none';
+  document.getElementById('btn-cerrar-sesion').style.display='';
+  document.getElementById('f-sesion-estado').textContent=`🔴 Sesión abierta — ${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`;
+  document.getElementById('f-sesion-estado').style.color='var(--green)';
+}
+
+async function cerrarSesion(){
+  if(!sesionActual)return;
+  if(!confirm(`¿Cerrar la sesión de asistencia?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
+  const {error}=await sb.from('sesiones_asistencia').update({hora_cierre:nowTime(),cerrada:true}).eq('id',sesionActual.id);
+  if(error)return alert('Error al cerrar sesión: '+error.message);
+  sesionActual=null;
+  document.getElementById('btn-abrir-sesion').style.display='';
+  document.getElementById('btn-cerrar-sesion').style.display='none';
+  document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
+  document.getElementById('f-sesion-estado').style.color='var(--muted)';
+  // Refrescar registros del día y dashboard
+  showFacialTab('registros');
+  loadDashboard();
 }
 async function loadReportes(){
   const {data} = await sb.from('asistencias').select('*');
@@ -2333,9 +2526,10 @@ async function captureVerify(){
 }
 async function confirmAtt(estado){
   if(!verifyAlumno)return;
-  const mid=document.getElementById('f-materia').value||null;
-  await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
-  const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_cHora=nowTime();
+  const mid=sesionActual?.materia_id||null;
+  const aulaId=sesionActual?.aula_id||null;
+  await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
+  const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=sesionActual?.mat_nombre||'clase',_cHora=nowTime();
   if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
   addFacialLog(verifyAlumno,estado,true);
@@ -2381,11 +2575,12 @@ async function saveManual(){
   const alumnoId=document.getElementById('man-alumno').value;
   const estado=document.getElementById('man-estado').value;
   if(!alumnoId)return alert('Selecciona un alumno primero buscando por apellido o DNI');
-  const mid=document.getElementById('f-materia').value||null;
-  const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
+  const mid=sesionActual?.materia_id||null;
+  const aulaId=sesionActual?.aula_id||null;
+  const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
   if(error){alert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
-  const _mMat=document.getElementById('f-materia')?.selectedOptions[0]?.text||'clase',_mHora=nowTime();
+  const _mMat=sesionActual?.mat_nombre||'clase',_mHora=nowTime();
   if(a?.perfil_id)sendFcmToUsers([a.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
   sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
@@ -2627,7 +2822,8 @@ function populateSelects(){
   const matOpts=allMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
   const alOpts=allAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
-  ['f-materia','a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
+  const fAula=document.getElementById('f-aula');if(fAula)fAula.innerHTML='<option value="">-- Selecciona aula --</option>'+aulaOpts;
+  ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
   // man-alumno is now a hidden input populated via search — no select to fill
   document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
