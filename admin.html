@@ -2086,10 +2086,18 @@ function _solPath(pathOrUrl){
     ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
     :pathOrUrl;
 }
-async function openSolucion(pathOrUrl){
-  const win=window.open('','_blank');
+async function openSolucion(pathOrUrl,btnEl){
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
   const {data}=await sb.storage.from('soluciones').createSignedUrl(_solPath(pathOrUrl),3600);
-  win.location.href=data?.signedUrl||pathOrUrl;
+  const url=data?.signedUrl||pathOrUrl;
+  const resp=await fetch(url);
+  const blob=await resp.blob();
+  const ext=_solPath(pathOrUrl).split('.').pop()||'jpg';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`solucion.${ext}`;
+  a.click();
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
 }
 async function downloadSolucionesZip(pid,pracTitulo,btnEl){
   btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
@@ -2134,7 +2142,7 @@ async function loadSoluciones(){
       return`<div class="sol-item">
         <div class="sol-icon">🖼️</div>
         <div style="flex:1"><div class="sol-name">${a.pf?.nombre} ${a.pf?.apellido}</div><div class="sol-info">DNI ${a.pf?.dni||'--'} · ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${fecha}</div></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}')" class="btn btn-outline" style="font-size:11px;padding:6px 10px">Ver ${a.archivos.length>1?i+1:''}</button>`).join('')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" class="btn btn-outline" style="font-size:11px;padding:6px 10px">⬇️${a.archivos.length>1?' '+(i+1):''}</button>`).join('')}</div>
       </div>`;
     }).join('')+`</div>`;
 }

@@ -488,7 +488,7 @@ async function loadPracticas(){
       <div class="prac-btns">
         ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
         ${entregada
-          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">Ver ${solList.length>1?i+1:''}</button>`).join('')}</div>`
+          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">⬇️${solList.length>1?' '+(i+1):''}</button>`).join('')}</div>`
           :`<div id="upzone-${p.id}" style="margin-top:4px">
               <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
                 <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="setSolFile('${p.id}',this)"/>
@@ -507,13 +507,21 @@ async function loadPracticas(){
 }
 
 const IMG_WARN_MB=5,IMG_MAX_MB=15;
-async function openSolucion(pathOrUrl){
-  const win=window.open('','_blank');
+async function openSolucion(pathOrUrl,btnEl){
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
   const path=pathOrUrl.startsWith('http')
     ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
     :pathOrUrl;
   const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-  win.location.href=data?.signedUrl||pathOrUrl;
+  const url=data?.signedUrl||pathOrUrl;
+  const resp=await fetch(url);
+  const blob=await resp.blob();
+  const ext=path.split('.').pop()||'jpg';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`solucion.${ext}`;
+  a.click();
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function setSolFile(pid,input){
