@@ -956,10 +956,9 @@
           <input type="hidden" id="n-alumno"/>
         </div>
         <div class="fg full"><label>Materia</label><select id="n-materia"><option value="">-- Selecciona --</option></select></div>
-        <div class="fg full"><label>Periodo</label><input type="text" id="n-periodo" placeholder="2026-I"/></div>
-        <div class="fg"><label>Nota 1</label><input type="number" id="n-n1" min="0" max="20" step=".5"/></div>
-        <div class="fg"><label>Nota 2</label><input type="number" id="n-n2" min="0" max="20" step=".5"/></div>
-        <div class="fg"><label>Nota 3</label><input type="number" id="n-n3" min="0" max="20" step=".5"/></div>
+        <div class="fg full"><label>Campo / Período</label><input type="text" id="n-periodo" placeholder="Ej: Práctica 1, Examen parcial..."/></div>
+        <div class="fg full"><label>Nota (0–20)</label><input type="number" id="n-n1" min="0" max="20" step=".5" placeholder="--"/></div>
+        <input type="hidden" id="n-n2"/><input type="hidden" id="n-n3"/>
       </div>
     </div>
     <div class="md-ft">
@@ -2229,15 +2228,14 @@ function renderNotas(){
   perTabsEl.innerHTML=periodos.map(p=>`<div class="aula-tab${p===adminNotaPerTab?' active':''}" onclick="adminNotaShowPer('${p.replace(/'/g,"\\'")}') " style="font-size:11px;padding:5px 12px">${p}</div>`).join('');
   // Tabla
   const rows=byPer[adminNotaPerTab]||[];
-  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th><th>Fecha</th><th></th></tr></thead><tbody>${
-    rows.map(n=>{const prom=n.promedio||0;const c=prom>=14?'bg':prom>=11?'by':'br';return`<tr>
+  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Fecha</th><th></th></tr></thead><tbody>${
+    rows.map(n=>{const nota=n.nota_1??'--';const c=(n.nota_1||0)>=11?'bg':'br';return`<tr>
       <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
       <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
-      <td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td>
-      <td><span class="badge ${c}">${prom||'--'}</span></td>
+      <td><span class="badge ${c}">${nota}</span></td>
       <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
       <td style="display:flex;gap:4px">
-        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="adminEditarNota('${n.alumno_id}','${(n.alumnos?.perfiles?.apellido||'')+' '+(n.alumnos?.perfiles?.nombre||'')}','${n.materia_id}','${n.periodo}',${n.nota_1??'null'},${n.nota_2??'null'},${n.nota_3??'null'})">Editar</button>
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="adminEditarNota('${n.alumno_id}','${(n.alumnos?.perfiles?.apellido||'')+' '+(n.alumnos?.perfiles?.nombre||'')}','${n.materia_id}','${n.periodo}',${n.nota_1??'null'})">Editar</button>
         <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="adminEliminarNota('${n.id}')">Eliminar</button>
       </td>
     </tr>`;}).join('')
@@ -2251,15 +2249,13 @@ async function adminEliminarNota(id){
   if(error)return myAlert('Error: '+error.message);
   await loadNotas();
 }
-function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1,n2,n3){
+function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
   document.getElementById('n-alumno').value=alumnoId;
   const info=document.getElementById('n-alumno-info');
   info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';info.textContent='✅ '+nombre;
   document.getElementById('n-materia').value=materiaId;
   document.getElementById('n-periodo').value=periodo;
   document.getElementById('n-n1').value=n1!=='null'?n1:'';
-  document.getElementById('n-n2').value=n2!=='null'?n2:'';
-  document.getElementById('n-n3').value=n3!=='null'?n3:'';
   openMd('md-nota');
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
