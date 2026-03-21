@@ -944,16 +944,15 @@
       <div class="msg" id="msg-nota"></div>
       <div class="fgrid">
         <div class="fg full">
-          <label>Buscar alumno por DNI</label>
-          <div style="display:flex;gap:8px">
-            <div class="dni-wrap" style="flex:1">
-              <input type="text" id="n-dni-search" placeholder="Ingresa el DNI..." maxlength="8" inputmode="numeric" style="width:100%" onblur="setTimeout(()=>hideSug('sug-nota'),200)" oninput="dniSuggest(this,'sug-nota','alumnos')"/>
-              <div id="sug-nota" class="dni-sug"></div>
-            </div>
-            <button class="btn btn-outline" style="padding:8px 14px;font-size:12px" onclick="buscarAlumnoPorDNI('nota')">Buscar</button>
+          <label>Alumno</label>
+          <div style="position:relative">
+            <input type="text" id="n-alumno-inp" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%"
+              oninput="nNotaSuggest(this)" onfocus="nNotaSuggest(this)"
+              onblur="setTimeout(()=>{const s=document.getElementById('n-alumno-sug');if(s)s.style.display='none'},150)"/>
+            <input type="hidden" id="n-alumno"/>
+            <div id="n-alumno-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--border);border-top:none;z-index:100;max-height:200px;overflow-y:auto"></div>
           </div>
-          <div id="n-alumno-info" style="display:none;margin-top:8px;padding:10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
-          <input type="hidden" id="n-alumno"/>
+          <div id="n-alumno-info" style="display:none;margin-top:6px;padding:8px 10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
         </div>
         <div class="fg full"><label>Materia</label><select id="n-materia"><option value="">-- Selecciona --</option></select></div>
         <div class="fg full"><label>Campo / Período</label><input type="text" id="n-periodo" placeholder="Ej: Práctica 1, Examen parcial..."/></div>
@@ -2243,6 +2242,29 @@ function renderNotas(){
 }
 function adminNotaShowMat(matId){adminNotaMatTab=matId;adminNotaPerTab=null;renderNotas();}
 function adminNotaShowPer(periodo){adminNotaPerTab=periodo;renderNotas();}
+function nNotaSuggest(inp){
+  const q=inp.value.trim().toLowerCase();
+  const box=document.getElementById('n-alumno-sug');
+  if(!q){box.style.display='none';return;}
+  const matches=allAlumnos.filter(a=>
+    `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase().includes(q)||
+    (a.perfiles?.dni||'').includes(q)
+  ).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(a=>`<div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;border-bottom:1px solid var(--border)"
+    onmousedown="nNotaSelect('${a.id}','${(a.perfiles?.apellido||'')+' '+(a.perfiles?.nombre||'')}','${a.perfiles?.dni||''}')">
+    <span style="color:var(--gold);margin-right:8px">${a.perfiles?.dni||'--'}</span>${a.perfiles?.apellido}, ${a.perfiles?.nombre}
+  </div>`).join('');
+  box.style.display='block';
+}
+function nNotaSelect(id,nombre,dni){
+  document.getElementById('n-alumno').value=id;
+  document.getElementById('n-alumno-inp').value=nombre;
+  document.getElementById('n-alumno-sug').style.display='none';
+  const info=document.getElementById('n-alumno-info');
+  info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';
+  info.textContent=`✅ ${nombre} · DNI: ${dni}`;
+}
 async function adminEliminarNota(id){
   if(!await myConfirm('¿Eliminar esta nota?'))return;
   const{error}=await sb.from('notas').delete().eq('id',id);
@@ -2251,6 +2273,7 @@ async function adminEliminarNota(id){
 }
 function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
   document.getElementById('n-alumno').value=alumnoId;
+  document.getElementById('n-alumno-inp').value=nombre;
   const info=document.getElementById('n-alumno-info');
   info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';info.textContent='✅ '+nombre;
   document.getElementById('n-materia').value=materiaId;
