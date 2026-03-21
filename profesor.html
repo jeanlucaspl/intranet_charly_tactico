@@ -175,15 +175,21 @@
     <div class="sc"><div class="sc-lbl">Clases Hoy</div><div class="sc-val" id="s-clases">--</div><div class="sc-sub">Programadas</div></div>
     <div class="sc"><div class="sc-lbl">Estado Hoy</div><div class="sc-val" id="s-hoy" style="font-size:28px">--</div><div class="sc-sub" id="s-hoy-txt">Sin registro</div></div>
   </div>
+  <!-- Estado del dispositivo — solo visible en app Android -->
+  <div id="device-status-card-dash" style="display:none;margin-bottom:20px;overflow:hidden;border:1px solid var(--border)">
+    <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+      <span id="device-status-badge-dash" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
+    </div>
+    <div id="device-status-list-dash" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;background:var(--navy2)"></div>
+    <div id="device-status-warn-dash" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:rgba(224,85,85,.06);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;line-height:1.7;color:var(--yellow)"></div>
+  </div>
+
   <!-- Botón rápido para marcar asistencia -->
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:24px;text-align:center;margin-bottom:20px">
+  <div style="background:var(--navy2);border:1px solid var(--border);padding:24px;text-align:center">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:8px">¿Ya llegaste hoy?</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">Registra tu asistencia con reconocimiento facial o GPS</div>
     <button class="btn btn-blue" style="font-size:14px;padding:12px 28px" onclick="showPanel('asistencia',document.querySelector('[onclick*=asistencia]'))">📸 MARCAR ASISTENCIA AHORA</button>
-  </div>
-  <div class="tw">
-    <div class="th"><span class="th-ttl">Últimas Asistencias</span></div>
-    <div id="d-ultimas"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -458,15 +464,6 @@ async function loadDashboard(){
   document.getElementById('s-hoy').textContent=hoyReg?.estado==='presente'?'✅':hoyReg?.estado==='tardanza'?'⏰':hoyReg?'❌':'❓';
   document.getElementById('s-hoy-txt').textContent=hoyReg?.estado||'Sin registro';
 
-  // Últimas 5
-  const{data:ult}=await sb.from('asistencias_profesores').select('*').eq('profesor_id',profesorId).order('fecha',{ascending:false}).limit(5);
-  if(!ult?.length){document.getElementById('d-ultimas').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros aún</div></div>`;return}
-  document.getElementById('d-ultimas').innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora</th><th>Estado</th><th>Método</th></tr></thead><tbody>${ult.map(a=>{
-    const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
-    const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
-    const metodo=a.verificado_facial?'<span class="badge bb">Facial</span>':(a.latitud?'<span class="badge">GPS</span>':'<span class="badge">Manual</span>');
-    return`<tr><td>${fecha}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${metodo}</td></tr>`;
-  }).join('')}</tbody></table>`;
 }
 
 // ── VERIFICAR SI YA MARCÓ HOY ──
@@ -546,31 +543,22 @@ function switchAsistTab(tab,btn){
   document.getElementById('geo-warning').style.display='none';
 }
 
-function checkDeviceStatusProfesor(){
-  if(!window.AndroidNative){deviceOk=true;return;}
-  document.getElementById('device-status-card').style.display='block';
-  const checks=[
-    {label:'GPS disponible',ok:!!navigator.geolocation,failMsg:'Tu dispositivo no tiene GPS.'},
-    {label:'Opciones de desarrollador',ok:!AndroidNative.isDeveloperOptionsEnabled(),failMsg:'Opciones de desarrollador activas. Desactívalas en Ajustes → Sistema → Opciones de desarrollador.'},
-    {label:'GPS simulado (mock)',ok:!AndroidNative.isMockLocationEnabled(),failMsg:'GPS falso detectado. Desactiva la ubicación simulada.'},
-    {label:'Apps de GPS falso',ok:!AndroidNative.hasMockLocationApps(),failMsg:'Tienes una app de GPS falso instalada. Desinstálala.'},
-  ];
-  const problemas=checks.filter(c=>!c.ok);
-  deviceOk=problemas.length===0;
-  const badge=document.getElementById('device-status-badge');
-  const list=document.getElementById('device-status-list');
-  const warn=document.getElementById('device-status-warn');
+function _renderDeviceCard(cardId,badgeId,listId,warnId,problemas,checks,motivo){
+  document.getElementById(cardId).style.display='block';
+  const badge=document.getElementById(badgeId);
+  const list=document.getElementById(listId);
+  const warn=document.getElementById(warnId);
   list.innerHTML=checks.map(c=>`<div style="display:flex;align-items:center;gap:10px">
     <span style="font-size:16px">${c.ok?'✅':'❌'}</span>
     <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;color:${c.ok?'var(--muted)':'var(--red)'};text-transform:uppercase">${c.label}</span>
   </div>`).join('');
   if(problemas.length){
     badge.textContent='⚠️ PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.15)';
-    const motivo=problemas.map(p=>p.failMsg).join(' | ');
-    if(!deviceWarnTimer){
+    warn.style.display='block';
+    warn.innerHTML=`⚠️ <strong>No puedes registrar asistencia hasta resolver el problema.</strong><br>${problemas.map(p=>`• ${p.failMsg}`).join('<br>')}`;
+    if(warnId==='device-status-warn'&&!deviceWarnTimer){
       deviceWarnSec=600;
-      warn.style.display='block';
-      warn.innerHTML=`⚠️ <strong>No puedes registrar asistencia hasta resolver el problema.</strong><br>${problemas.map(p=>`• ${p.failMsg}`).join('<br>')}<br><br>⏱ Tiempo para resolverlo: <strong id="device-warn-countdown">${fmtCd(deviceWarnSec)}</strong>. Si no lo solucionas, se notificará a la dirección.`;
+      warn.innerHTML+=`<br><br>⏱ Tiempo para resolverlo: <strong id="device-warn-countdown">${fmtCd(deviceWarnSec)}</strong>. Si no lo solucionas, se notificará a la dirección.`;
       deviceWarnTimer=setInterval(()=>{
         deviceWarnSec--;
         const el=document.getElementById('device-warn-countdown');
@@ -586,6 +574,23 @@ function checkDeviceStatusProfesor(){
     warn.style.display='none';
     if(deviceWarnTimer){clearInterval(deviceWarnTimer);deviceWarnTimer=null;}
   }
+}
+
+function checkDeviceStatusProfesor(){
+  if(!window.AndroidNative){deviceOk=true;return;}
+  const checks=[
+    {label:'GPS disponible',ok:!!navigator.geolocation,failMsg:'Tu dispositivo no tiene GPS.'},
+    {label:'Opciones de desarrollador',ok:!AndroidNative.isDeveloperOptionsEnabled(),failMsg:'Opciones de desarrollador activas. Desactívalas en Ajustes → Sistema → Opciones de desarrollador.'},
+    {label:'GPS simulado (mock)',ok:!AndroidNative.isMockLocationEnabled(),failMsg:'GPS falso detectado. Desactiva la ubicación simulada.'},
+    {label:'Apps de GPS falso',ok:!AndroidNative.hasMockLocationApps(),failMsg:'Tienes una app de GPS falso instalada. Desinstálala.'},
+  ];
+  const problemas=checks.filter(c=>!c.ok);
+  deviceOk=problemas.length===0;
+  const motivo=problemas.map(p=>p.failMsg).join(' | ');
+  // Card en dashboard
+  _renderDeviceCard('device-status-card-dash','device-status-badge-dash','device-status-list-dash','device-status-warn-dash',problemas,checks,motivo);
+  // Card en panel asistencia
+  _renderDeviceCard('device-status-card','device-status-badge','device-status-list','device-status-warn',problemas,checks,motivo);
 }
 
 // ── CÁMARA ──
