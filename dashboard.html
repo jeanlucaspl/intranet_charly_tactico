@@ -571,17 +571,26 @@ async function submitSolucion(pid){
   const files=solucionFiles[pid];
   const msgEl=document.getElementById(`smsg-${pid}`);
   if(!files||!files.length){showMsg(msgEl,'Selecciona al menos una foto','err');return}
-  for(let i=0;i<files.length;i++){
-    const file=files[i];
-    showMsg(msgEl,`Subiendo ${i+1}/${files.length}...`,'ok');
-    const ext=file.name.split('.').pop();
+  // Pre-leer todos los archivos en memoria antes de subir (evita que Android revoque el acceso)
+  showMsg(msgEl,'Preparando archivos...','ok');
+  const blobs=[];
+  try{
+    for(const f of files){
+      const buf=await f.arrayBuffer();
+      blobs.push({buf,name:f.name,type:f.type||'image/jpeg'});
+    }
+  }catch(e){showMsg(msgEl,'Error leyendo archivos: '+e.message,'err');return}
+  for(let i=0;i<blobs.length;i++){
+    const {buf,name,type}=blobs[i];
+    showMsg(msgEl,`Subiendo ${i+1}/${blobs.length}...`,'ok');
+    const ext=name.split('.').pop()||'jpg';
     const path=`${alumnoId}/${pid}_${Date.now()}_${i}.${ext}`;
-    const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,file,{contentType:file.type});
-    if(upErr){showMsg(msgEl,`Error: ${upErr.message}`,'err');return}
+    const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,buf,{contentType:type});
+    if(upErr){showMsg(msgEl,`Error subiendo foto ${i+1}: ${upErr.message}`,'err');return}
     const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:upData.path,tipo:'imagen'});
     if(error){showMsg(msgEl,error.message,'err');return}
   }
-  showMsg(msgEl,`✅ ${files.length} foto${files.length>1?'s':''} entregada${files.length>1?'s':''}`,'ok');
+  showMsg(msgEl,`✅ ${blobs.length} foto${blobs.length>1?'s':''} entregada${blobs.length>1?'s':''}`,'ok');
   solucionFiles[pid]=[];
   setTimeout(()=>loadPracticas(),1200);
 }
