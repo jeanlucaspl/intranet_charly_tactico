@@ -6,6 +6,7 @@
   <title>Charly Táctico · Profesor</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <!-- face-api.js para reconocimiento facial en el navegador -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
@@ -1133,13 +1134,43 @@ function setProfPracticaFiles(input){
   document.getElementById('pp-fname').textContent=files.length===1?files[0].name:`${files.length} archivos seleccionados`;
 }
 
-async function openSolucion(pathOrUrl){
-  const path=pathOrUrl.startsWith('http')
+function _solPath(pathOrUrl){
+  return pathOrUrl.startsWith('http')
     ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
     :pathOrUrl;
+}
+async function openSolucion(pathOrUrl){
+  const win=window.open('','_blank');
+  const path=_solPath(pathOrUrl);
   const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
-  else window.open(pathOrUrl,'_blank');
+  win.location.href=data?.signedUrl||pathOrUrl;
+}
+
+async function downloadSolucionesZip(pid,pracTitulo,btnEl){
+  btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
+  const {data}=await sb.from('soluciones')
+    .select('*,alumnos(perfiles(nombre,apellido,dni))')
+    .eq('practica_id',pid).order('entregado_en');
+  if(!data?.length){btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+  const zip=new JSZip();
+  for(const s of data){
+    const pf=s.alumnos?.perfiles;
+    const folder=`${pf?.apellido||'alumno'}_${pf?.nombre||''}_DNI${pf?.dni||''}`.replace(/\s+/g,'_');
+    const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(_solPath(s.archivo_url),3600);
+    if(!signed?.signedUrl)continue;
+    const resp=await fetch(signed.signedUrl);
+    if(!resp.ok)continue;
+    const blob=await resp.blob();
+    const ext=(_solPath(s.archivo_url).split('.').pop()||'jpg').toLowerCase();
+    const idx=data.filter(x=>x.alumno_id===s.alumno_id).indexOf(s)+1;
+    zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
+  }
+  const content=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(content);
+  a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
+  a.click();
+  btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';
 }
 
 async function deleteProfPractica(id){
@@ -1231,7 +1262,13 @@ async function loadProfSoluciones(){
     if(!byAlumno[key]){byAlumno[key]={nombre:`${s.alumnos?.perfiles?.nombre||''} ${s.alumnos?.perfiles?.apellido||''}`.trim(),archivos:[]};}
     byAlumno[key].archivos.push(s);
   });
-  el.innerHTML=`<div style="background:var(--navy2);border:1px solid var(--border)">
+  // Título de la práctica para el ZIP
+  const pracOpt=document.getElementById('q-prof-sol-practica');
+  const pracTitulo=pracOpt.options[pracOpt.selectedIndex]?.text||'practica';
+  el.innerHTML=`<div style="margin-bottom:12px">
+    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" onclick="downloadSolucionesZip('${pid}',${JSON.stringify(pracTitulo)},this)">📦 Descargar ZIP de todas las soluciones</button>
+  </div>
+  <div style="background:var(--navy2);border:1px solid var(--border)">
     ${Object.values(byAlumno).map(a=>`<div class="sol-item">
       <div class="sol-icon">🖼️</div>
       <div style="flex:1">

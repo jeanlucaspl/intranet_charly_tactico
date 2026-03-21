@@ -6,6 +6,7 @@
   <title>Charly Táctico · Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -2080,20 +2081,62 @@ async function deleteMateria(id){
   if(error)return await myAlert('No se puede eliminar: '+error.message);
   await loadMaterias(); populateSelects();
 }
+function _solPath(pathOrUrl){
+  return pathOrUrl.startsWith('http')
+    ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
+    :pathOrUrl;
+}
+async function openSolucion(pathOrUrl){
+  const win=window.open('','_blank');
+  const {data}=await sb.storage.from('soluciones').createSignedUrl(_solPath(pathOrUrl),3600);
+  win.location.href=data?.signedUrl||pathOrUrl;
+}
+async function downloadSolucionesZip(pid,pracTitulo,btnEl){
+  btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
+  const {data}=await sb.from('soluciones')
+    .select('*,alumnos(perfiles(nombre,apellido,dni))')
+    .eq('practica_id',pid).order('entregado_en');
+  if(!data?.length){btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+  const zip=new JSZip();
+  for(const s of data){
+    const pf=s.alumnos?.perfiles;
+    const folder=`${pf?.apellido||'alumno'}_${pf?.nombre||''}_DNI${pf?.dni||''}`.replace(/\s+/g,'_');
+    const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(_solPath(s.archivo_url),3600);
+    if(!signed?.signedUrl)continue;
+    const resp=await fetch(signed.signedUrl);
+    if(!resp.ok)continue;
+    const blob=await resp.blob();
+    const ext=(_solPath(s.archivo_url).split('.').pop()||'jpg').toLowerCase();
+    const idx=data.filter(x=>x.alumno_id===s.alumno_id).indexOf(s)+1;
+    zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
+  }
+  const content=await zip.generateAsync({type:'blob'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(content);
+  a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
+  a.click();
+  btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';
+}
 async function loadSoluciones(){
   const pid=document.getElementById('q-sol-practica').value;
   if(!pid){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div>`;return}
-  const {data}=await sb.from('soluciones').select('*,alumnos(perfiles(nombre,apellido)),practicas(titulo)').eq('practica_id',pid).order('entregado_en',{ascending:false});
+  const {data}=await sb.from('soluciones').select('*,alumnos(perfiles(nombre,apellido,dni)),practicas(titulo)').eq('practica_id',pid).order('entregado_en',{ascending:false});
   if(!data?.length){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei">📥</div><div class="et">Sin soluciones entregadas</div></div>`;return}
-  document.getElementById('d-soluciones').innerHTML=data.map(s=>{
-    const fecha=new Date(s.entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    const icon=s.tipo==='pdf'?'📄':'🖼️';
-    return`<div class="sol-item">
-      <div class="sol-icon">${icon}</div>
-      <div style="flex:1"><div class="sol-name">${s.alumnos?.perfiles?.nombre} ${s.alumnos?.perfiles?.apellido}</div><div class="sol-info">Entregado: ${fecha}</div></div>
-      <a href="${s.archivo_url}" target="_blank" class="btn btn-outline" style="font-size:11px;padding:7px 12px;text-decoration:none">Ver</a>
-    </div>`;
-  }).join('');
+  const pracTitulo=data[0]?.practicas?.titulo||'practica';
+  // Agrupar por alumno
+  const byAlumno={};
+  data.forEach(s=>{if(!byAlumno[s.alumno_id]){byAlumno[s.alumno_id]={pf:s.alumnos?.perfiles,archivos:[]};}byAlumno[s.alumno_id].archivos.push(s);});
+  document.getElementById('d-soluciones').innerHTML=
+    `<div style="margin-bottom:12px"><button class="btn btn-outline" style="font-size:11px;padding:8px 16px" onclick="downloadSolucionesZip('${pid}',${JSON.stringify(pracTitulo)},this)">📦 Descargar ZIP de todas las soluciones</button></div>`+
+    `<div style="background:var(--navy2);border:1px solid var(--border)">`+
+    Object.values(byAlumno).map(a=>{
+      const fecha=new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return`<div class="sol-item">
+        <div class="sol-icon">🖼️</div>
+        <div style="flex:1"><div class="sol-name">${a.pf?.nombre} ${a.pf?.apellido}</div><div class="sol-info">DNI ${a.pf?.dni||'--'} · ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${fecha}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}')" class="btn btn-outline" style="font-size:11px;padding:6px 10px">Ver ${a.archivos.length>1?i+1:''}</button>`).join('')}</div>
+      </div>`;
+    }).join('')+`</div>`;
 }
 
 // ── RENDERERS ──

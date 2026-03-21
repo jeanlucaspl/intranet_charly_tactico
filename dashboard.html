@@ -508,13 +508,12 @@ async function loadPracticas(){
 
 const IMG_WARN_MB=5,IMG_MAX_MB=15;
 async function openSolucion(pathOrUrl){
-  // Backward compat: old records stored full signed URL, new ones store path
+  const win=window.open('','_blank');
   const path=pathOrUrl.startsWith('http')
     ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
     :pathOrUrl;
   const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
-  else window.open(pathOrUrl,'_blank');
+  win.location.href=data?.signedUrl||pathOrUrl;
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function setSolFile(pid,input){
