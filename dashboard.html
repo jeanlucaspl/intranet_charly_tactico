@@ -565,15 +565,13 @@ async function setSolFile(pid,input){
   const warnEl=document.getElementById(`swarn-${pid}`);
   const bloqueadas=nuevas.filter(f=>f.size>IMG_MAX_MB*1024*1024);
   if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=`⛔ ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;input.value='';return;}
-  // Leer con FileReader (más compatible en Android que arrayBuffer)
-  const leidos=[];
-  for(const f of nuevas){
-    try{
-      const buf=await _leerArchivo(f);
-      leidos.push({buf,name:f.name,type:f.type||'image/jpeg',size:f.size});
-    }catch(e){warnEl.style.display='block';warnEl.textContent=`⛔ No se pudo leer ${f.name}. Probá seleccionarla desde Archivos en lugar de Galería.`;input.value='';return;}
-  }
+  // Leer todos en paralelo inmediatamente (evita revocación de acceso en Android)
+  const resultados=await Promise.allSettled(nuevas.map(f=>_leerArchivo(f).then(buf=>({buf,name:f.name,type:f.type||'image/jpeg',size:f.size}))));
   input.value='';
+  const leidos=resultados.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  const fallidos=resultados.filter(r=>r.status==='rejected').length;
+  if(fallidos>0){warnEl.style.display='block';warnEl.textContent=`⚠️ ${fallidos} archivo${fallidos>1?'s':''} no se pudo${fallidos>1?'ron':''} leer y se omitió${fallidos>1?'ron':''}. Seleccionalos desde Archivos en lugar de Galería.`;}
+  if(!leidos.length)return;
   if(!solucionFiles[pid])solucionFiles[pid]=[];
   solucionFiles[pid]=[...solucionFiles[pid],...leidos];
   const pesadas=solucionFiles[pid].filter(f=>f.size>IMG_WARN_MB*1024*1024);
