@@ -275,7 +275,16 @@
   <div class="tw">
     <div class="th"><span class="th-ttl">Registrar / Actualizar Nota</span></div>
     <div style="padding:18px;display:grid;gap:14px">
-      <div class="fg"><label>Alumno</label><select id="pn-alumno"><option value="">Seleccionar alumno...</option></select></div>
+      <div class="fg"><label>Alumno</label>
+        <div style="position:relative">
+          <input type="text" id="pn-alumno-inp" placeholder="Buscar por apellido o DNI..." autocomplete="off"
+            oninput="pnSuggest(this)" onfocus="pnSuggest(this)"
+            onblur="setTimeout(()=>document.getElementById('pn-sug').style.display='none',150)"
+            style="width:100%"/>
+          <input type="hidden" id="pn-alumno"/>
+          <div id="pn-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--border);border-top:none;z-index:100;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
       <div class="fg"><label>Materia</label><select id="pn-materia"><option value="">Seleccionar materia...</option></select></div>
       <div class="fg"><label>Período (ej: 2025-1)</label><input type="text" id="pn-periodo" placeholder="2025-1"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
@@ -780,11 +789,30 @@ async function loadNotasSelects(){
   ]);
   pnMaterias=(mpRows||[]).map(r=>r.materias).filter(Boolean);
   pnAlumnos=alumnos||[];
-  const sa=document.getElementById('pn-alumno');
   const sm=document.getElementById('pn-materia');
-  sa.innerHTML='<option value="">Seleccionar alumno...</option>'+pnAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.apellido}, ${a.perfiles?.nombre} — DNI ${a.perfiles?.dni||'--'}</option>`).join('');
   sm.innerHTML='<option value="">Seleccionar materia...</option>'+pnMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
-  sa.onchange=()=>loadNotasAlumno(sa.value);
+}
+function pnSuggest(inp){
+  const q=inp.value.trim().toLowerCase();
+  const box=document.getElementById('pn-sug');
+  if(!q){box.style.display='none';return;}
+  const matches=pnAlumnos.filter(a=>
+    `${a.perfiles?.apellido} ${a.perfiles?.nombre}`.toLowerCase().includes(q)||
+    (a.perfiles?.dni||'').includes(q)
+  ).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(a=>`
+    <div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;border-bottom:1px solid var(--border)"
+      onmousedown="pnSelect('${a.id}','${a.perfiles?.apellido} ${a.perfiles?.nombre}')">
+      <span style="color:var(--gold);margin-right:8px">${a.perfiles?.dni||'--'}</span>${a.perfiles?.apellido}, ${a.perfiles?.nombre}
+    </div>`).join('');
+  box.style.display='block';
+}
+function pnSelect(id,nombre){
+  document.getElementById('pn-alumno').value=id;
+  document.getElementById('pn-alumno-inp').value=nombre;
+  document.getElementById('pn-sug').style.display='none';
+  loadNotasAlumno(id);
 }
 async function loadNotasAlumno(alumnoId){
   if(!alumnoId){document.getElementById('d-notas-prof').innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Selecciona alumno para ver notas</div></div>';return;}
