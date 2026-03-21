@@ -3039,12 +3039,12 @@ function showProfTab(tab){
 async function inhabilitarProfesor(id){
   if(!await myConfirm('¿Inhabilitar a este profesor? No podrá iniciar sesión.'))return;
   await sb.from('profesores').update({activo:false}).eq('id',id);
-  await loadProfesores();
+  await loadProfesores(); if(esDueno) loadProfesoresTexto();
 }
 async function reactivarProfesor(id){
   if(!await myConfirm('¿Reactivar a este profesor?'))return;
   await sb.from('profesores').update({activo:true}).eq('id',id);
-  await loadProfesores();
+  await loadProfesores(); if(esDueno) loadProfesoresTexto();
 }
 async function deleteProfesor(id,perfilId){ await inhabilitarProfesor(id); }
 
@@ -3106,7 +3106,7 @@ async function saveProfesor(){
     if(profRow) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
   }
   showMsg(msg,`✅ Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
-  await loadProfesores(); populateSelects();
+  await loadProfesores(); populateSelects(); if(esDueno) loadProfesoresTexto();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
   prPhotoBlob=null;prFotoFile=null;
   setTimeout(()=>closeMd('md-profesor'),2000);
