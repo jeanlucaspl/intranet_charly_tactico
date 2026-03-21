@@ -351,7 +351,7 @@ async function loadNotas(){
   const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
   document.getElementById('s-mat').textContent=data?.length||0;
   if(data?.length){
-    const proms=data.filter(n=>n.promedio).map(n=>n.promedio);
+    const proms=data.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
     const gen=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--';
     document.getElementById('s-prom').textContent=gen;
   }
@@ -362,11 +362,10 @@ async function loadNotas(){
 
 function renderNotasTable(data){
   if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
-  return`<table><thead><tr><th>Materia</th><th>N1</th><th>N2</th><th>N3</th><th>Promedio</th><th>Estado</th></tr></thead><tbody>${data.map(n=>{
-    const p=n.promedio||0;const c=p>=14?'nota-a':p>=11?'nota-m':'nota-b';
-    const bc=p>=14?'bg':p>=11?'by':'br';
-    const est=p>=14?'Aprobado':p>=11?'En riesgo':'Desaprobado';
-    return`<tr><td><strong>${n.materias?.nombre||'--'}</strong></td><td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td><td class="${c}"><strong>${p||'--'}</strong></td><td><span class="badge ${bc}">${est}</span></td></tr>`;
+  return`<table><thead><tr><th>Materia</th><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${data.map(n=>{
+    const nota=n.nota_1??'--';
+    const c=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
+    return`<tr><td><strong>${n.materias?.nombre||'--'}</strong></td><td>${n.periodo||'--'}</td><td class="${c}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
 
