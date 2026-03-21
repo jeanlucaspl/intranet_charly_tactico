@@ -844,8 +844,18 @@
     <div class="md-bd">
       <input type="hidden" id="mmp-materia-id"/>
       <div class="msg" id="msg-mat-prof"></div>
-      <div class="fg full"><label>Seleccioná los profesores</label>
-        <div id="mmp-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);padding:8px;background:var(--navy)"></div>
+      <div class="fg full"><label>Profesores asignados</label>
+        <div id="mmp-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;padding:8px;border:1px solid var(--border);background:var(--navy);margin-bottom:12px">
+          <span id="mmp-chips-empty" style="color:var(--muted);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em">Ninguno asignado</span>
+        </div>
+      </div>
+      <div class="fg full"><label>Buscar por apellido o DNI</label>
+        <div style="position:relative">
+          <input type="text" id="mmp-search" placeholder="Escribe apellido o DNI..." autocomplete="off"
+            oninput="mmpSuggest(this)" onfocus="mmpSuggest(this)" onblur="setTimeout(()=>hideSug('mmp-sug'),150)"
+            style="width:100%"/>
+          <div id="mmp-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
+        </div>
       </div>
     </div>
     <div class="md-ft">
@@ -2014,27 +2024,65 @@ async function saveMateria(){
   await loadMaterias(); populateSelects();
   setTimeout(()=>closeMd('md-materia'),1200);
 }
+let mmpSelected=new Map(); // profesor_id → nombre
+function renderMmpChips(){
+  const el=document.getElementById('mmp-chips');
+  const empty=document.getElementById('mmp-chips-empty');
+  if(!mmpSelected.size){empty.style.display='';el.querySelectorAll('.mmp-chip').forEach(c=>c.remove());return;}
+  empty.style.display='none';
+  el.querySelectorAll('.mmp-chip').forEach(c=>c.remove());
+  mmpSelected.forEach((nombre,id)=>{
+    const chip=document.createElement('div');
+    chip.className='mmp-chip';
+    chip.style.cssText='display:flex;align-items:center;gap:6px;background:var(--navy3);border:1px solid var(--gold);padding:4px 10px;font-family:"Barlow Condensed",sans-serif;font-size:12px;letter-spacing:.06em';
+    chip.innerHTML=`<span>${nombre}</span><button onclick="mmpRemove('${id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0">✕</button>`;
+    el.appendChild(chip);
+  });
+}
+function mmpRemove(id){mmpSelected.delete(id);renderMmpChips();}
+function mmpSuggest(inp){
+  const q=inp.value.trim().toLowerCase();
+  const box=document.getElementById('mmp-sug');
+  if(!q){box.style.display='none';return;}
+  const filtro=allProfesoresActivos.filter(p=>
+    p.perfiles?.apellido?.toLowerCase().startsWith(q)||
+    p.perfiles?.dni?.startsWith(q)
+  ).filter(p=>!mmpSelected.has(p.id));
+  if(!filtro.length){box.style.display='none';return;}
+  box.innerHTML=filtro.slice(0,8).map(p=>`<div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.08em;border-bottom:1px solid var(--border)"
+    onmousedown="mmpSelect('${p.id}','${(p.perfiles?.nombre+' '+p.perfiles?.apellido).replace(/'/g,'&#39;')}')">
+    <span style="color:var(--gold)">${p.perfiles?.apellido||'--'}, ${p.perfiles?.nombre||'--'}</span>
+    <span style="color:var(--muted);font-size:10px;margin-left:8px">DNI: ${p.perfiles?.dni||'--'}</span>
+  </div>`).join('');
+  box.style.display='block';
+}
+function mmpSelect(id,nombre){
+  mmpSelected.set(id,nombre);
+  renderMmpChips();
+  document.getElementById('mmp-search').value='';
+  document.getElementById('mmp-sug').style.display='none';
+}
 async function openMatProf(materiaId){
   document.getElementById('mmp-materia-id').value=materiaId;
-  const {data}=await sb.from('materia_profesor').select('profesor_id').eq('materia_id',materiaId);
-  const asignados=new Set((data||[]).map(r=>r.profesor_id));
-  document.getElementById('mmp-list').innerHTML=allProfesoresActivos.length
-    ?allProfesoresActivos.map(p=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;cursor:pointer;border-bottom:1px solid var(--border)">
-        <input type="checkbox" value="${p.id}" ${asignados.has(p.id)?'checked':''}>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px">${p.perfiles?.nombre||''} ${p.perfiles?.apellido||''}</span>
-      </label>`).join('')
-    :'<div style="color:var(--muted);font-size:12px;padding:8px">No hay profesores registrados</div>';
+  mmpSelected=new Map();
+  const {data}=await sb.from('materia_profesor').select('profesor_id,profesores(perfiles(nombre,apellido))').eq('materia_id',materiaId);
+  (data||[]).forEach(r=>{
+    const nombre=`${r.profesores?.perfiles?.nombre||''} ${r.profesores?.perfiles?.apellido||''}`.trim();
+    mmpSelected.set(r.profesor_id,nombre);
+  });
+  document.getElementById('mmp-search').value='';
+  document.getElementById('mmp-sug').style.display='none';
+  renderMmpChips();
   openMd('md-mat-prof');
 }
 async function saveMatProf(){
   const materiaId=document.getElementById('mmp-materia-id').value;
   const msg=document.getElementById('msg-mat-prof');
-  const checks=[...document.querySelectorAll('#mmp-list input[type=checkbox]')];
-  const seleccionados=checks.filter(c=>c.checked).map(c=>c.value);
   const {error:delErr}=await sb.from('materia_profesor').delete().eq('materia_id',materiaId);
   if(delErr)return showMsg(msg,delErr.message,'err');
-  if(seleccionados.length){
-    const {error:insErr}=await sb.from('materia_profesor').insert(seleccionados.map(pid=>({materia_id:materiaId,profesor_id:pid})));
+  if(mmpSelected.size){
+    const rows=[...mmpSelected.keys()].map(pid=>({materia_id:materiaId,profesor_id:pid}));
+    const {error:insErr}=await sb.from('materia_profesor').insert(rows);
     if(insErr)return showMsg(msg,insErr.message,'err');
   }
   closeMd('md-mat-prof');
