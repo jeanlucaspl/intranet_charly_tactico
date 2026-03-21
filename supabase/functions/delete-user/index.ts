@@ -49,7 +49,41 @@ Deno.serve(async (req) => {
     }
 
     // ── PERFIL + AUTH ──
+    // Limpia TODAS las tablas que puedan referenciar este perfil, sin importar el rol.
+    // Esto cubre casos de datos inconsistentes (ej: un profesor con rol='alumno').
     if (perfil_id) {
+      // 1. Buscar si este perfil tiene fila en profesores o alumnos (por si acaso)
+      const [{ data: profRows }, { data: alumRows }] = await Promise.all([
+        sb.from('profesores').select('id').eq('perfil_id', perfil_id),
+        sb.from('alumnos').select('id').eq('perfil_id', perfil_id),
+      ])
+
+      // 2. Limpiar registros de profesor si existen (que no se hayan borrado por profesor_id)
+      for (const prof of (profRows || [])) {
+        const e1 = await del(sb, 'asistencias_profesores', 'profesor_id', prof.id)
+        if (e1) errors.push(e1)
+        const e2 = await del(sb, 'profesores', 'id', prof.id)
+        if (e2) errors.push(e2)
+      }
+
+      // 3. Limpiar registros de alumno si existen (datos inconsistentes)
+      for (const al of (alumRows || [])) {
+        const steps = [
+          del(sb, 'solicitudes_ubicacion', 'alumno_id', al.id),
+          del(sb, 'soluciones',            'alumno_id', al.id),
+          del(sb, 'asistencias',           'alumno_id', al.id),
+          del(sb, 'notas',                 'alumno_id', al.id),
+          del(sb, 'alumno_materia',        'alumno_id', al.id),
+          del(sb, 'alumno_aula',           'alumno_id', al.id),
+          del(sb, 'padres_alumnos',        'alumno_id', al.id),
+        ]
+        const results = await Promise.all(steps)
+        results.forEach(e => { if(e) errors.push(e) })
+        const e = await del(sb, 'alumnos', 'id', al.id)
+        if (e) errors.push(e)
+      }
+
+      // 4. Limpiar el resto de tablas que referencian perfil_id
       const steps = [
         del(sb, 'solicitudes_ubicacion', 'padre_id',        perfil_id),
         del(sb, 'padres_alumnos',        'padre_id',        perfil_id),
@@ -62,9 +96,11 @@ Deno.serve(async (req) => {
       const results = await Promise.all(steps)
       results.forEach(e => { if(e) errors.push(e) })
 
+      // 5. Borrar perfil
       const ep = await del(sb, 'perfiles', 'id', perfil_id)
       if (ep) errors.push('PERFILES: ' + ep)
 
+      // 6. Borrar de auth
       const { error: authErr } = await sb.auth.admin.deleteUser(perfil_id)
       if (authErr) errors.push('AUTH: ' + authErr.message)
     }
