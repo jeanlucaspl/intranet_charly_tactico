@@ -2107,10 +2107,10 @@ async function openSolucion(pathOrUrl,btnEl){
 async function downloadSolucionesZip(pid,pracTitulo,btnEl){
   btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
   try{
-    const {data}=await sb.from('soluciones')
+    const {data,error:qErr}=await sb.from('soluciones')
       .select('*,alumnos(perfiles(nombre,apellido,dni))')
       .eq('practica_id',pid).order('entregado_en');
-    if(!data?.length){btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    if(qErr||!data?.length){await myAlert('ZIP: '+(qErr?.message||'Sin soluciones para esta práctica ('+pid+')'));btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
     const zip=new JSZip();
     let ok=0;
     for(const s of data){
