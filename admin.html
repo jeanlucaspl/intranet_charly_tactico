@@ -348,9 +348,9 @@
       <button class="btn btn-gold" onclick="openMd('md-alumno')">+ Nuevo Alumno</button>
     </div>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <input type="text" id="q-al-apellido" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
-    <input type="text" id="q-al-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <input type="text" id="q-al-apellido" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
+    <input type="text" id="q-al-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"/>
     <button class="btn btn-outline" onclick="filterAlumnos()">Buscar</button>
   </div>
   <div class="aula-tabs">
@@ -614,9 +614,9 @@
     <div class="ph-left"><div class="eye">Apoderados</div><div class="ttl">GESTIÓN PADRES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <input type="text" id="q-padre-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
-    <input type="text" id="q-padre-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <input type="text" id="q-padre-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
+    <input type="text" id="q-padre-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterPadres()">
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="padtab-activos" onclick="showPadTab('activos')">✅ Activos</div>
@@ -634,9 +634,9 @@
     <div class="ph-left"><div class="eye">Solo acceso dueño</div><div class="ttl">GESTIÓN ADMINISTRADORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-admin')">+ Nuevo Admin</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
-    <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <input type="text" id="q-adm-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
+    <input type="text" id="q-adm-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterAdmins()">
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="admtab-activos" onclick="showAdmTab('activos')">✅ Activos</div>
@@ -700,8 +700,8 @@
   </div>
   <div style="margin-top:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">Todas las contraseñas registradas</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input type="text" id="q-pass-ape" placeholder="Filtrar por apellido..." style="flex:1;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterContrasenas()">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <input type="text" id="q-pass-ape" placeholder="Filtrar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterContrasenas()">
     </div>
     <div id="d-contrasenas"><div class="empty"><div class="ei">🔑</div><div class="et">Cargando...</div></div></div>
   </div>
@@ -713,9 +713,9 @@
     <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN PROFESORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <input type="text" id="q-prof-ape" placeholder="Buscar por apellido..." style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
-    <input type="text" id="q-prof-dni" placeholder="DNI..." style="width:120px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <input type="text" id="q-prof-ape" placeholder="Buscar por apellido..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
+    <input type="text" id="q-prof-dni" placeholder="DNI..." style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="filterProfesores()">
   </div>
   <div class="aula-tabs">
     <div class="aula-tab active" id="proftab-activos" onclick="showProfTab('activos')">✅ Activos</div>
