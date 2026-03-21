@@ -675,15 +675,9 @@
 <!-- ══ CONTRASEÑAS ══ -->
 <div class="panel" id="panel-contrasenas">
   <div class="ph"><div class="ph-left"><div class="eye">Gestión de accesos</div><div class="ttl">CONTRASEÑAS</div></div></div>
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 18px;margin-bottom:16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">
-    🔑 Busca un usuario por DNI para ver o cambiar su contraseña
-  </div>
-  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-    <div class="dni-wrap" style="flex:1;min-width:180px">
-      <input type="text" id="pass-dni-search" placeholder="DNI del usuario..." maxlength="8" inputmode="numeric" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;width:100%;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="setTimeout(()=>hideSug('sug-pass'),200)" oninput="dniSuggest(this,'sug-pass','todos')"/>
-      <div id="sug-pass" class="dni-sug"></div>
-    </div>
-    <button class="btn btn-gold" onclick="buscarUsuarioPorDNI()">Buscar</button>
+  <div class="dni-wrap" style="margin-bottom:20px">
+    <input type="text" id="pass-dni-search" placeholder="Buscar usuario por apellido o DNI..." autocomplete="off" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;width:100%;transition:border-color .2s" onfocus="this.style.borderColor='var(--gold)'" onblur="setTimeout(()=>hideSug('sug-pass'),200)" oninput="dniSuggest(this,'sug-pass','todos')"/>
+    <div id="sug-pass" class="dni-sug"></div>
   </div>
   <div id="pass-result" style="display:none;background:var(--navy2);border:1px solid var(--border);padding:20px">
     <div id="pass-user-info" style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:16px"></div>
