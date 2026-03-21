@@ -2894,14 +2894,14 @@ async function saveProfesor(){
   }
   const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,activo:true,foto_url:fotoUrl});
   if(prErr){showMsg(msg,prErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
-  // Assign materia if selected → insertar en materia_profesor
+  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+  // Restaurar sesión del dueño ANTES de escribir en materia_profesor (requiere permisos de dueño)
+  if(duSession)await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
+  // Assign materia if selected → insertar en materia_profesor (ya con sesión del dueño)
   if(materiaId){
     const {data:profRow}=await sb.from('profesores').select('id').eq('perfil_id',uid).single();
     if(profRow) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
   }
-  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
-  // Restaurar sesión del dueño
-  if(duSession)await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
   showMsg(msg,`✅ Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
