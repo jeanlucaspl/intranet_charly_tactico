@@ -2088,41 +2088,50 @@ function _solPath(pathOrUrl){
 }
 async function openSolucion(pathOrUrl,btnEl){
   if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
-  const {data}=await sb.storage.from('soluciones').createSignedUrl(_solPath(pathOrUrl),3600);
-  const url=data?.signedUrl||pathOrUrl;
-  const resp=await fetch(url);
-  const blob=await resp.blob();
-  const ext=_solPath(pathOrUrl).split('.').pop()||'jpg';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`solucion.${ext}`;
-  a.click();
+  try{
+    const path=_solPath(pathOrUrl);
+    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
+    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo. Verificá la policy de lectura en storage.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    const resp=await fetch(data.signedUrl);
+    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    const blob=await resp.blob();
+    const ext=path.split('.').pop()||'jpg';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`solucion.${ext}`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){await myAlert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
 }
 async function downloadSolucionesZip(pid,pracTitulo,btnEl){
   btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
-  const {data}=await sb.from('soluciones')
-    .select('*,alumnos(perfiles(nombre,apellido,dni))')
-    .eq('practica_id',pid).order('entregado_en');
-  if(!data?.length){btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
-  const zip=new JSZip();
-  for(const s of data){
-    const pf=s.alumnos?.perfiles;
-    const folder=`${pf?.apellido||'alumno'}_${pf?.nombre||''}_DNI${pf?.dni||''}`.replace(/\s+/g,'_');
-    const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(_solPath(s.archivo_url),3600);
-    if(!signed?.signedUrl)continue;
-    const resp=await fetch(signed.signedUrl);
-    if(!resp.ok)continue;
-    const blob=await resp.blob();
-    const ext=(_solPath(s.archivo_url).split('.').pop()||'jpg').toLowerCase();
-    const idx=data.filter(x=>x.alumno_id===s.alumno_id).indexOf(s)+1;
-    zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
-  }
-  const content=await zip.generateAsync({type:'blob'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(content);
-  a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
-  a.click();
+  try{
+    const {data}=await sb.from('soluciones')
+      .select('*,alumnos(perfiles(nombre,apellido,dni))')
+      .eq('practica_id',pid).order('entregado_en');
+    if(!data?.length){btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    const zip=new JSZip();
+    let ok=0;
+    for(const s of data){
+      const pf=s.alumnos?.perfiles;
+      const folder=`${pf?.apellido||'alumno'}_${pf?.nombre||''}_DNI${pf?.dni||''}`.replace(/\s+/g,'_');
+      const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(_solPath(s.archivo_url),3600);
+      if(!signed?.signedUrl)continue;
+      const resp=await fetch(signed.signedUrl);
+      if(!resp.ok)continue;
+      const blob=await resp.blob();
+      const ext=(_solPath(s.archivo_url).split('.').pop()||'jpg').toLowerCase();
+      const idx=data.filter(x=>x.alumno_id===s.alumno_id).indexOf(s)+1;
+      zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
+      ok++;
+    }
+    if(!ok){await myAlert('No se pudieron obtener los archivos. Verificá la policy de lectura en storage.');btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    const content=await zip.generateAsync({type:'blob'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(content);
+    a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){await myAlert('Error generando ZIP: '+e.message);}
   btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';
 }
 async function loadSoluciones(){

@@ -509,18 +509,21 @@ async function loadPracticas(){
 const IMG_WARN_MB=5,IMG_MAX_MB=15;
 async function openSolucion(pathOrUrl,btnEl){
   if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
-  const path=pathOrUrl.startsWith('http')
-    ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
-    :pathOrUrl;
-  const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-  const url=data?.signedUrl||pathOrUrl;
-  const resp=await fetch(url);
-  const blob=await resp.blob();
-  const ext=path.split('.').pop()||'jpg';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`solucion.${ext}`;
-  a.click();
+  try{
+    const path=pathOrUrl.startsWith('http')
+      ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
+      :pathOrUrl;
+    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
+    if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo. Contactá al administrador.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    const resp=await fetch(data.signedUrl);
+    if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    const blob=await resp.blob();
+    const ext=path.split('.').pop()||'jpg';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`solucion.${ext}`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){alert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
