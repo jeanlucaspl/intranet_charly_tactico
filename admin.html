@@ -1094,8 +1094,7 @@
             <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="document.getElementById('pr-pass').value=generarPass()">🔀</button>
           </div>
         </div>
-        <div class="fg full"><label>Especialidad (opcional)</label><input type="text" id="pr-especialidad" placeholder="Ej: Matemáticas, Razonamiento Verbal"/></div>
-        <div class="fg full"><label>Materia que dicta (opcional)</label><select id="pr-materia"><option value="">-- Sin asignar --</option></select></div>
+        <div class="fg full"><label>Materia inicial (opcional)</label><select id="pr-materia"><option value="">-- Sin asignar --</option></select></div>
       </div>
       <div class="fg" style="margin-top:8px">
         <label>📸 Foto para reconocimiento facial (opcional)</label>
@@ -2873,7 +2872,6 @@ async function saveProfesor(){
   const email=document.getElementById('pr-email').value.trim();
   const pass=document.getElementById('pr-pass').value.trim();
   const telefono=document.getElementById('pr-telefono').value.trim();
-  const especialidad=document.getElementById('pr-especialidad').value.trim();
   const materiaId=document.getElementById('pr-materia').value;
   const msg=document.getElementById('msg-profesor');
   if(!nombre||!apellido||!dni||!email||!pass)return showMsg(msg,'Todos los campos marcados son obligatorios','err');
@@ -2894,7 +2892,7 @@ async function saveProfesor(){
     const{data:upData}=await sb.storage.from('fotos-alumnos').upload(`prof_${uid}.${ext}`,blob,{upsert:true,contentType:prPhotoBlob?'image/jpeg':prFotoFile?.type});
     if(upData)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
   }
-  const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,especialidad:especialidad||null,activo:true,foto_url:fotoUrl});
+  const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,activo:true,foto_url:fotoUrl});
   if(prErr){showMsg(msg,prErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
   // Assign materia if selected → insertar en materia_profesor
   if(materiaId){
