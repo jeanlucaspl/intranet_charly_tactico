@@ -48,6 +48,7 @@
     .btn-gold{background:var(--gold);color:var(--navy)}.btn-gold:hover{background:var(--gold2)}
     .btn-blue{background:var(--blue);color:var(--navy)}.btn-blue:hover{filter:brightness(1.1)}
     .btn-green{background:var(--green);color:var(--white)}.btn-green:hover{filter:brightness(1.1)}
+    .btn-red{background:rgba(224,85,85,.15);color:var(--red);border:1px solid var(--red)}.btn-red:hover{background:var(--red);color:#fff}
     .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-outline:hover{border-color:var(--blue);color:var(--blue)}
     .btn:disabled{opacity:.4;cursor:not-allowed}
 
@@ -1132,6 +1133,22 @@ function setProfPracticaFiles(input){
   document.getElementById('pp-fname').textContent=files.length===1?files[0].name:`${files.length} archivos seleccionados`;
 }
 
+async function openSolucion(pathOrUrl){
+  const path=pathOrUrl.startsWith('http')
+    ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
+    :pathOrUrl;
+  const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+  else window.open(pathOrUrl,'_blank');
+}
+
+async function deleteProfPractica(id){
+  if(!await myConfirm('¿Eliminar esta práctica? Se quitará para todos los alumnos.'))return;
+  const {error}=await sb.from('practicas').delete().eq('id',id);
+  if(error)return myAlert('Error: '+error.message);
+  loadProfPracticas();
+}
+
 async function saveProfPractica(){
   const semana=document.getElementById('pp-semana').value;
   const materiaId=document.getElementById('pp-materia').value;
@@ -1152,7 +1169,7 @@ async function saveProfPractica(){
     urls.push(STORAGE+'practicas/'+upData.path);
   }
   const archivoUrl=urls.length===1?urls[0]:JSON.stringify(urls);
-  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true});
+  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true,creado_por:uid});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return;}
   showMsg(msg,'✅ Práctica subida correctamente','ok');
   profPracticaFiles=[];
@@ -1189,7 +1206,10 @@ async function loadProfPracticas(){
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:${p.activa!==false?'var(--green)':'var(--red)'}">
         ${p.activa!==false?'👁️ Visible para alumnos':'🙈 Oculta'}
       </div>
-      <div class="prac-btns">${links||'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}</div>
+      <div class="prac-btns">
+        ${links||'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}
+        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deleteProfPractica('${p.id}')">🗑️ Eliminar</button>
+      </div>
     </div>`;
   }).join('');
   // Populate soluciones select
@@ -1219,7 +1239,7 @@ async function loadProfSoluciones(){
         <div class="sol-info">Entregó ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${a.archivos.map((s,i)=>`<a href="${s.archivo_url}" target="_blank" class="btn btn-outline" style="font-size:11px;padding:6px 10px;text-decoration:none">Ver ${a.archivos.length>1?i+1:''}</a>`).join('')}
+        ${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}')" class="btn btn-outline" style="font-size:11px;padding:6px 10px">Ver ${a.archivos.length>1?i+1:''}</button>`).join('')}
       </div>
     </div>`).join('')}
   </div>`;

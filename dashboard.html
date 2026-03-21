@@ -467,7 +467,7 @@ async function loadPracticas(){
   // Get materias of this alumno
   const {data:mats}=await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId);
   const matIds=mats?.map(m=>m.materia_id)||[];
-  let query=sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
+  let query=sb.from('practicas').select('*,materias(nombre),perfiles:creado_por(nombre,apellido)').order('semana_inicio',{ascending:false});
   if(matIds.length)query=query.in('materia_id',matIds);
   const {data:practicasRaw}=await query;
   const practicas=(practicasRaw||[]).filter(p=>p.activa!==false);
@@ -483,12 +483,12 @@ async function loadPracticas(){
     return`<div class="prac-card">
       <div class="prac-sem">Semana: ${p.semana_inicio}</div>
       <div class="prac-ttl">${p.titulo}</div>
-      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}${p.perfiles?` · <span style="color:var(--blue)">Prof. ${p.perfiles.nombre} ${p.perfiles.apellido}</span>`:''}</div>
       ${p.descripcion?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.descripcion}</div>`:''}
       <div class="prac-btns">
         ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
         ${entregada
-          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<a href="${s.archivo_url}" target="_blank" style="color:var(--gold);margin-left:6px">Ver ${solList.length>1?i+1:''}</a>`).join('')}</div>`
+          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">Ver ${solList.length>1?i+1:''}</button>`).join('')}</div>`
           :`<div id="upzone-${p.id}" style="margin-top:4px">
               <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
                 <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="setSolFile('${p.id}',this)"/>
@@ -507,6 +507,15 @@ async function loadPracticas(){
 }
 
 const IMG_WARN_MB=5,IMG_MAX_MB=15;
+async function openSolucion(pathOrUrl){
+  // Backward compat: old records stored full signed URL, new ones store path
+  const path=pathOrUrl.startsWith('http')
+    ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
+    :pathOrUrl;
+  const {data}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+  else window.open(pathOrUrl,'_blank');
+}
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function setSolFile(pid,input){
   const files=[...input.files];
@@ -533,9 +542,7 @@ async function submitSolucion(pid){
     const path=`${alumnoId}/${pid}_${Date.now()}_${i}.${ext}`;
     const {data:upData,error:upErr}=await sb.storage.from('soluciones').upload(path,file,{contentType:file.type});
     if(upErr){showMsg(msgEl,`Error: ${upErr.message}`,'err');return}
-    const {data:signed}=await sb.storage.from('soluciones').createSignedUrl(upData.path,60*60*24*30);
-    const url=signed?.signedUrl||'';
-    const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:url,tipo:'imagen'});
+    const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:upData.path,tipo:'imagen'});
     if(error){showMsg(msgEl,error.message,'err');return}
   }
   showMsg(msgEl,`✅ ${files.length} foto${files.length>1?'s':''} entregada${files.length>1?'s':''}`,'ok');
