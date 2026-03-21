@@ -286,12 +286,8 @@
         </div>
       </div>
       <div class="fg"><label>Materia</label><select id="pn-materia"><option value="">Seleccionar materia...</option></select></div>
-      <div class="fg"><label>Período (ej: 2025-1)</label><input type="text" id="pn-periodo" placeholder="2025-1"/></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div class="fg"><label>Nota 1</label><input type="number" id="pn-n1" min="0" max="20" step="0.5" placeholder="--"/></div>
-        <div class="fg"><label>Nota 2</label><input type="number" id="pn-n2" min="0" max="20" step="0.5" placeholder="--"/></div>
-        <div class="fg"><label>Nota 3</label><input type="number" id="pn-n3" min="0" max="20" step="0.5" placeholder="--"/></div>
-      </div>
+      <div class="fg"><label>Título</label><input type="text" id="pn-titulo" placeholder="Ej: Práctica 1, Práctica de repaso..."/></div>
+      <div class="fg"><label>Nota (0–20)</label><input type="number" id="pn-nota" min="0" max="20" step="0.5" placeholder="--"/></div>
       <button class="btn btn-gold" onclick="saveNotaProfesor()">GUARDAR NOTA</button>
       <div class="msg" id="pn-msg"></div>
     </div>
@@ -818,20 +814,17 @@ async function loadNotasAlumno(alumnoId){
   if(!alumnoId){document.getElementById('d-notas-prof').innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Selecciona alumno para ver notas</div></div>';return;}
   const{data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
   if(!data?.length){document.getElementById('d-notas-prof').innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';return;}
-  document.getElementById('d-notas-prof').innerHTML=`<table><thead><tr><th>Materia</th><th>Período</th><th>N1</th><th>N2</th><th>N3</th><th>Prom</th></tr></thead><tbody>${data.map(n=>`<tr><td>${n.materias?.nombre||'--'}</td><td>${n.periodo||'--'}</td><td>${n.nota_1??'--'}</td><td>${n.nota_2??'--'}</td><td>${n.nota_3??'--'}</td><td><strong style="color:${(n.promedio||0)>=11?'var(--green)':'var(--red)'}">${n.promedio??'--'}</strong></td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('d-notas-prof').innerHTML=`<table><thead><tr><th>Materia</th><th>Título</th><th>Nota</th></tr></thead><tbody>${data.map(n=>`<tr><td>${n.materias?.nombre||'--'}</td><td>${n.periodo||'--'}</td><td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td></tr>`).join('')}</tbody></table>`;
 }
 async function saveNotaProfesor(){
   const alumnoId=document.getElementById('pn-alumno').value;
   const materiaId=document.getElementById('pn-materia').value;
-  const periodo=document.getElementById('pn-periodo').value.trim();
-  const n1=parseFloat(document.getElementById('pn-n1').value)||null;
-  const n2=parseFloat(document.getElementById('pn-n2').value)||null;
-  const n3=parseFloat(document.getElementById('pn-n3').value)||null;
+  const titulo=document.getElementById('pn-titulo').value.trim();
+  const nota=parseFloat(document.getElementById('pn-nota').value);
   const msg=document.getElementById('pn-msg');
-  if(!alumnoId||!materiaId||!periodo)return showMsg(msg,'Selecciona alumno, materia y período','err');
-  const ns=[n1,n2,n3].filter(n=>n!==null);
-  const prom=ns.length?parseFloat((ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(2)):null;
-  const{error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
+  if(!alumnoId||!materiaId||!titulo)return showMsg(msg,'Selecciona alumno, materia e ingresa un título','err');
+  if(isNaN(nota)||nota<0||nota>20)return showMsg(msg,'Ingresa una nota válida entre 0 y 20','err');
+  const{error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo:titulo,nota_1:nota,nota_2:null,nota_3:null,promedio:nota},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Nota guardada ✅','ok');
   // FCM al alumno y sus padres
