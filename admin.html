@@ -319,6 +319,7 @@
 <!-- ══ INICIO ══ -->
 <div class="panel active" id="panel-inicio">
   <div class="ph"><div class="ph-left"><div class="eye">Panel de control</div><div class="ttl">DASHBOARD</div></div></div>
+
   <!-- Stats base (admin y dueño) -->
   <div class="cg">
     <div class="sc"><div class="sc-lbl">Alumnos</div><div class="sc-val" id="s-alumnos">--</div><div class="sc-sub">Activos</div></div>
@@ -327,32 +328,39 @@
     <div class="sc"><div class="sc-lbl">Tardanzas</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--</div><div class="sc-sub">Hoy</div></div>
     <div class="sc" style="cursor:pointer" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))"><div class="sc-lbl">Mensajes</div><div class="sc-val" id="s-msgs" style="color:var(--gold)">--</div><div class="sc-sub">No leídos</div></div>
   </div>
-  <!-- Dashboard exclusivo dueño -->
-  <div id="d-dueno-dash" style="display:none">
-    <!-- Mensajes no leídos -->
-    <div class="th" style="margin-top:20px">
-      <span class="th-ttl">💬 Mensajes no leídos de padres</span>
-      <button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))">Ver todos →</button>
-    </div>
-    <div id="d-dash-msgs"><div class="empty"><div class="et">Cargando...</div></div></div>
 
-    <!-- Asistencia hoy por materia -->
-    <div class="th" style="margin-top:20px">
-      <span class="th-ttl">📋 Asistencia de alumnos hoy</span>
+  <!-- Dashboard exclusivo dueño — 3 pestañas -->
+  <div id="d-dueno-dash" style="display:none;margin-top:20px">
+    <div class="aula-tabs">
+      <div class="aula-tab active" id="dtab-cadetes" onclick="showDashTab('cadetes')">🎓 Cadetes</div>
+      <div class="aula-tab" id="dtab-padres" onclick="showDashTab('padres')">
+        👨‍👩‍👧 Padres <span id="dtab-padres-badge" style="display:none;background:var(--gold);color:#000;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px;font-family:'Barlow',sans-serif;font-weight:700">0</span>
+      </div>
+      <div class="aula-tab" id="dtab-profesores" onclick="showDashTab('profesores')">👩‍🏫 Profesores</div>
     </div>
-    <div id="d-dash-asist"><div class="empty"><div class="et">Cargando...</div></div></div>
 
-    <!-- Sesiones activas -->
-    <div class="th" style="margin-top:20px">
-      <span class="th-ttl">🔴 Sesiones de asistencia activas</span>
+    <!-- TAB CADETES -->
+    <div id="dtab-content-cadetes" style="padding-top:16px">
+      <div class="th"><span class="th-ttl">Asistencia por materia — hoy</span></div>
+      <div id="d-dash-asist"><div class="empty"><div class="et">Cargando...</div></div></div>
+      <div class="th" style="margin-top:16px"><span class="th-ttl">Sesiones activas</span></div>
+      <div id="d-dash-sesiones"><div class="empty"><div class="et">Sin sesiones abiertas</div></div></div>
     </div>
-    <div id="d-dash-sesiones"><div class="empty"><div class="et">Sin sesiones abiertas</div></div></div>
 
-    <!-- Asistencia profesores hoy -->
-    <div class="th" style="margin-top:20px">
-      <span class="th-ttl">👩‍🏫 Asistencia de profesores hoy</span>
+    <!-- TAB PADRES -->
+    <div id="dtab-content-padres" style="display:none;padding-top:16px">
+      <div class="th">
+        <span class="th-ttl">Mensajes no leídos</span>
+        <button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="showPanel('contacto',document.querySelector('[onclick*=contacto]'))">Ver todos →</button>
+      </div>
+      <div id="d-dash-msgs"><div class="empty"><div class="et">Cargando...</div></div></div>
     </div>
-    <div id="d-dash-profs"><div class="empty"><div class="et">Sin registros hoy</div></div></div>
+
+    <!-- TAB PROFESORES -->
+    <div id="dtab-content-profesores" style="display:none;padding-top:16px">
+      <div class="th"><span class="th-ttl">Asistencia de profesores — hoy</span></div>
+      <div id="d-dash-profs"><div class="empty"><div class="et">Sin registros hoy</div></div></div>
+    </div>
   </div>
 </div>
 
@@ -1381,39 +1389,28 @@ async function loadDashboard(){
 }
 
 // ── DASHBOARD DUEÑO ──
+function showDashTab(tab){
+  ['cadetes','padres','profesores'].forEach(t=>{
+    document.getElementById('dtab-content-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('dtab-'+t).classList.toggle('active',t===tab);
+  });
+}
+
 async function loadDashboardDueno(){
   document.getElementById('d-dueno-dash').style.display='block';
   const today=todayISO();
 
-  // 1. Mensajes no leídos
-  const {data:msgs}=await sb.from('contacto_mensajes')
-    .select('id,mensaje,creado_en,perfiles!padre_id(nombre,apellido)')
-    .eq('leido',false).order('creado_en',{ascending:false}).limit(5);
-  const msgsEl=document.getElementById('d-dash-msgs');
-  if(!msgs?.length){
-    msgsEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin mensajes no leídos ✅</div></div>`;
-  } else {
-    msgsEl.innerHTML=msgs.map(m=>`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</div>
-        <div style="font-size:12px;color:var(--white);margin-top:4px">${(m.mensaje||'').slice(0,80)}${m.mensaje?.length>80?'…':''}</div>
-      </div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);white-space:nowrap">${new Date(m.creado_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</div>
-    </div>`).join('');
-  }
-
-  // 2. Asistencia hoy por materia
+  // TAB CADETES — asistencia por materia
   const {data:asist}=await sb.from('asistencias')
-    .select('estado,materia_id,aula_id,materias(nombre),aulas(nombre)')
+    .select('estado,materia_id,aula_id,materias(nombre)')
     .eq('fecha',today);
   const asistEl=document.getElementById('d-dash-asist');
   if(!asist?.length){
     asistEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin registros de asistencia hoy</div></div>`;
   } else {
-    // Agrupar por materia
     const byMat={};
     asist.forEach(a=>{
-      const key=a.materia_id||'sin-materia';
+      const key=a.materia_id||'sin';
       if(!byMat[key])byMat[key]={nombre:a.materias?.nombre||'Sin materia',p:0,t:0,au:0};
       if(a.estado==='presente')byMat[key].p++;
       else if(a.estado==='tardanza')byMat[key].t++;
@@ -1429,7 +1426,7 @@ async function loadDashboardDueno(){
     }</tbody></table>`;
   }
 
-  // 3. Sesiones activas
+  // Sesiones activas (dentro de cadetes)
   const {data:sesiones}=await sb.from('sesiones_asistencia')
     .select('*,aulas(nombre),materias(nombre)')
     .eq('fecha',today).eq('cerrada',false);
@@ -1446,7 +1443,28 @@ async function loadDashboardDueno(){
     </div>`).join('');
   }
 
-  // 4. Asistencia profesores hoy (tabla asistencias_profesores)
+  // TAB PADRES — mensajes no leídos
+  const {data:msgs}=await sb.from('contacto_mensajes')
+    .select('id,mensaje,creado_en,perfiles!padre_id(nombre,apellido)')
+    .eq('leido',false).order('creado_en',{ascending:false}).limit(10);
+  const msgsEl=document.getElementById('d-dash-msgs');
+  const noLeidosCount=msgs?.length||0;
+  // Badge en pestaña
+  const badge=document.getElementById('dtab-padres-badge');
+  if(badge){badge.textContent=noLeidosCount;badge.style.display=noLeidosCount?'':'none';}
+  if(!noLeidosCount){
+    msgsEl.innerHTML=`<div class="empty" style="padding:12px"><div class="et">Sin mensajes no leídos ✅</div></div>`;
+  } else {
+    msgsEl.innerHTML=msgs.map(m=>`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:10px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</div>
+        <div style="font-size:12px;color:var(--white);margin-top:4px">${(m.mensaje||'').slice(0,100)}${(m.mensaje||'').length>100?'…':''}</div>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);white-space:nowrap">${new Date(m.creado_en).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+  }
+
+  // TAB PROFESORES — asistencia del día
   const {data:profAsist}=await sb.from('asistencias_profesores')
     .select('estado,hora_ingreso,profesores(perfiles(nombre,apellido))')
     .eq('fecha',today);
