@@ -1191,7 +1191,20 @@ async function downloadSolucionesZip(pid,pracTitulo,btnEl){
 }
 
 async function deleteProfPractica(id){
-  if(!await myConfirm('¿Eliminar esta práctica? Se quitará para todos los alumnos.'))return;
+  if(!await myConfirm('¿Eliminar esta práctica? También se borrarán todas las soluciones entregadas.'))return;
+  // Borrar archivos de soluciones en storage
+  const {data:sols}=await sb.from('soluciones').select('archivo_url').eq('practica_id',id);
+  if(sols?.length){
+    const paths=sols.map(s=>_solPath(s.archivo_url)).filter(Boolean);
+    if(paths.length)await sb.storage.from('soluciones').remove(paths);
+  }
+  // Borrar PDFs de la práctica en storage
+  const {data:prac}=await sb.from('practicas').select('archivo_url').eq('id',id).single();
+  if(prac?.archivo_url){
+    const paths=parsePracUrls(prac.archivo_url).map(u=>{const m=u.match(/\/practicas\/(.*?)(\?|$)/);return m?m[1]:null;}).filter(Boolean);
+    if(paths.length)await sb.storage.from('practicas').remove(paths);
+  }
+  // Borrar práctica (CASCADE borra soluciones de DB)
   const {error}=await sb.from('practicas').delete().eq('id',id);
   if(error)return myAlert('Error: '+error.message);
   loadProfPracticas();
