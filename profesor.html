@@ -774,11 +774,12 @@ function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 // ── NOTAS ──
 let pnAlumnos=[],pnMaterias=[];
 async function loadNotasSelects(){
-  const [{data:alumnos},{data:materias}]=await Promise.all([
-    sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').order('id'),
-    sb.from('materias').select('id,nombre').order('nombre')
+  const [{data:mpRows},{data:alumnos}]=await Promise.all([
+    sb.from('materia_profesor').select('materias(id,nombre)').eq('profesor_id',profesorId),
+    sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').eq('activo',true).order('id')
   ]);
-  pnAlumnos=alumnos||[];pnMaterias=materias||[];
+  pnMaterias=(mpRows||[]).map(r=>r.materias).filter(Boolean);
+  pnAlumnos=alumnos||[];
   const sa=document.getElementById('pn-alumno');
   const sm=document.getElementById('pn-materia');
   sa.innerHTML='<option value="">Seleccionar alumno...</option>'+pnAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.apellido}, ${a.perfiles?.nombre} — DNI ${a.perfiles?.dni||'--'}</option>`).join('');
