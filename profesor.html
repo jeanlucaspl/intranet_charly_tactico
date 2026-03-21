@@ -787,6 +787,7 @@ async function loadNotasSelects(){
   pnAlumnos=alumnos||[];
   const sm=document.getElementById('pn-materia');
   sm.innerHTML='<option value="">Seleccionar materia...</option>'+pnMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
+  loadTodasNotas();
 }
 function pnSuggest(inp){
   const q=inp.value.trim().toLowerCase();
@@ -811,10 +812,28 @@ function pnSelect(id,nombre){
   loadNotasAlumno(id);
 }
 async function loadNotasAlumno(alumnoId){
-  if(!alumnoId){document.getElementById('d-notas-prof').innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Selecciona alumno para ver notas</div></div>';return;}
-  const{data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
-  if(!data?.length){document.getElementById('d-notas-prof').innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';return;}
-  document.getElementById('d-notas-prof').innerHTML=`<table><thead><tr><th>Materia</th><th>Título</th><th>Nota</th></tr></thead><tbody>${data.map(n=>`<tr><td>${n.materias?.nombre||'--'}</td><td>${n.periodo||'--'}</td><td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td></tr>`).join('')}</tbody></table>`;
+  // solo refresca la tabla general, alumnoId ignorado
+  await loadTodasNotas();
+}
+async function loadTodasNotas(){
+  const el=document.getElementById('d-notas-prof');
+  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin materias asignadas</div></div>';return;}
+  const materiaIds=pnMaterias.map(m=>m.id);
+  const{data}=await sb.from('notas')
+    .select('*,materias(nombre),alumnos(perfiles(nombre,apellido,dni))')
+    .in('materia_id',materiaIds)
+    .order('creado_en',{ascending:false});
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Materia</th><th>Alumno</th><th>DNI</th><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${
+    data.map(n=>`<tr>
+      <td>${n.materias?.nombre||'--'}</td>
+      <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
+      <td style="color:var(--muted);font-size:11px">${n.alumnos?.perfiles?.dni||'--'}</td>
+      <td>${n.periodo||'--'}</td>
+      <td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td>
+      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+    </tr>`).join('')
+  }</tbody></table>`;
 }
 async function saveNotaProfesor(){
   const alumnoId=document.getElementById('pn-alumno').value;
@@ -834,7 +853,7 @@ async function saveNotaProfesor(){
     sendFcmToUsers([al.perfil_id],'📝 Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
     sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
   });
-  loadNotasAlumno(alumnoId);
+  loadTodasNotas();
 }
 
 init();
