@@ -671,8 +671,10 @@ const HOR_DIAS_LABEL=['Lunes','Martes','Miércoles','Jueves','Viernes'];
 
 let horCurrentAulaId=null,horAulasData=[];
 async function loadHorario(){
-  // Solo aulas donde este profesor tiene slots asignados
-  const {data:slots}=await sb.from('horario_plantilla').select('aula_id,aulas(id,nombre)').eq('profesor_id',profesorId);
+  const {data:mpRows}=await sb.from('materia_profesor').select('materia_id').eq('profesor_id',profesorId);
+  const matIds=(mpRows||[]).map(r=>r.materia_id);
+  if(!matIds.length){document.getElementById('hor-aula-tabs').innerHTML='';document.getElementById('d-horario').innerHTML='<div class="empty"><div class="et">Sin materias asignadas</div></div>';return;}
+  const {data:slots}=await sb.from('horario_plantilla').select('aula_id,aulas(id,nombre)').in('materia_id',matIds);
   const seen=new Set();
   horAulasData=(slots||[]).map(s=>s.aulas).filter(a=>{if(!a||seen.has(a.id))return false;seen.add(a.id);return true;});
   renderHorAulaTabs();
@@ -687,7 +689,9 @@ async function selectHorAulaTab(aulaId){
   horCurrentAulaId=aulaId;
   renderHorAulaTabs();
   const wrap=document.getElementById('d-horario');
-  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId).eq('profesor_id',profesorId);
+  const {data:mpRows2}=await sb.from('materia_profesor').select('materia_id').eq('profesor_id',profesorId);
+  const matIds2=(mpRows2||[]).map(r=>r.materia_id);
+  const {data}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId).in('materia_id',matIds2.length?matIds2:['00000000-0000-0000-0000-000000000000']);
   const horData={};
   (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
   let html=`<table class="hor-table"><thead><tr><th style="width:72px">HORA/DÍA</th>${HOR_DIAS_LABEL.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
