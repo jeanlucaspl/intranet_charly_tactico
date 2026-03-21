@@ -2914,9 +2914,9 @@ function populateSelects(){
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   const fAula=document.getElementById('f-aula');if(fAula)fAula.innerHTML='<option value="">-- Selecciona aula --</option>'+aulaOpts;
   ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
-  document.getElementById('q-nota-materia').innerHTML='<option value="">Todas</option>'+matOpts;
+  const qNotaMat=document.getElementById('q-nota-materia');if(qNotaMat)qNotaMat.innerHTML='<option value="">Todas</option>'+matOpts;
   // man-alumno is now a hidden input populated via search — no select to fill
-  document.getElementById('n-dest').innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
+  const nDest=document.getElementById('n-dest');if(nDest)nDest.innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
 function filterAlumnos(){
