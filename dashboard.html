@@ -551,19 +551,27 @@ function removeSolFile(pid,idx){
   renderSolPreview(pid);
   if(!solucionFiles[pid].length)document.getElementById(`swarn-${pid}`).style.display='none';
 }
+function _leerArchivo(f){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=()=>rej(new Error('No se pudo leer '+f.name));
+    r.readAsArrayBuffer(f);
+  });
+}
 async function setSolFile(pid,input){
   const nuevas=[...input.files];
   if(!nuevas.length)return;
   const warnEl=document.getElementById(`swarn-${pid}`);
   const bloqueadas=nuevas.filter(f=>f.size>IMG_MAX_MB*1024*1024);
   if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=`⛔ ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;input.value='';return;}
-  // Leer a memoria inmediatamente antes de cualquier reset (Android revoca acceso si se resetea el input)
+  // Leer con FileReader (más compatible en Android que arrayBuffer)
   const leidos=[];
   for(const f of nuevas){
     try{
-      const buf=await f.arrayBuffer();
+      const buf=await _leerArchivo(f);
       leidos.push({buf,name:f.name,type:f.type||'image/jpeg',size:f.size});
-    }catch(e){warnEl.style.display='block';warnEl.textContent=`⛔ No se pudo leer ${f.name}. Intentá seleccionarla de nuevo.`;input.value='';return;}
+    }catch(e){warnEl.style.display='block';warnEl.textContent=`⛔ No se pudo leer ${f.name}. Probá seleccionarla desde Archivos en lugar de Galería.`;input.value='';return;}
   }
   input.value='';
   if(!solucionFiles[pid])solucionFiles[pid]=[];
