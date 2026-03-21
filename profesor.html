@@ -128,6 +128,41 @@
     .empty .ei{font-size:36px;margin-bottom:10px}
     .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
+    /* PRÁCTICAS */
+    .prac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px}
+    .prac-card{background:var(--navy2);border:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+    .prac-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold)}
+    .prac-semana{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.25em;color:var(--gold);text-transform:uppercase}
+    .prac-titulo{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1.1}
+    .prac-mat{font-size:12px;color:var(--muted)}
+    .prac-btns{display:flex;flex-direction:column;gap:6px}
+    /* FILE UPLOAD */
+    .file-drop{border:2px dashed var(--border);padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative}
+    .file-drop:hover,.file-drop.dragover{border-color:var(--gold)}
+    .file-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .file-drop .fd-icon{font-size:28px;margin-bottom:8px}
+    .file-drop .fd-txt{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+    .file-drop .fd-name{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--gold);margin-top:6px;font-weight:600}
+    /* MODAL */
+    .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;padding:20px}
+    .mo.open{display:flex}
+    .md{background:var(--navy2);border:1px solid var(--border);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+    .md-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+    .md-ttl{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em}
+    .md-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+    .md-bd{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+    .md-ft{display:flex;gap:8px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--border)}
+    .fg{display:flex;flex-direction:column;gap:6px}
+    .fg label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+    .fg input,.fg select,.fg textarea{background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;width:100%;transition:border-color .2s;resize:vertical}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+    /* SOLUCIONES */
+    .sol-item{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--border)}
+    .sol-item:last-child{border-bottom:none}
+    .sol-icon{font-size:22px;flex-shrink:0}
+    .sol-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.05em}
+    .sol-info{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:2px}
+
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--blue);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
@@ -158,6 +193,8 @@
     <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Mi Horario</button>
     <button class="sb-link" onclick="showPanel('historial',this)"><span class="ic">📅</span>Mi Historial</button>
     <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📝</span>Notas</button>
+    <button class="sb-link" onclick="showPanel('practicas',this)"><span class="ic">📄</span>Prácticas</button>
+    <button class="sb-link" onclick="showPanel('soluciones',this)"><span class="ic">📥</span>Soluciones</button>
     <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones <span id="s-notif" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px;display:none"></span></button>
   </div>
 </div>
@@ -326,6 +363,53 @@
     <div class="th"><span class="th-ttl">Notas registradas</span></div>
     <div id="pn-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
     <div id="d-notas-prof"><div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div></div>
+  </div>
+</div>
+
+<!-- PRÁCTICAS -->
+<div class="panel" id="panel-practicas">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Material académico</div><div class="ttl">PRÁCTICAS</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-prof-practica')">+ Subir Práctica</button>
+  </div>
+  <div class="prac-grid" id="d-prof-practicas"><div class="empty"><div class="ei">📄</div><div class="et">Cargando...</div></div></div>
+</div>
+
+<!-- SOLUCIONES -->
+<div class="panel" id="panel-soluciones">
+  <div class="ph"><div class="ph-left"><div class="eye">Entregas de alumnos</div><div class="ttl">SOLUCIONES</div></div></div>
+  <div style="margin-bottom:14px">
+    <select id="q-prof-sol-practica" onchange="loadProfSoluciones()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;width:100%">
+      <option value="">-- Selecciona una práctica --</option>
+    </select>
+  </div>
+  <div id="d-prof-soluciones"><div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div></div>
+</div>
+
+<!-- MODAL PRÁCTICA PROFESOR -->
+<div class="mo" id="md-prof-practica">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">SUBIR PRÁCTICA</div><button class="md-x" onclick="closeMd('md-prof-practica')">✕</button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-prof-practica"></div>
+      <div class="fg"><label>Semana (lunes)</label><input type="date" id="pp-semana"/></div>
+      <div class="fg"><label>Materia</label><select id="pp-materia"><option value="">-- Selecciona --</option></select></div>
+      <div class="fg"><label>Título</label><input type="text" id="pp-titulo" placeholder="Práctica N°1 — Razonamiento Verbal"/></div>
+      <div class="fg"><label>Descripción (opcional)</label><textarea id="pp-desc" rows="2" placeholder="Instrucciones..."></textarea></div>
+      <div class="fg"><label>Archivos PDF</label>
+        <div class="file-drop">
+          <input type="file" accept=".pdf" multiple onchange="setProfPracticaFiles(this)"/>
+          <div class="fd-icon">📄</div>
+          <div class="fd-txt">Arrastra uno o varios PDFs aquí</div>
+          <div class="fd-name" id="pp-fname"></div>
+        </div>
+        <div id="pp-warn-pdf" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.05em;line-height:1.6;color:var(--yellow)"></div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-prof-practica')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-subir-pp" onclick="saveProfPractica()">SUBIR PRÁCTICA</button>
+    </div>
   </div>
 </div>
 
@@ -867,6 +951,8 @@ function showPanel(id,btn){
   if(id==='historial')loadHistorial();
   if(id==='asistencia'){checkYaMarcado();checkDeviceStatusProfesor();}
   if(id==='notas')loadNotasSelects();
+  if(id==='practicas'){loadProfPracticas();populateProfPracticaSelect();}
+  if(id==='soluciones')loadProfPracticas();
   if(id==='notificaciones')loadNotifs();
 }
 async function alertarAdminGPS(motivo='GPS denegado'){
@@ -1017,6 +1103,126 @@ async function saveNotaProfesor(){
     sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
   });
   loadTodasNotas();
+}
+
+// ── PRÁCTICAS PROFESOR ──
+const PDF_WARN_MB=10,PDF_MAX_MB=20;
+function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
+let profPracticaFiles=[];
+
+function openMd(id){document.getElementById(id).classList.add('open');}
+function closeMd(id){document.getElementById(id).classList.remove('open');}
+
+function setProfPracticaFiles(input){
+  const files=[...input.files];
+  if(!files.length)return;
+  const warn=document.getElementById('pp-warn-pdf');
+  const bloqueados=files.filter(f=>f.size>PDF_MAX_MB*1024*1024);
+  const pesados=files.filter(f=>f.size>PDF_WARN_MB*1024*1024);
+  if(bloqueados.length){
+    warn.style.display='block';
+    warn.innerHTML=`⛔ <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a>.`;
+    return;
+  }
+  if(pesados.length){
+    warn.style.display='block';
+    warn.innerHTML=`⚠️ Archivo pesado. Podés comprimirlo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subir.`;
+  } else warn.style.display='none';
+  profPracticaFiles=files;
+  document.getElementById('pp-fname').textContent=files.length===1?files[0].name:`${files.length} archivos seleccionados`;
+}
+
+async function saveProfPractica(){
+  const semana=document.getElementById('pp-semana').value;
+  const materiaId=document.getElementById('pp-materia').value;
+  const titulo=document.getElementById('pp-titulo').value.trim();
+  const desc=document.getElementById('pp-desc').value.trim();
+  const msg=document.getElementById('msg-prof-practica');
+  if(!semana||!materiaId||!titulo)return showMsg(msg,'Completa semana, materia y título','err');
+  if(!profPracticaFiles.length)return showMsg(msg,'Selecciona al menos un PDF','err');
+  const btn=document.getElementById('btn-subir-pp');
+  btn.disabled=true;btn.textContent='SUBIENDO...';
+  const urls=[];
+  for(let i=0;i<profPracticaFiles.length;i++){
+    const f=profPracticaFiles[i];
+    showMsg(msg,`Subiendo ${i+1}/${profPracticaFiles.length}: ${f.name}...`,'ok');
+    const path=`${semana}/${materiaId}_${Date.now()}_${i}.pdf`;
+    const {data:upData,error:upErr}=await sb.storage.from('practicas').upload(path,f,{contentType:'application/pdf'});
+    if(upErr){showMsg(msg,`Error: ${upErr.message}`,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return;}
+    urls.push(STORAGE+'practicas/'+upData.path);
+  }
+  const archivoUrl=urls.length===1?urls[0]:JSON.stringify(urls);
+  const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true});
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return;}
+  showMsg(msg,'✅ Práctica subida correctamente','ok');
+  profPracticaFiles=[];
+  document.getElementById('pp-fname').textContent='';
+  document.getElementById('pp-warn-pdf').style.display='none';
+  btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';
+  await loadProfPracticas();
+  setTimeout(()=>closeMd('md-prof-practica'),1400);
+}
+
+async function populateProfPracticaSelect(){
+  if(!profesorId)return;
+  const {data:mpRows}=await sb.from('materia_profesor').select('materia_id,materias(id,nombre)').eq('profesor_id',profesorId);
+  const sel=document.getElementById('pp-materia');
+  sel.innerHTML='<option value="">-- Selecciona --</option>'+
+    (mpRows||[]).map(r=>`<option value="${r.materias?.id}">${r.materias?.nombre}</option>`).join('');
+}
+
+async function loadProfPracticas(){
+  if(!profesorId)return;
+  const {data:mpRows}=await sb.from('materia_profesor').select('materia_id').eq('profesor_id',profesorId);
+  const matIds=(mpRows||[]).map(r=>r.materia_id);
+  if(!matIds.length){document.getElementById('d-prof-practicas').innerHTML='<div class="empty"><div class="ei">📄</div><div class="et">Sin materias asignadas</div></div>';return;}
+  const {data}=await sb.from('practicas').select('*,materias(nombre)').in('materia_id',matIds).order('semana_inicio',{ascending:false});
+  const el=document.getElementById('d-prof-practicas');
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas aún</div></div>';return;}
+  el.innerHTML=data.map(p=>{
+    const urls=parsePracUrls(p.archivo_url);
+    const links=urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 ${urls.length>1?'PDF '+(i+1):'Descargar PDF'}</a>`).join('');
+    return`<div class="prac-card">
+      <div class="prac-semana">Semana: ${p.semana_inicio}</div>
+      <div class="prac-titulo">${p.titulo}</div>
+      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:${p.activa!==false?'var(--green)':'var(--red)'}">
+        ${p.activa!==false?'👁️ Visible para alumnos':'🙈 Oculta'}
+      </div>
+      <div class="prac-btns">${links||'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}</div>
+    </div>`;
+  }).join('');
+  // Populate soluciones select
+  const sel=document.getElementById('q-prof-sol-practica');
+  sel.innerHTML='<option value="">-- Selecciona una práctica --</option>'+
+    data.map(p=>`<option value="${p.id}">${p.titulo} (${p.semana_inicio})</option>`).join('');
+}
+
+async function loadProfSoluciones(){
+  const pid=document.getElementById('q-prof-sol-practica').value;
+  const el=document.getElementById('d-prof-soluciones');
+  if(!pid){el.innerHTML='<div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div>';return;}
+  const {data}=await sb.from('soluciones').select('*,alumnos(perfiles(nombre,apellido))').eq('practica_id',pid).order('entregado_en',{ascending:false});
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📥</div><div class="et">Sin entregas aún</div></div>';return;}
+  // Agrupar por alumno
+  const byAlumno={};
+  data.forEach(s=>{
+    const key=s.alumno_id;
+    if(!byAlumno[key]){byAlumno[key]={nombre:`${s.alumnos?.perfiles?.nombre||''} ${s.alumnos?.perfiles?.apellido||''}`.trim(),archivos:[]};}
+    byAlumno[key].archivos.push(s);
+  });
+  el.innerHTML=`<div style="background:var(--navy2);border:1px solid var(--border)">
+    ${Object.values(byAlumno).map(a=>`<div class="sol-item">
+      <div class="sol-icon">🖼️</div>
+      <div style="flex:1">
+        <div class="sol-name">${a.nombre}</div>
+        <div class="sol-info">Entregó ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${a.archivos.map((s,i)=>`<a href="${s.archivo_url}" target="_blank" class="btn btn-outline" style="font-size:11px;padding:6px 10px;text-decoration:none">Ver ${a.archivos.length>1?i+1:''}</a>`).join('')}
+      </div>
+    </div>`).join('')}
+  </div>`;
 }
 
 let _dialogResolve=null;
