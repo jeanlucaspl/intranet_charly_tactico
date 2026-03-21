@@ -837,6 +837,24 @@
   </div>
 </div>
 
+<!-- MODAL ASIGNAR PROFESORES A MATERIA -->
+<div class="mo" id="md-mat-prof">
+  <div class="md">
+    <div class="md-hd"><div class="md-ttl">PROFESORES DE MATERIA</div><button class="md-x" onclick="closeMd('md-mat-prof')">✕</button></div>
+    <div class="md-bd">
+      <input type="hidden" id="mmp-materia-id"/>
+      <div class="msg" id="msg-mat-prof"></div>
+      <div class="fg full"><label>Seleccioná los profesores</label>
+        <div id="mmp-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);padding:8px;background:var(--navy)"></div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-mat-prof')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveMatProf()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HORARIO -->
 <div class="mo" id="md-horario">
   <div class="md">
@@ -1279,7 +1297,7 @@ async function loadAlumnos(){
   renderAttGrid(allAlumnos);
 }
 async function loadMaterias(){
-  const {data,error} = await sb.from('materias').select('*,perfiles!profesor_id(nombre,apellido)').order('nombre');
+  const {data,error} = await sb.from('materias').select('*,materia_profesor(profesor_id,profesores(perfiles(nombre,apellido)))').order('nombre');
   if(error)console.error('loadMaterias error:',error.message,error.code);
   allMaterias = data||[];
   renderMaterias();
@@ -1827,11 +1845,14 @@ function renderAulas(){
 }
 function renderMaterias(){
   if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin materias registradas</div></div>`;return}
-  document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>`<tr>
+  document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Profesores</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>{
+    const profs=(m.materia_profesor||[]).map(mp=>`${mp.profesores?.perfiles?.nombre||''} ${mp.profesores?.perfiles?.apellido||''}`.trim()).filter(Boolean).join(', ')||'<span style="color:var(--muted)">Sin asignar</span>';
+    return`<tr>
     <td><strong>${m.nombre}</strong></td>
     <td>${m.codigo||'--'}</td>
-    <td>${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
-  </tr>`).join('')}</tbody></table>`;
+    <td style="font-size:11px">${profs}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">${esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">👩‍🏫 Asignar</button><button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
+  </tr>`;}).join('')}</tbody></table>`;
 }
 function renderNotas(data){
   if(!data.length){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas</div></div>`;return}
@@ -1992,6 +2013,32 @@ async function saveMateria(){
   sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📚 Nueva materia',`Se incorporó la materia "${nombre}" a la academia.`);});
   await loadMaterias(); populateSelects();
   setTimeout(()=>closeMd('md-materia'),1200);
+}
+async function openMatProf(materiaId){
+  document.getElementById('mmp-materia-id').value=materiaId;
+  const {data}=await sb.from('materia_profesor').select('profesor_id').eq('materia_id',materiaId);
+  const asignados=new Set((data||[]).map(r=>r.profesor_id));
+  document.getElementById('mmp-list').innerHTML=allProfesoresActivos.length
+    ?allProfesoresActivos.map(p=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;cursor:pointer;border-bottom:1px solid var(--border)">
+        <input type="checkbox" value="${p.id}" ${asignados.has(p.id)?'checked':''}>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px">${p.perfiles?.nombre||''} ${p.perfiles?.apellido||''}</span>
+      </label>`).join('')
+    :'<div style="color:var(--muted);font-size:12px;padding:8px">No hay profesores registrados</div>';
+  openMd('md-mat-prof');
+}
+async function saveMatProf(){
+  const materiaId=document.getElementById('mmp-materia-id').value;
+  const msg=document.getElementById('msg-mat-prof');
+  const checks=[...document.querySelectorAll('#mmp-list input[type=checkbox]')];
+  const seleccionados=checks.filter(c=>c.checked).map(c=>c.value);
+  const {error:delErr}=await sb.from('materia_profesor').delete().eq('materia_id',materiaId);
+  if(delErr)return showMsg(msg,delErr.message,'err');
+  if(seleccionados.length){
+    const {error:insErr}=await sb.from('materia_profesor').insert(seleccionados.map(pid=>({materia_id:materiaId,profesor_id:pid})));
+    if(insErr)return showMsg(msg,insErr.message,'err');
+  }
+  closeMd('md-mat-prof');
+  await loadMaterias();
 }
 async function saveHorario(){
   const semana=document.getElementById('hor-semana').value;

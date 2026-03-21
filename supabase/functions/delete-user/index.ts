@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
     if (profesor_id) {
       let e = await del(sb, 'asistencias_profesores', 'profesor_id', profesor_id)
       if (e) errors.push(e)
+      e = await del(sb, 'materia_profesor', 'profesor_id', profesor_id)
+      if (e) errors.push(e)
       e = await del(sb, 'profesores', 'id', profesor_id)
       if (e) errors.push(e)
     }
@@ -62,8 +64,10 @@ Deno.serve(async (req) => {
       for (const prof of (profRows || [])) {
         const e1 = await del(sb, 'asistencias_profesores', 'profesor_id', prof.id)
         if (e1) errors.push(e1)
-        const e2 = await del(sb, 'profesores', 'id', prof.id)
+        const e2 = await del(sb, 'materia_profesor', 'profesor_id', prof.id)
         if (e2) errors.push(e2)
+        const e3 = await del(sb, 'profesores', 'id', prof.id)
+        if (e3) errors.push(e3)
       }
 
       // 3. Limpiar registros de alumno si existen (datos inconsistentes)
