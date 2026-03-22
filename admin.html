@@ -16,6 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -504,9 +505,9 @@
       <div class="cam-wrap"><video id="f-video" autoplay muted playsinline></video><canvas id="f-canvas"></canvas></div>
       <div class="cam-status cs-idle" id="f-camst">Cámara detenida</div>
       <div style="display:flex;gap:8px;width:100%;max-width:400px">
-        <button class="btn btn-green" style="flex:1" onclick="captureVerify()">📸 Capturar</button>
-        <button class="btn btn-outline" onclick="showFacialTab('manual')">✏️ Ir a Manual</button>
+        <button class="btn btn-outline" style="flex:1" onclick="showFacialTab('manual')">✏️ Asistencia Manual</button>
       </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center">Reconocimiento automático en tiempo real — apunta la cámara al alumno</div>
       <div class="verify-card" id="verify-card">
         <div class="verify-name" id="v-name"></div>
         <div class="verify-info" id="v-info"></div>
@@ -1210,6 +1211,8 @@ let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, prac
 let esDueno = false, uid = null;
 let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
+let faceApiLoaded=false, facialScanLoop=null, facialMatchStreak=0, facialFaceMatcher=null;
+const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.45, FACIAL_SCAN_MS=600;
 
 // ── UBICACIÓN ACADEMIA ──
 let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'Jr. Túpac Amaru 187, Tarapoto 22201'};
@@ -1318,6 +1321,7 @@ async function init(){
   await loadAcademiaConfig();
   await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
   renderAulaTabs();
+  cargarModelosFacial();
   if(esDueno) loadProfesoresTexto();
   await Promise.all([loadDashboard(),loadNotas(),loadPracticas(),loadReportes(),loadNotifHist(),loadContacto(),loadPadres(),loadContrasenas()]);
   if(pf?.rol==='dueno'){loadAdmins();loadProfesores();}
@@ -1366,6 +1370,30 @@ async function loadAlumnos(){
   renderAlumnos(allAlumnos);
   renderAlumnosInactivos(allAlumnosInactivos);
   renderAttGrid(allAlumnos);
+  construirFaceMatcher();
+}
+async function cargarModelosFacial(){
+  if(typeof faceapi==='undefined')return;
+  try{
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
+    faceApiLoaded=true;
+    construirFaceMatcher();
+  }catch(e){console.warn('face-api modelos no cargaron:',e);}
+}
+function construirFaceMatcher(){
+  if(!faceApiLoaded||!allAlumnos.length)return;
+  const labeled=allAlumnos
+    .filter(a=>a.foto_descriptor)
+    .map(a=>new faceapi.LabeledFaceDescriptors(
+      a.id,
+      [new Float32Array(Object.values(a.foto_descriptor))]
+    ));
+  facialFaceMatcher=labeled.length?new faceapi.FaceMatcher(labeled,FACIAL_UMBRAL):null;
 }
 async function loadMaterias(){
   const {data,error} = await sb.from('materias').select('*,materia_profesor(profesor_id,profesores(perfiles(nombre,apellido)))').order('nombre');
@@ -2767,12 +2795,14 @@ async function startCam(){
     facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
     v.addEventListener('loadedmetadata',()=>{const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight});
-    setCamSt('✅ Cámara activa — Listo','cs-ok');
+    iniciarFacialScan();
   }catch(e){setCamSt('❌ Error: '+e.message,'cs-fail')}
 }
 function stopCam(){
+  detenerFacialScan();
   if(facialStream)facialStream.getTracks().forEach(t=>t.stop());
   facialStream=null;document.getElementById('f-video').srcObject=null;
+  const c=document.getElementById('f-canvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
   setCamSt('Cámara detenida','cs-idle');document.getElementById('verify-card').style.display='none';
 }
 async function flipCam(){
@@ -2782,21 +2812,73 @@ async function flipCam(){
   if(facialStream){await stopCam();await startCam();}
 }
 function setCamSt(txt,cls){const el=document.getElementById('f-camst');el.textContent=txt;el.className='cam-status '+cls}
-async function captureVerify(){
-  if(!facialStream)return await myAlert('Activa la cámara primero.');
+function iniciarFacialScan(){
+  if(facialScanLoop)return;
+  facialMatchStreak=0;
+  if(!faceApiLoaded){
+    setCamSt('⏳ Cargando modelos de reconocimiento...','cs-scan');
+    const wait=setInterval(()=>{if(faceApiLoaded){clearInterval(wait);iniciarFacialScan();}},500);
+    return;
+  }
+  if(!facialFaceMatcher){
+    setCamSt('⚠️ Ningún alumno tiene foto registrada — usa Asistencia Manual','cs-scan');
+    return;
+  }
+  setCamSt('🔍 Escaneando rostros en tiempo real...','cs-scan');
+  facialScanLoop=setInterval(scanFrameFacial,FACIAL_SCAN_MS);
+}
+function detenerFacialScan(){
+  if(facialScanLoop){clearInterval(facialScanLoop);facialScanLoop=null;}
+  facialMatchStreak=0;
+}
+async function scanFrameFacial(){
+  if(!facialStream||!faceApiLoaded||!facialFaceMatcher)return;
+  if(verifyAlumno)return; // ya hay un alumno esperando confirmación
   const v=document.getElementById('f-video'),c=document.getElementById('f-canvas');
-  c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
-  setCamSt('🔍 Analizando rostro...','cs-scan');
-  await new Promise(r=>setTimeout(r,1200));
-  // Demo: pick random pending alumno
-  const logged=facialLog.map(l=>l.id);
-  const pending=allAlumnos.filter(a=>!logged.includes(a.id));
-  if(!pending.length){setCamSt('✅ Todos registrados','cs-ok');return}
-  verifyAlumno=pending[Math.floor(Math.random()*Math.min(pending.length,3))];
-  document.getElementById('v-name').textContent=`${verifyAlumno.perfiles?.nombre} ${verifyAlumno.perfiles?.apellido}`;
-  document.getElementById('v-info').textContent=`Código: ${verifyAlumno.codigo} · ${verifyAlumno.turno||''}`;
-  document.getElementById('verify-card').style.display='block';
-  setCamSt(`👤 Identificado: ${verifyAlumno.perfiles?.nombre}`,'cs-ok');
+  if(!v.videoWidth)return;
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  try{
+    const det=await faceapi
+      .detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+      .withFaceLandmarks().withFaceDescriptor();
+    if(!det){facialMatchStreak=0;setCamSt('🔍 Buscando rostro...','cs-scan');return;}
+    const resized=faceapi.resizeResults(det,{width:v.videoWidth,height:v.videoHeight});
+    const box=resized.detection.box;
+    const match=facialFaceMatcher.findBestMatch(det.descriptor);
+    const matched=match.label!=='unknown';
+    ctx.strokeStyle=matched?'#4caf7d':'#e8c96a';
+    ctx.lineWidth=3;
+    ctx.strokeRect(box.x,box.y,box.width,box.height);
+    ctx.fillStyle=matched?'rgba(76,175,125,0.15)':'rgba(232,201,106,0.1)';
+    ctx.fillRect(box.x,box.y,box.width,box.height);
+    ctx.fillStyle=matched?'#4caf7d':'#e8c96a';
+    ctx.font='bold 14px Barlow Condensed, sans-serif';
+    const pct=matched?Math.round((1-match.distance)*100):null;
+    ctx.fillText(matched?`✓ ${pct}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
+    if(matched){
+      facialMatchStreak++;
+      setCamSt(`🟢 Reconociendo... (${facialMatchStreak}/${FACIAL_MATCH_NEEDED})`,'cs-ok');
+      if(facialMatchStreak>=FACIAL_MATCH_NEEDED){
+        detenerFacialScan();
+        const alumno=allAlumnos.find(a=>a.id===match.label);
+        if(alumno){
+          verifyAlumno=alumno;
+          document.getElementById('v-name').textContent=`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`;
+          document.getElementById('v-info').textContent=`Código: ${alumno.codigo} · ${alumno.turno||''}`;
+          document.getElementById('verify-card').style.display='block';
+          setCamSt(`👤 Identificado: ${alumno.perfiles?.nombre}`,'cs-ok');
+        }else{
+          facialMatchStreak=0;
+          iniciarFacialScan();
+        }
+      }
+    }else{
+      facialMatchStreak=0;
+      setCamSt(`🟡 Rostro detectado — buscando coincidencia...`,'cs-scan');
+    }
+  }catch(e){console.warn('scanFrameFacial error:',e.message);}
 }
 async function confirmAtt(estado){
   if(!verifyAlumno)return;
@@ -2809,8 +2891,14 @@ async function confirmAtt(estado){
   addFacialLog(verifyAlumno,estado,true);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
   setCamSt('✅ Registrado — Siguiente cadete','cs-ok');loadDashboard();
+  if(facialStream)iniciarFacialScan();
 }
-function rejectVerify(){verifyAlumno=null;document.getElementById('verify-card').style.display='none';setCamSt('⚠️ Rechazado — Intenta de nuevo','cs-scan')}
+function rejectVerify(){
+  verifyAlumno=null;
+  document.getElementById('verify-card').style.display='none';
+  setCamSt('⚠️ Rechazado — Buscando siguiente...','cs-scan');
+  if(facialStream)iniciarFacialScan();
+}
 function addFacialLog(alumno,estado,facial){
   facialLog.push({id:alumno.id,nombre:`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`,estado,facial,hora:new Date().toTimeString().slice(0,5)});
   const f=facialLog.filter(l=>l.facial).length,m=facialLog.filter(l=>!l.facial).length;
