@@ -221,6 +221,8 @@
 
     /* SIDEBAR TOGGLE */
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
+    .fab-refresh{display:none;position:fixed;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 64px);right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--navy3);color:var(--gold);border:1px solid var(--border);width:44px;height:44px;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.4);border-radius:50%;align-items:center;justify-content:center;transition:transform .2s}
+    .fab-refresh:active{transform:rotate(180deg)}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
@@ -232,7 +234,7 @@
     }
     @media(max-width:767px){
       .sidebar{transform:translateX(-100%);width:260px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
-      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
+      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}.fab-refresh{display:flex}
       .tb-date{display:none}.tb-brand{font-size:18px}
       .cg{grid-template-columns:repeat(2,1fr)}.sc-val{font-size:34px}
       .ph{flex-direction:column;align-items:flex-start;gap:10px}.ph-left .ttl{font-size:28px}
@@ -324,6 +326,7 @@
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
 <button class="sb-tog" onclick="toggleSb()">☰</button>
+<button class="fab-refresh" onclick="location.reload()" title="Actualizar">↻</button>
 
 <div class="layout"><div class="main">
 
@@ -3572,7 +3575,6 @@ function _dlgOk(){document.getElementById('dlg-overlay').style.display='none';if
 function _dlgCancel(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(false);_dialogResolve=null;}}
 
 init();
-(function(){let sy=0,pull=false,ind=null;const TH=80;document.addEventListener('touchstart',e=>{if(_mdStack.length>0||window.scrollY!==0)return;sy=e.touches[0].clientY;pull=true;},{passive:true});document.addEventListener('touchmove',e=>{if(!pull||_mdStack.length>0)return;const dy=e.touches[0].clientY-sy;if(dy>0&&window.scrollY===0){if(!ind){ind=document.createElement('div');ind.style.cssText='position:fixed;top:0;left:0;right:0;text-align:center;padding:10px;background:#1a2236;color:#aaa;font-family:"Barlow Condensed",sans-serif;font-size:13px;letter-spacing:.1em;z-index:9999';document.body.appendChild(ind);}ind.textContent=dy>TH?'↑ Soltar para actualizar':'↓ Seguí bajando para actualizar';ind.style.opacity=Math.min(dy/TH,1).toFixed(2);}},{passive:true});document.addEventListener('touchend',e=>{if(!pull)return;pull=false;const dy=e.changedTouches[0].clientY-sy;if(ind){document.body.removeChild(ind);ind=null;}if(dy>TH&&window.scrollY===0&&_mdStack.length===0)location.reload();},{passive:true});})();
 </script>
 
 <!-- Modal de diálogo personalizado -->
