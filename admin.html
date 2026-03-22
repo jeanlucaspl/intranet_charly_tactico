@@ -239,7 +239,7 @@
       .cg{grid-template-columns:repeat(2,1fr)}.sc-val{font-size:34px}
       .ph{flex-direction:column;align-items:flex-start;gap:10px}.ph-left .ttl{font-size:28px}
       .hgrid{grid-template-columns:repeat(2,1fr)}.fgrid{grid-template-columns:1fr}
-      .md{max-width:100%;margin:0;border-radius:0;max-height:100vh}.mo{padding:0;align-items:flex-end}
+      .md{max-width:100%;margin:0;border-radius:0;height:100dvh;height:100vh;max-height:none}.mo{padding:0;align-items:stretch}
       .prac-grid{grid-template-columns:1fr}.att-grid{grid-template-columns:1fr}
     }
     @media(max-width:479px){
@@ -3351,10 +3351,13 @@ function closeMd(id){
   _mdStack=_mdStack.filter(x=>x!==id);
   if(_mdStack.length===0) document.body.style.overflow='';
 }
-// Botón Back de Android cierra el modal activo en lugar de navegar
-window.addEventListener('popstate',e=>{
+// Botón Back de Android cierra el modal activo — pide confirmación si tiene formulario
+window.addEventListener('popstate',async e=>{
   if(_mdStack.length>0){
-    closeMd(_mdStack[_mdStack.length-1]);
+    const id=_mdStack[_mdStack.length-1];
+    const ok=await myConfirm('¿Cerrar sin guardar los cambios?');
+    if(ok){closeMd(id);}
+    else{history.pushState({modal:id},'');}
   }
 });
 
