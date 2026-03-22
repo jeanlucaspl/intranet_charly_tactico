@@ -1216,9 +1216,11 @@ let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'J
 let academiaConfigId=null;
 
 async function loadAcademiaConfig(){
-  const{data}=await sb.from('config_academia').select('*').limit(1).maybeSingle();
+  const{data,error}=await sb.from('config_academia').select('*').limit(1).maybeSingle();
+  if(error) console.warn('loadAcademiaConfig error (RLS?):', error.message, '→ usando valores por defecto');
   if(data){
     academiaLoc=data;academiaConfigId=data.id;
+    console.log('Academia config cargada:', data.latitud, data.longitud, 'radio:', data.radio_metros);
     const dir=data.direccion||`${data.latitud}, ${data.longitud}`;
     const lbl=document.getElementById('acad-dir-lbl');if(lbl)lbl.textContent=dir;
     const rlbl=document.getElementById('acad-radio-lbl');if(rlbl)rlbl.textContent=data.radio_metros||200;
@@ -1277,6 +1279,7 @@ async function verificarUbicacionAdmin(){
     navigator.geolocation.getCurrentPosition(
       pos=>{
         const dist=Math.round(calcDistanciaMetros(pos.coords.latitude,pos.coords.longitude,academiaLoc.latitud,academiaLoc.longitud));
+        console.log(`GPS: tuPos=(${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}) academia=(${academiaLoc.latitud},${academiaLoc.longitud}) dist=${dist}m radio=${academiaLoc.radio_metros||200}m`);
         if(dist>(academiaLoc.radio_metros||200)){
           resolve({ok:false,msg:`Estás a ${dist}m de la academia (límite: ${academiaLoc.radio_metros||200}m). Debes estar físicamente en la academia para tomar asistencia.`});
         }else{
