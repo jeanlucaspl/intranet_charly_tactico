@@ -291,9 +291,9 @@
             <button class="btn btn-blue" style="flex:1" id="btn-start-cam" onclick="startCam()">📷 Activar Cámara</button>
             <button class="btn btn-outline" onclick="stopCam()">⏹</button>
           </div>
-          <button class="btn btn-green" style="width:100%;max-width:360px" id="btn-verificar" onclick="verificarFacial()" disabled>
-            📸 Verificar y Registrar
-          </button>
+          <div id="btn-verificar" style="width:100%;max-width:360px;padding:10px;background:rgba(61,220,132,0.08);border:1px solid rgba(61,220,132,0.25);text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:#6b7a99;text-transform:uppercase">
+            Al abrir la cámara el escaneo es automático
+          </div>
         </div>
         <div>
           <div id="facial-result" class="result-box"></div>
@@ -460,6 +460,8 @@ window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().the
 let uid=null, profesorId=null, profesorData=null;
 let camStream=null, gpsCoords=null;
 let faceApiLoaded=false, myDescriptor=null;
+let scanLoop=null, matchStreak=0;
+const MATCH_NEEDED=3, UMBRAL=0.45, SCAN_MS=600;
 let academiaConfig=null;
 let deviceOk=null,deviceWarnTimer=null,deviceWarnSec=600;
 const fmtCd=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
@@ -701,16 +703,20 @@ async function startCam(){
       const c=document.getElementById('cam-canvas');
       c.width=v.videoWidth;c.height=v.videoHeight;
     });
-    setCamStatus('✅ Cámara activa','cs-ok');
-    document.getElementById('btn-verificar').disabled=false;
+    setCamStatus('🔍 Escaneando rostro en tiempo real...','cs-scan');
+    document.getElementById('btn-verificar').disabled=true;
+    iniciarScanLoop();
   }catch(e){
     setCamStatus('❌ Error: '+e.message,'cs-fail');
   }
 }
 function stopCam(){
+  detenerScanLoop();
   if(camStream)camStream.getTracks().forEach(t=>t.stop());
   camStream=null;
   document.getElementById('cam-video').srcObject=null;
+  const canvas=document.getElementById('cam-canvas');
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
   setCamStatus('Cámara detenida','cs-idle');
   document.getElementById('btn-verificar').disabled=true;
 }
@@ -719,65 +725,91 @@ function setCamStatus(txt,cls){
   el.textContent=txt; el.className='cam-status '+cls;
 }
 
-// ── VERIFICACIÓN FACIAL ──
-async function verificarFacial(){
-  if(!camStream)return;
+// ── SCAN EN TIEMPO REAL ──
+function iniciarScanLoop(){
+  if(scanLoop)return;
+  matchStreak=0;
   if(!faceApiLoaded){
-    showResultado(false,'Modelos no cargados','Usa la opción GPS');return;
+    setCamStatus('⚠️ Modelos aún cargando, aguardá...','cs-scan');
+    // Reintentar cuando estén listos
+    const wait=setInterval(()=>{if(faceApiLoaded){clearInterval(wait);iniciarScanLoop();}},500);
+    return;
   }
+  if(!myDescriptor){
+    setCamStatus('⚠️ No tenés foto registrada. Contactá al administrador.','cs-fail');
+    return;
+  }
+  scanLoop=setInterval(scanFrame, SCAN_MS);
+}
+function detenerScanLoop(){
+  if(scanLoop){clearInterval(scanLoop);scanLoop=null;}
+  matchStreak=0;
+}
 
-  setCamStatus('🔍 Analizando rostro...','cs-scan');
-
+async function scanFrame(){
+  if(!camStream||!faceApiLoaded)return;
   const video=document.getElementById('cam-video');
   const canvas=document.getElementById('cam-canvas');
-  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-  canvas.getContext('2d').drawImage(video,0,0);
+  if(!video.videoWidth)return;
+
+  // Ajustar canvas al tamaño real del video
+  const displaySize={width:video.videoWidth,height:video.videoHeight};
+  canvas.width=displaySize.width;
+  canvas.height=displaySize.height;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   try{
-    // Detectar rostro en el frame actual
-    const detections=await faceapi
-      .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions())
+    const det=await faceapi
+      .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
       .withFaceLandmarks()
       .withFaceDescriptor();
 
-    if(!detections){
-      setCamStatus('❌ No se detectó ningún rostro','cs-fail');
-      showResultado(false,'Sin rostro detectado','Asegúrate de estar frente a la cámara');
+    if(!det){
+      matchStreak=0;
+      setCamStatus('🔍 Buscando rostro...','cs-scan');
       return;
     }
 
-    // Si no hay descriptor guardado, registrar automáticamente (primera vez)
-    if(!myDescriptor){
-      // Guardar el descriptor para futuras verificaciones
-      const descriptorObj=Array.from(detections.descriptor);
-      await sb.from('profesores').update({foto_descriptor:descriptorObj}).eq('id',profesorId);
-      myDescriptor=detections.descriptor;
-      // Registrar presente
-      await registrarAsistencia('presente',true);
-      setCamStatus('✅ Rostro registrado y asistencia marcada','cs-ok');
-      showResultado(true,'PRESENTE','Primera verificación — rostro guardado');
-      return;
-    }
+    // Dibujar caja alrededor del rostro
+    const resized=faceapi.resizeResults(det,displaySize);
+    const box=resized.detection.box;
+    const distancia=myDescriptor?faceapi.euclideanDistance(det.descriptor,myDescriptor):1;
+    const matched=distancia<UMBRAL;
 
-    // Comparar con descriptor guardado
-    const distancia=faceapi.euclideanDistance(detections.descriptor,myDescriptor);
-    const UMBRAL=0.5; // Menor = más estricto. 0.4-0.6 es estándar
+    ctx.strokeStyle=matched?'#3ddc84':'#e8c96a';
+    ctx.lineWidth=3;
+    ctx.strokeRect(box.x,box.y,box.width,box.height);
+    ctx.fillStyle=matched?'rgba(61,220,132,0.15)':'rgba(232,201,106,0.1)';
+    ctx.fillRect(box.x,box.y,box.width,box.height);
 
-    if(distancia<UMBRAL){
-      // Coincide — es el profesor
-      const estado=esTardanza()?'tardanza':'presente';
-      await registrarAsistencia(estado,true);
-      setCamStatus(`✅ Verificado — ${estado.toUpperCase()}`,'cs-ok');
-      showResultado(true,estado.toUpperCase(),`Distancia facial: ${distancia.toFixed(3)} (umbral ${UMBRAL})`);
+    // Etiqueta sobre la caja
+    ctx.fillStyle=matched?'#3ddc84':'#e8c96a';
+    ctx.font='bold 14px Barlow Condensed, sans-serif';
+    ctx.fillText(matched?`✓ ${(1-distancia).toFixed(0)*100||Math.round((1-distancia)*100)}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
+
+    if(matched){
+      matchStreak++;
+      setCamStatus(`🟢 Rostro reconocido (${matchStreak}/${MATCH_NEEDED})...`,'cs-ok');
+      if(matchStreak>=MATCH_NEEDED){
+        detenerScanLoop();
+        await confirmarAsistenciaFacial();
+      }
     }else{
-      // No coincide
-      setCamStatus('❌ Rostro no reconocido','cs-fail');
-      showResultado(false,'NO RECONOCIDO',`Distancia: ${distancia.toFixed(3)} — umbral: ${UMBRAL}`);
+      matchStreak=0;
+      setCamStatus(`🟡 Rostro detectado — distancia: ${distancia.toFixed(2)}...`,'cs-scan');
     }
   }catch(e){
-    setCamStatus('❌ Error en verificación','cs-fail');
-    console.error(e);
+    console.warn('scanFrame error:',e.message);
   }
+}
+
+async function confirmarAsistenciaFacial(){
+  setCamStatus('✅ Identidad confirmada — registrando...','cs-ok');
+  const estado=esTardanza()?'tardanza':'presente';
+  await registrarAsistencia(estado,true);
+  setCamStatus(`✅ Asistencia registrada — ${estado.toUpperCase()}`,'cs-ok');
+  showResultado(true,estado.toUpperCase(),'Verificado por reconocimiento facial en tiempo real');
 }
 
 function esTardanza(){
