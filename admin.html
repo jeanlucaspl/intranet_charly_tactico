@@ -2925,21 +2925,25 @@ function confirmarEliminarAlumno(alumnoId,perfilId,nombre,apellido){
 async function confirmarEliminarUsuario(perfilId,extraId,nombre,apellido,tipo){
   const tipos={alumno:'alumno',padre:'padre',profesor:'profesor',admin:'administrador'};
   if(!await myConfirm(`¿Estás seguro que deseas ELIMINAR definitivamente a:\n\n${nombre} ${apellido}\n\nEsta acción borrará todos sus datos de la base de datos y del sistema de autenticación. No se puede deshacer.`))return;
-  eliminarUsuario(perfilId,extraId,tipo);
+  await eliminarUsuario(perfilId,extraId,tipo);
 }
 async function eliminarUsuario(perfilId,extraId,tipo){
   const FNURL=`https://jfczouzgikqxcnotukag.supabase.co/functions/v1/delete-user`;
-  const {data:{session}}=await sb.auth.getSession();
-  const body={perfil_id:perfilId};
-  if(tipo==='alumno'&&extraId) body.alumno_id=extraId;
-  if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
-  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify(body)});
-  const json=await res.json();
-  if(json.error){await myAlert('Error al eliminar: '+json.error);return;}
-  if(tipo==='alumno') await loadAlumnos();
-  else if(tipo==='padre') await loadPadres();
-  else if(tipo==='profesor') await loadProfesores();
-  else if(tipo==='admin') await loadAdmins();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){await myAlert('Sesión expirada. Recargá la página.');return;}
+    const body={perfil_id:perfilId};
+    if(tipo==='alumno'&&extraId) body.alumno_id=extraId;
+    if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
+    const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify(body)});
+    let json;
+    try{json=await res.json();}catch(_){await myAlert('Error al eliminar: respuesta inesperada del servidor (HTTP '+res.status+')');return;}
+    if(!res.ok||json.error){await myAlert('Error al eliminar: '+(json.error||'HTTP '+res.status));return;}
+    if(tipo==='alumno'){await loadAlumnos();construirFaceMatcher();}
+    else if(tipo==='padre') await loadPadres();
+    else if(tipo==='profesor') await loadProfesores();
+    else if(tipo==='admin') await loadAdmins();
+  }catch(e){await myAlert('Error inesperado al eliminar: '+e.message);}
 }
 async function saveMateria(){
   const nombre=document.getElementById('m-nombre').value.trim();
