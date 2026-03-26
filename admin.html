@@ -2627,7 +2627,9 @@ async function saveAlumno(){
     const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
     if(!upErr&&upData){
       const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-      await sb.from('alumnos').update({foto_url:fotoUrl}).eq('id',alumnoId);
+      const descriptor=await computarDescriptor(fotoBlob);
+      await sb.from('alumnos').update({foto_url:fotoUrl,foto_descriptor:descriptor}).eq('id',alumnoId);
+      if(descriptor) construirFaceMatcher();
     }
   }
 
@@ -2874,9 +2876,12 @@ async function saveRegistrarFoto(){
   if(upErr){showMsg(msg,'Error al subir: '+upErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
   const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
   const tabla=tipo==='profesor'?'profesores':'alumnos';
-  const {error:updErr}=await sb.from(tabla).update({foto_url:fotoUrl,foto_descriptor:null}).eq('id',alumnoId);
+  btn.textContent='ANALIZANDO CARA...';
+  const descriptor=await computarDescriptor(blob);
+  const {error:updErr}=await sb.from(tabla).update({foto_url:fotoUrl,foto_descriptor:descriptor}).eq('id',alumnoId);
   if(updErr){showMsg(msg,'Error al guardar: '+updErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
-  showMsg(msg,'Foto registrada correctamente','ok');
+  showMsg(msg,descriptor?'Foto y reconocimiento facial registrados':'Foto registrada (no se detectó cara)','ok');
+  if(tipo==='alumno') construirFaceMatcher();
   if(tipo==='profesor') await loadProfesores(); else await loadAlumnos();
   btn.disabled=false; btn.textContent='GUARDAR FOTO';
   stopRegFotoCam(); rfPhotoBlob=null; rfFotoFile=null;
@@ -3398,6 +3403,24 @@ async function flipRegCam(){
   regFacingMode=regFacingMode==='environment'?'user':'environment';
   if(regStream) await startRegCam();
 }
+
+// Calcula el descriptor facial de un blob de imagen usando face-api.
+// Devuelve Array de 128 floats, o null si no hay cara / face-api no cargó.
+async function computarDescriptor(blob){
+  if(!faceApiLoaded||typeof faceapi==='undefined') return null;
+  try{
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+    const det=await faceapi
+      .detectSingleFace(img,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+      .withFaceLandmarks().withFaceDescriptor();
+    URL.revokeObjectURL(url);
+    if(!det) return null;
+    return Array.from(det.descriptor);
+  }catch(e){console.warn('Error computarDescriptor:',e);return null;}
+}
+
 function snapPhoto(){
   const v=document.getElementById('reg-video'),c=document.getElementById('reg-canvas');
   c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
@@ -3614,13 +3637,16 @@ async function saveProfesor(){
   const uid=await signUpSeguro(email,pass,dni,msg,btn,'CREAR PROFESOR');
   if(!uid)return;
 
-  // Subir foto si existe (antes del RPC para tener la URL)
-  let fotoUrl=null;
+  // Subir foto si existe (antes del RPC para tener la URL) y computar descriptor
+  let fotoUrl=null, fotoDescriptor=null;
   const blob=prPhotoBlob||prFotoFile;
   if(blob){
     const ext=prPhotoBlob?'jpg':(prFotoFile?.name.split('.').pop()||'jpg');
     const{data:upData}=await sb.storage.from('fotos-alumnos').upload(`prof_${uid}.${ext}`,blob,{upsert:true,contentType:prPhotoBlob?'image/jpeg':prFotoFile?.type});
-    if(upData)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+    if(upData){
+      fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+      fotoDescriptor=await computarDescriptor(blob);
+    }
   }
 
   const{error:rpcErr}=await sb.rpc('crear_perfil_profesor',{
@@ -3629,6 +3655,8 @@ async function saveProfesor(){
     p_materia_id:materiaId||null, p_foto_url:fotoUrl
   });
   if(rpcErr){showMsg(msg,'Error al guardar datos: '+rpcErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
+  // Guardar descriptor facial si se computó
+  if(fotoDescriptor) await sb.from('profesores').update({foto_descriptor:fotoDescriptor}).eq('perfil_id',uid);
   showMsg(msg,` Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects(); if(esDueno) loadProfesoresTexto();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
