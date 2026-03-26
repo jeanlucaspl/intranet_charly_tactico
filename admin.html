@@ -3596,10 +3596,18 @@ async function saveProfesor(){
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
   // Restaurar sesión del dueño ANTES de escribir en materia_profesor (requiere permisos de dueño)
   if(duSession)await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
-  // Assign materia if selected → insertar en materia_profesor (ya con sesión del dueño)
+  // Assign materia if selected → usar service role via RPC o query directa con sesión dueño
   if(materiaId){
-    const {data:profRow}=await sb.from('profesores').select('id').eq('perfil_id',uid).single();
-    if(profRow) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
+    // Buscar con sesión dueño ya restaurada
+    const {data:profRow,error:profRowErr}=await sb.from('profesores').select('id').eq('perfil_id',uid).maybeSingle();
+    if(profRow?.id){
+      await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
+    } else {
+      // fallback: buscar en toda la tabla (sin filtro RLS adicional)
+      const {data:allProf}=await sb.from('profesores').select('id,perfil_id');
+      const match=(allProf||[]).find(p=>p.perfil_id===uid);
+      if(match) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:match.id},{onConflict:'materia_id,profesor_id'});
+    }
   }
   showMsg(msg,` Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects(); if(esDueno) loadProfesoresTexto();
