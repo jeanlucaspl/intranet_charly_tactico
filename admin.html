@@ -2745,7 +2745,7 @@ async function savePago(){
 // ── REGISTRAR FOTO ──────────────────────────────────────────
 let rfPhotoBlob=null, rfFotoFile=null, rfStream=null;
 
-function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
+async function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
   rfPhotoBlob=null; rfFotoFile=null;
   document.getElementById('rf-alumno-id').value=entidadId||'';
   document.getElementById('rf-perfil-id').value=perfilId||'';
@@ -2755,6 +2755,13 @@ function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
   document.getElementById('rf-search-wrap').style.display=entidadId?'none':'block';
   // Título dinámico
   document.querySelector('#md-reg-foto .md-ttl').textContent=tipo==='profesor'?'REGISTRAR FOTO DE PROFESOR':'REGISTRAR FOTO DE ALUMNO';
+  // Cargar datos si no están listos (en caso de abrir modal sin entrar al panel)
+  if(tipo==='profesor'&&(!allProfesoresActivos||!allProfesoresActivos.length)){
+    await loadProfesores();
+  }
+  if(tipo==='alumno'&&(!allAlumnos||!allAlumnos.length)){
+    await loadAlumnos();
+  }
   const sel=document.getElementById('rf-selected');
   if(alumnoId){
     sel.style.display='block';
