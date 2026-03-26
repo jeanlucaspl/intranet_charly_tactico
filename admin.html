@@ -45,7 +45,13 @@
     /* SIDEBAR */
     .sidebar{width:230px;flex-shrink:0;background:var(--navy2);border-right:1px solid var(--border);position:fixed;top:60px;bottom:0;overflow-y:auto;z-index:50;transition:transform .3s ease}
     .sb-section{padding:16px 0 4px}
-    .sb-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;padding:0 20px 6px}
+    .sb-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;padding:0 20px 6px;display:flex;align-items:center;justify-content:space-between}
+    .sb-label .sec-arrow{font-size:9px;transition:transform .25s;display:inline-block;opacity:.6}
+    .sb-collapsible.collapsed .sec-arrow{transform:rotate(-90deg)}
+    .sb-section-body{overflow:hidden;max-height:500px;transition:max-height .3s ease}
+    .sb-collapsible.collapsed .sb-section-body{max-height:0}
+    .sb-label.has-toggle{cursor:pointer;user-select:none}
+    .sb-label.has-toggle:hover{color:var(--white)}
     .sb-link{display:flex;align-items:center;gap:10px;padding:11px 20px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-left:2px solid transparent;width:100%;text-align:left;cursor:pointer;transition:all .2s}
     .sb-link:hover{color:var(--white);background:var(--navy3)}
     .sb-link.active{color:var(--gold);border-left-color:var(--gold);background:var(--navy3)}
@@ -223,6 +229,7 @@
 
     /* SIDEBAR TOGGLE */
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
+    .sb-tog::before{content:"";display:block;width:20px;height:2px;background:currentColor;box-shadow:0 6px 0 currentColor,0 -6px 0 currentColor}
     .fab-refresh{display:none;position:fixed;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 64px);right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--navy3);color:var(--gold);border:1px solid var(--border);width:44px;height:44px;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.4);border-radius:50%;align-items:center;justify-content:center;transition:transform .2s}
     .fab-refresh:active{transform:rotate(180deg)}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
@@ -296,33 +303,41 @@
     <div class="sb-label">General</div>
     <button class="sb-link active" onclick="showPanel('inicio',this)">Dashboard</button>
   </div>
-  <div class="sb-section">
-    <div class="sb-label">Gestión</div>
-    <button class="sb-link" onclick="showPanel('aulas',this)">Aulas</button>
-    <button class="sb-link" onclick="showPanel('alumnos',this)">Gestión Alumnos</button>
-    <button class="sb-link" onclick="showPanel('materias',this)">Materias</button>
-    <button class="sb-link" onclick="showPanel('horario',this)">Horario Semanal</button>
-    <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none">Gestión Padres</button>
-    <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none">Gestión Profesores</button>
-    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none">Gestión Administradores</button>
-    <button class="sb-link sb-dueno" onclick="showPanel('academia',this)" style="display:none">Datos de la Academia</button>
+  <div class="sb-section sb-collapsible" id="sec-gestion">
+    <div class="sb-label has-toggle" onclick="toggleSection('sec-gestion')">Gestión <span class="sec-arrow">&#9662;</span></div>
+    <div class="sb-section-body">
+      <button class="sb-link" onclick="showPanel('aulas',this)">Aulas</button>
+      <button class="sb-link" onclick="showPanel('alumnos',this)">Gestión Alumnos</button>
+      <button class="sb-link" onclick="showPanel('materias',this)">Materias</button>
+      <button class="sb-link" onclick="showPanel('horario',this)">Horario Semanal</button>
+      <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none">Gestión Padres</button>
+      <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none">Gestión Profesores</button>
+      <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none">Gestión Administradores</button>
+      <button class="sb-link sb-dueno" onclick="showPanel('academia',this)" style="display:none">Datos de la Academia</button>
+    </div>
   </div>
-  <div class="sb-section">
-    <div class="sb-label">Asistencia</div>
-    <button class="sb-link" onclick="showPanel('facial',this)">Tomar Asistencia</button>
-    <button class="sb-link" onclick="showPanel('reportes',this)">Reportes</button>
+  <div class="sb-section sb-collapsible" id="sec-asistencia">
+    <div class="sb-label has-toggle" onclick="toggleSection('sec-asistencia')">Asistencia <span class="sec-arrow">&#9662;</span></div>
+    <div class="sb-section-body">
+      <button class="sb-link" onclick="showPanel('facial',this)">Tomar Asistencia</button>
+      <button class="sb-link" onclick="showPanel('reportes',this)">Reportes</button>
+    </div>
   </div>
-  <div class="sb-section">
-    <div class="sb-label">Académico</div>
-    <button class="sb-link" onclick="showPanel('notas',this)">Notas</button>
-    <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
-    <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
+  <div class="sb-section sb-collapsible" id="sec-academico">
+    <div class="sb-label has-toggle" onclick="toggleSection('sec-academico')">Académico <span class="sec-arrow">&#9662;</span></div>
+    <div class="sb-section-body">
+      <button class="sb-link" onclick="showPanel('notas',this)">Notas</button>
+      <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
+      <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
+    </div>
   </div>
-  <div class="sb-section">
-    <div class="sb-label">Comunicación</div>
-    <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones</button>
-    <button class="sb-link" onclick="showPanel('contacto',this)">Contacto Padres</button>
-    <button class="sb-link" onclick="showPanel('contrasenas',this)">Contraseñas</button>
+  <div class="sb-section sb-collapsible" id="sec-comunicacion">
+    <div class="sb-label has-toggle" onclick="toggleSection('sec-comunicacion')">Comunicación <span class="sec-arrow">&#9662;</span></div>
+    <div class="sb-section-body">
+      <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones</button>
+      <button class="sb-link" onclick="showPanel('contacto',this)">Contacto Padres</button>
+      <button class="sb-link" onclick="showPanel('contrasenas',this)">Contraseñas</button>
+    </div>
   </div>
 </div>
 
@@ -3387,6 +3402,7 @@ function showPanel(id,btn){
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
+function toggleSection(id){document.getElementById(id).classList.toggle('collapsed')}
 async function handleAndroidBack(){
   // Si hay un modal abierto, intercepta el back exclusivamente para él
   if(_mdStack.length>0){

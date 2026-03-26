@@ -141,10 +141,10 @@
     .msg.ok{border:1px solid var(--green);color:var(--green);background:rgba(76,175,125,.08)}
 
     .empty{text-align:center;padding:40px 20px;color:var(--muted)}
-    .empty .ei{font-size:36px;margin-bottom:10px}
     .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
+    .sb-tog::before{content:"";display:block;width:20px;height:2px;background:currentColor;box-shadow:0 6px 0 currentColor,0 -6px 0 currentColor}
     .fab-refresh{display:none;position:fixed;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 64px);right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--navy3);color:var(--gold);border:1px solid var(--border);width:44px;height:44px;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.4);border-radius:50%;align-items:center;justify-content:center;transition:transform .2s}
     .fab-refresh:active{transform:rotate(180deg)}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
@@ -228,7 +228,7 @@
   </div>
   <div class="tw" style="margin-top:16px">
     <div class="th"><span class="th-ttl">Mis Notas — Resumen</span></div>
-    <div id="d-notas-res"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas-res"><div class="empty"><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -237,7 +237,7 @@
   <div class="ph"><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
   <div id="hor-aula-tabs" class="aula-tabs"></div>
   <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="d-horario">
-    <div class="empty"><div class="ei"></div><div class="et">Cargando horario...</div></div>
+    <div class="empty"><div class="et">Cargando horario...</div></div>
   </div>
 </div>
 
@@ -251,7 +251,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Historial de Asistencias</span></div>
-    <div id="d-asist"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-asist"><div class="empty"><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -260,14 +260,14 @@
   <div class="ph"><div class="eye">Rendimiento académico</div><div class="ttl">MIS NOTAS</div></div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Calificaciones por Materia</span></div>
-    <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas"><div class="empty"><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
 <!-- PRÁCTICAS -->
 <div class="panel" id="panel-practicas">
   <div class="ph"><div class="eye">Material semanal</div><div class="ttl">MIS PRÁCTICAS</div></div>
-  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- NOTIFICACIONES -->
@@ -276,7 +276,7 @@
     <div class="ph-left"><div class="eye">Comunicados institucionales</div><div class="ttl">NOTIFICACIONES</div></div>
     <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()"> Borrar todo</button>
   </div>
-  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+  <div class="nlist" id="d-notifs"><div class="empty"><div class="et">Cargando...</div></div></div>
 </div>
 
 </div></div>
@@ -361,7 +361,7 @@ async function checkPendingSolicitud(){
 }
 
 async function loadNotas(){
-  if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
+  if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
   const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
   document.getElementById('s-mat').textContent=data?.length||0;
   if(data?.length){
@@ -374,7 +374,7 @@ async function loadNotas(){
 }
 
 function renderNotasTable(data){
-  if(!data.length)return`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;
+  if(!data.length)return`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
   const byMat={};
   data.forEach(n=>{
     const key=n.materia_id||'sin';
@@ -406,7 +406,7 @@ function renderNotasTable(data){
   }).join('');
 }
 function renderNotasResumen(data){
-  if(!data.length)return`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;
+  if(!data.length)return`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
   const byMat={};
   data.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
   return`<div style="display:flex;flex-direction:column;gap:6px">${Object.values(byMat).map(mat=>{
@@ -421,7 +421,7 @@ function renderNotasResumen(data){
 }
 
 async function loadAsistencias(){
-  if(!alumnoId){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;return;}
+  if(!alumnoId){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="et">Sin datos de alumno</div></div>`;return;}
   const {data}=await sb.from('asistencias').select('*,materias(nombre)').eq('alumno_id',alumnoId).order('fecha',{ascending:false});
   const p=data?.filter(a=>a.estado==='presente').length||0;
   const t=data?.filter(a=>a.estado==='tardanza').length||0;
@@ -431,7 +431,7 @@ async function loadAsistencias(){
   document.getElementById('a-tard').textContent=t;
   document.getElementById('a-aus').textContent=au;
   document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
-  if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin registros</div></div>`;return}
+  if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="et">Sin registros</div></div>`;return}
   document.getElementById('d-asist').innerHTML=`<table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
     const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
     const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
@@ -450,7 +450,7 @@ async function loadNotifs(){
   const visible=(data||[]).filter(n=>!ocultasIds.has(n.id));
   const unread=visible.filter(n=>!n.leida).length;
   document.getElementById('s-notif').textContent=unread;
-  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notificaciones</div></div>`;return}
+  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="et">Sin notificaciones</div></div>`;return}
   const icons={info:'INFO',alerta:'AVISO',urgente:'URGENTE'};
   document.getElementById('d-notifs').innerHTML=visible.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -477,7 +477,7 @@ async function deleteAllNotifs(){
 }
 
 async function loadPracticas(){
-  if(!alumnoId){document.getElementById('d-practicas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;return;}
+  if(!alumnoId){document.getElementById('d-practicas').innerHTML=`<div class="empty"><div class="et">Sin datos de alumno</div></div>`;return;}
   // Get materias of this alumno
   const {data:mats}=await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId);
   const matIds=mats?.map(m=>m.materia_id)||[];
@@ -489,7 +489,7 @@ async function loadPracticas(){
   const {data:sols}=alumnoId?await sb.from('soluciones').select('*').eq('alumno_id',alumnoId):{data:[]};
   const solMap={};sols?.forEach(s=>{if(!solMap[s.practica_id])solMap[s.practica_id]=[];solMap[s.practica_id].push(s);});
   const el=document.getElementById('d-practicas');
-  if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin prácticas disponibles</div></div>`;return}
+  if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="et">Sin prácticas disponibles</div></div>`;return}
   el.innerHTML=practicas.map(p=>{
     const pracUrls=parsePracUrls(p.archivo_url);
     const solList=solMap[p.id]||[];
@@ -638,7 +638,7 @@ async function loadHorario(){
     selectHorAulaTab(horAulasData[0].id);
   }else{
     const wrap=document.getElementById('d-horario');
-    if(wrap)wrap.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin horario disponible</div></div>`;
+    if(wrap)wrap.innerHTML=`<div class="empty"><div class="et">Sin horario disponible</div></div>`;
   }
 }
 function renderHorAulaTabs(){
