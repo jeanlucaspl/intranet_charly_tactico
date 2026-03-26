@@ -355,14 +355,14 @@ async function saveFcmToken(){
 
 async function loadHijo(){
   if(!alumnoId)return;
-  const {data}=await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni),alumno_aula(aulas(nombre))').eq('id',alumnoId).single();
+  const {data}=await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni)').eq('id',alumnoId).single();
   if(!data)return;
   const foto=data.foto_url?`<img src="${data.foto_url}" alt="foto">`:'👮';
   document.getElementById('d-hijo-card').innerHTML=`<div class="hijo-card">
     <div class="hijo-av">${foto}</div>
     <div>
       <div class="hijo-nombre">${data.perfiles?.nombre} ${data.perfiles?.apellido}</div>
-      <div class="hijo-info">Código: ${data.codigo} · DNI: ${data.perfiles?.dni||'--'} · ${data.alumno_aula?.[0]?.aulas?.nombre||'Sin aula'} · Turno ${data.turno||'--'}</div>
+      <div class="hijo-info">Código: ${data.codigo} · DNI: ${data.perfiles?.dni||'--'} · Turno ${data.turno||'--'}</div>
     </div>
   </div>`;
 }

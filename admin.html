@@ -1367,7 +1367,7 @@ function fmtDate(d){return d?new Date(d).toLocaleDateString('es-PE',{day:'2-digi
 // ── LOADERS ──
 let allAlumnosInactivos=[];
 async function loadAlumnos(){
-  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni,telefono),alumno_aula(aulas(nombre))').order('creado_en');
+  const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni,telefono)').order('creado_en');
   allAlumnos=(data||[]).filter(a=>a.activo!==false);
   allAlumnosInactivos=(data||[]).filter(a=>a.activo===false);
   renderAlumnos(allAlumnos);
