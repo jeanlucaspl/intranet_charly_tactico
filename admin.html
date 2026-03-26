@@ -33,8 +33,9 @@
 
     /* TOPBAR */
     .topbar{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(11,17,32,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
-    .tb-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;flex-shrink:0}
+    .tb-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;flex-shrink:0;display:flex;align-items:center;gap:10px}
     .tb-brand span{color:var(--white)}
+    .tb-brand img{height:36px;width:36px;object-fit:contain;flex-shrink:0;display:block}
     .tb-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--navy);background:var(--gold);padding:3px 10px;text-transform:uppercase;flex-shrink:0}
     .tb-sep{flex:1}
     .tb-date{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
@@ -290,7 +291,7 @@
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="tb-brand"><span>CHARLY</span> TÁCTICO</div>
+  <div class="tb-brand"><img src="icono_final.png" alt=""/><span>CHARLY TÁCTICO</span> TEDAX</div>
   <div class="tb-badge">Admin</div>
   <div class="tb-sep"></div>
   <div class="tb-date"><strong id="topFecha"></strong></div>
