@@ -24,7 +24,7 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
     html{scroll-behavior:smooth}
-    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh}
+    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overscroll-behavior-y:contain}
     body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
 
     .topbar{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(11,17,32,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
@@ -177,12 +177,14 @@
     .sol-info{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:2px}
 
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--blue);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
+    .fab-refresh{display:none;position:fixed;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 64px);right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--navy3);color:var(--gold);border:1px solid var(--border);width:44px;height:44px;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.4);border-radius:50%;align-items:center;justify-content:center;transition:transform .2s}
+    .fab-refresh:active{transform:rotate(180deg)}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
     @media(max-width:767px){
       .sidebar{transform:translateX(-100%);width:250px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
-      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
+      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}.fab-refresh{display:flex}
       .tb-user{display:none}.cg{grid-template-columns:repeat(2,1fr)}.ttl{font-size:28px}
       .facial-grid{grid-template-columns:1fr}
     }
@@ -201,19 +203,20 @@
 <div class="sidebar" id="sidebar">
   <div class="sb-sec">
     <div class="sb-lbl">Mi cuenta</div>
-    <button class="sb-link active" onclick="showPanel('inicio',this)"><span class="ic">🏠</span>Inicio</button>
-    <button class="sb-link" onclick="showPanel('asistencia',this)"><span class="ic">📸</span>Marcar Asistencia</button>
-    <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Mi Horario</button>
-    <button class="sb-link" onclick="showPanel('historial',this)"><span class="ic">📅</span>Mi Historial</button>
-    <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📝</span>Notas</button>
-    <button class="sb-link" onclick="showPanel('practicas',this)"><span class="ic">📄</span>Prácticas</button>
-    <button class="sb-link" onclick="showPanel('soluciones',this)"><span class="ic">📥</span>Soluciones</button>
-    <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones <span id="s-notif" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px;display:none"></span></button>
+    <button class="sb-link active" onclick="showPanel('inicio',this)">Inicio</button>
+    <button class="sb-link" onclick="showPanel('asistencia',this)">Marcar Asistencia</button>
+    <button class="sb-link" onclick="showPanel('horario',this)">Mi Horario</button>
+    <button class="sb-link" onclick="showPanel('historial',this)">Mi Historial</button>
+    <button class="sb-link" onclick="showPanel('notas',this)">Notas</button>
+    <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
+    <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
+    <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones <span id="s-notif" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px;display:none"></span></button>
   </div>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
-<button class="sb-tog" onclick="toggleSb()">☰</button>
+<button class="sb-tog" onclick="toggleSb()"></button>
+<button class="fab-refresh" onclick="location.reload()" title="Actualizar">↻</button>
 
 <div class="layout"><div class="main">
 
@@ -228,7 +231,7 @@
   <!-- Estado del dispositivo — solo visible en app Android -->
   <div id="device-status-card-dash" style="display:none;margin-bottom:20px;overflow:hidden;border:1px solid var(--border)">
     <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)"> Estado del Dispositivo</span>
       <span id="device-status-badge-dash" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
     </div>
     <div id="device-status-list-dash" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;background:var(--navy2)"></div>
@@ -239,7 +242,7 @@
   <div style="background:var(--navy2);border:1px solid var(--border);padding:24px;text-align:center">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-bottom:8px">¿Ya llegaste hoy?</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">Registra tu asistencia con reconocimiento facial o GPS</div>
-    <button class="btn btn-blue" style="font-size:14px;padding:12px 28px" onclick="showPanel('asistencia',document.querySelector('[onclick*=asistencia]'))">📸 MARCAR ASISTENCIA AHORA</button>
+    <button class="btn btn-blue" style="font-size:14px;padding:12px 28px" onclick="showPanel('asistencia',document.querySelector('[onclick*=asistencia]'))"> MARCAR ASISTENCIA AHORA</button>
   </div>
 </div>
 
@@ -249,7 +252,7 @@
 
   <!-- Ya marcó hoy -->
   <div id="ya-marcado" style="display:none;background:var(--navy2);border:1px solid var(--green);padding:24px;text-align:center;margin-bottom:20px">
-    <div style="font-size:48px;margin-bottom:10px">✅</div>
+    <div style="font-size:48px;margin-bottom:10px"></div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)">ASISTENCIA REGISTRADA HOY</div>
     <div id="ya-marcado-info" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:8px"></div>
   </div>
@@ -258,15 +261,15 @@
   <div id="form-asistencia">
     <!-- Pestañas -->
     <div class="aula-tabs" style="margin-bottom:0">
-      <button class="aula-tab active" id="tab-asist-facial" onclick="switchAsistTab('facial',this)">📸 Asistencia Facial</button>
-      <button class="aula-tab" id="tab-asist-manual" onclick="switchAsistTab('manual',this)">📍 Asistencia Manual</button>
+      <button class="aula-tab active" id="tab-asist-facial" onclick="switchAsistTab('facial',this)"> Asistencia Facial</button>
+      <button class="aula-tab" id="tab-asist-manual" onclick="switchAsistTab('manual',this)"> Asistencia Manual</button>
     </div>
     <div style="background:var(--navy2);border:1px solid var(--border);border-top:none;padding:20px 20px 0;margin-bottom:20px">
 
     <!-- Estado del dispositivo — solo visible en app Android -->
     <div id="device-status-card" style="display:none;margin-bottom:18px;overflow:hidden;border:1px solid var(--border)">
       <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)"> Estado del Dispositivo</span>
         <span id="device-status-badge" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
       </div>
       <div id="device-status-list" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;background:var(--navy2)"></div>
@@ -278,9 +281,9 @@
 
     <!-- PESTAÑA 1: Facial -->
     <div id="tab-content-facial" class="facial-box">
-      <div class="facial-title">📸 Asistencia Facial — Reconocimiento</div>
+      <div class="facial-title"> Asistencia Facial — Reconocimiento</div>
       <div id="facial-loading" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:16px">
-        ⏳ Cargando modelos de reconocimiento...
+         Cargando modelos de reconocimiento...
       </div>
       <div class="facial-grid">
         <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
@@ -290,8 +293,8 @@
           </div>
           <div class="cam-status cs-idle" id="cam-status">Cámara detenida</div>
           <div style="display:flex;gap:8px;width:100%;max-width:360px">
-            <button class="btn btn-blue" style="flex:1" id="btn-start-cam" onclick="startCam()">📷 Activar Cámara</button>
-            <button class="btn btn-outline" onclick="stopCam()">⏹</button>
+            <button class="btn btn-blue" style="flex:1" id="btn-start-cam" onclick="startCam()"> Activar Cámara</button>
+            <button class="btn btn-outline" onclick="stopCam()"></button>
           </div>
           <div id="btn-verificar" style="width:100%;max-width:360px;padding:10px;background:rgba(61,220,132,0.08);border:1px solid rgba(61,220,132,0.25);text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:#6b7a99;text-transform:uppercase">
             Al abrir la cámara el escaneo es automático
@@ -300,7 +303,7 @@
         <div>
           <div id="facial-result" class="result-box"></div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:16px;line-height:1.8">
-            ℹ️ El sistema compara tu rostro con la foto registrada al momento de tu alta.<br><br>
+            ℹ El sistema compara tu rostro con la foto registrada al momento de tu alta.<br><br>
             No se guarda ninguna imagen — solo se registra que fuiste verificado.
           </div>
         </div>
@@ -309,14 +312,14 @@
 
     <!-- PESTAÑA 2: Manual GPS -->
     <div id="tab-content-manual" class="facial-box" style="display:none">
-      <div class="facial-title">📍 Asistencia Manual — GPS</div>
+      <div class="facial-title"> Asistencia Manual — GPS</div>
       <div class="gps-box">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tu ubicación actual</div>
         <div class="gps-coords" id="gps-coords">Click en "Obtener ubicación"</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="getGPS()">📍 Obtener Ubicación</button>
-        <button class="btn btn-gold" id="btn-registrar-gps" onclick="registrarGPS()" disabled>✅ Registrar Presente</button>
+        <button class="btn btn-outline" onclick="getGPS()"> Obtener Ubicación</button>
+        <button class="btn btn-gold" id="btn-registrar-gps" onclick="registrarGPS()" disabled> Registrar Presente</button>
       </div>
       <div class="msg" id="gps-msg"></div>
     </div>
@@ -329,7 +332,7 @@
   <div class="ph"><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
   <div id="hor-aula-tabs" class="aula-tabs"></div>
   <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="d-horario">
-    <div class="empty"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div>
+    <div class="empty"><div class="ei"></div><div class="et">Cargando horario...</div></div>
   </div>
 </div>
 
@@ -343,7 +346,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Historial Completo</span></div>
-    <div id="d-historial"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
+    <div id="d-historial"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -375,7 +378,7 @@
   <div class="tw" style="margin-top:12px">
     <div class="th"><span class="th-ttl">Notas registradas</span></div>
     <div id="pn-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
-    <div id="d-notas-prof"><div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div></div>
+    <div id="d-notas-prof"><div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div></div>
   </div>
 </div>
 
@@ -385,7 +388,7 @@
     <div class="ph-left"><div class="eye">Material académico</div><div class="ttl">PRÁCTICAS</div></div>
     <button class="btn btn-gold" onclick="openMd('md-prof-practica')">+ Subir Práctica</button>
   </div>
-  <div class="prac-grid" id="d-prof-practicas"><div class="empty"><div class="ei">📄</div><div class="et">Cargando...</div></div></div>
+  <div class="prac-grid" id="d-prof-practicas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- SOLUCIONES -->
@@ -396,13 +399,13 @@
       <option value="">-- Selecciona una práctica --</option>
     </select>
   </div>
-  <div id="d-prof-soluciones"><div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div></div>
+  <div id="d-prof-soluciones"><div class="empty"><div class="ei"></div><div class="et">Selecciona una práctica</div></div></div>
 </div>
 
 <!-- MODAL PRÁCTICA PROFESOR -->
 <div class="mo" id="md-prof-practica">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">SUBIR PRÁCTICA</div><button class="md-x" onclick="closeMd('md-prof-practica')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">SUBIR PRÁCTICA</div><button class="md-x" onclick="closeMd('md-prof-practica')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-prof-practica"></div>
       <div class="fg"><label>Semana (lunes)</label><input type="date" id="pp-semana"/></div>
@@ -412,7 +415,7 @@
       <div class="fg"><label>Archivos PDF</label>
         <div class="file-drop">
           <input type="file" accept=".pdf" multiple onchange="setProfPracticaFiles(this)"/>
-          <div class="fd-icon">📄</div>
+          <div class="fd-icon"></div>
           <div class="fd-txt">Arrastra uno o varios PDFs aquí</div>
           <div class="fd-name" id="pp-fname"></div>
         </div>
@@ -430,9 +433,9 @@
 <div class="panel" id="panel-notificaciones">
   <div class="ph">
     <div class="ph-left"><div class="eye">Comunicados</div><div class="ttl">NOTIFICACIONES</div></div>
-    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()">🗑️ Borrar todo</button>
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()"> Borrar todo</button>
   </div>
-  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei">🔔</div><div class="et">Cargando...</div></div></div>
+  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 </div></div>
@@ -483,14 +486,14 @@ async function loadNotifs(){
   const unread=visible.filter(n=>!n.leida).length;
   const badge=document.getElementById('s-notif');
   if(badge){badge.textContent=unread;badge.style.display=unread?'inline':'none';}
-  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
-  const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
+  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notificaciones</div></div>`;return}
+  const icons={info:'INFO',alerta:'AVISO',urgente:'URGENTE'};
   document.getElementById('d-notifs').innerHTML=visible.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
-      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
-    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar">🗑️</button><div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span style="background:var(--yellow);color:#000;font-size:8px;padding:1px 4px;border-radius:2px;margin-left:4px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px"> Abrir PDF</a></div>`):'';
+    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar"></button><div class="nico">${icons[n.tipo]||''}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span style="background:var(--yellow);color:#000;font-size:8px;padding:1px 4px;border-radius:2px;margin-left:4px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
 }
 async function deleteNotif(id){
@@ -560,7 +563,7 @@ async function loadDashboard(){
 
   // Estado hoy
   const hoyReg=data?.find(a=>a.fecha===todayISO());
-  document.getElementById('s-hoy').textContent=hoyReg?.estado==='presente'?'✅':hoyReg?.estado==='tardanza'?'⏰':hoyReg?'❌':'❓';
+  document.getElementById('s-hoy').textContent=hoyReg?.estado==='presente'?'':hoyReg?.estado==='tardanza'?'':hoyReg?'':'';
   document.getElementById('s-hoy-txt').textContent=hoyReg?.estado||'Sin registro';
 
 }
@@ -589,7 +592,7 @@ async function loadFaceApi(){
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
     faceApiLoaded=true;
-    loadingEl.textContent='✅ Reconocimiento facial listo';
+    loadingEl.textContent=' Reconocimiento facial listo';
     loadingEl.style.color='var(--green)';
 
     // Cargar descriptor del profesor
@@ -597,7 +600,7 @@ async function loadFaceApi(){
       myDescriptor=new Float32Array(Object.values(profesorData.foto_descriptor));
     }
   }catch(e){
-    loadingEl.textContent='⚠️ Facial no disponible — usa GPS';
+    loadingEl.textContent=' Facial no disponible — usa GPS';
     loadingEl.style.color='var(--yellow)';
     console.warn('face-api error:',e);
   }
@@ -624,10 +627,10 @@ async function checkGeofence(){
       const radio=academiaConfig.radio_metros||200;
       const w=document.getElementById('geo-warning');
       if(dist<=radio){w.style.display='none';resolve(true);}
-      else{w.textContent=`⛔ Estás a ${Math.round(dist)}m de la academia. Debes estar dentro de ${radio}m para registrar asistencia.`;w.style.display='block';resolve(false);}
+      else{w.textContent=` Estás a ${Math.round(dist)}m de la academia. Debes estar dentro de ${radio}m para registrar asistencia.`;w.style.display='block';resolve(false);}
     },()=>{
       const w=document.getElementById('geo-warning');
-      w.textContent='⚠️ No se pudo verificar tu ubicación. Activa el GPS e intenta de nuevo.';
+      w.textContent=' No se pudo verificar tu ubicación. Activa el GPS e intenta de nuevo.';
       w.style.display='block';
       resolve(false);
     },{enableHighAccuracy:true,timeout:10000});
@@ -648,16 +651,16 @@ function _renderDeviceCard(cardId,badgeId,listId,warnId,problemas,checks,motivo)
   const list=document.getElementById(listId);
   const warn=document.getElementById(warnId);
   list.innerHTML=checks.map(c=>`<div style="display:flex;align-items:center;gap:10px">
-    <span style="font-size:16px">${c.ok?'✅':'❌'}</span>
+    <span style="font-size:16px">${c.ok?'':''}</span>
     <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;color:${c.ok?'var(--muted)':'var(--red)'};text-transform:uppercase">${c.label}</span>
   </div>`).join('');
   if(problemas.length){
-    badge.textContent='⚠️ PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.15)';
+    badge.textContent=' PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.15)';
     warn.style.display='block';
-    warn.innerHTML=`⚠️ <strong>No puedes registrar asistencia hasta resolver el problema.</strong><br>${problemas.map(p=>`• ${p.failMsg}`).join('<br>')}`;
+    warn.innerHTML=` <strong>No puedes registrar asistencia hasta resolver el problema.</strong><br>${problemas.map(p=>`• ${p.failMsg}`).join('<br>')}`;
     if(warnId==='device-status-warn'&&!deviceWarnTimer){
       deviceWarnSec=600;
-      warn.innerHTML+=`<br><br>⏱ Tiempo para resolverlo: <strong id="device-warn-countdown">${fmtCd(deviceWarnSec)}</strong>. Si no lo solucionas, se notificará a la dirección.`;
+      warn.innerHTML+=`<br><br> Tiempo para resolverlo: <strong id="device-warn-countdown">${fmtCd(deviceWarnSec)}</strong>. Si no lo solucionas, se notificará a la dirección.`;
       deviceWarnTimer=setInterval(()=>{
         deviceWarnSec--;
         const el=document.getElementById('device-warn-countdown');
@@ -669,7 +672,7 @@ function _renderDeviceCard(cardId,badgeId,listId,warnId,problemas,checks,motivo)
       },1000);
     }
   }else{
-    badge.textContent='✅ TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.15)';
+    badge.textContent=' TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.15)';
     warn.style.display='none';
     if(deviceWarnTimer){clearInterval(deviceWarnTimer);deviceWarnTimer=null;}
   }
@@ -705,11 +708,11 @@ async function startCam(){
       const c=document.getElementById('cam-canvas');
       c.width=v.videoWidth;c.height=v.videoHeight;
     });
-    setCamStatus('🔍 Escaneando rostro en tiempo real...','cs-scan');
+    setCamStatus(' Escaneando rostro en tiempo real...','cs-scan');
     document.getElementById('btn-verificar').disabled=true;
     iniciarScanLoop();
   }catch(e){
-    setCamStatus('❌ Error: '+e.message,'cs-fail');
+    setCamStatus(' Error: '+e.message,'cs-fail');
   }
 }
 function stopCam(){
@@ -732,13 +735,13 @@ function iniciarScanLoop(){
   if(scanLoop)return;
   matchStreak=0;
   if(!faceApiLoaded){
-    setCamStatus('⚠️ Modelos aún cargando, aguardá...','cs-scan');
+    setCamStatus(' Modelos aún cargando, aguardá...','cs-scan');
     // Reintentar cuando estén listos
     const wait=setInterval(()=>{if(faceApiLoaded){clearInterval(wait);iniciarScanLoop();}},500);
     return;
   }
   if(!myDescriptor){
-    setCamStatus('⚠️ No tenés foto registrada. Contactá al administrador.','cs-fail');
+    setCamStatus(' No tenés foto registrada. Contactá al administrador.','cs-fail');
     return;
   }
   scanLoop=setInterval(scanFrame, SCAN_MS);
@@ -769,7 +772,7 @@ async function scanFrame(){
 
     if(!det){
       matchStreak=0;
-      setCamStatus('🔍 Buscando rostro...','cs-scan');
+      setCamStatus(' Buscando rostro...','cs-scan');
       return;
     }
 
@@ -788,18 +791,18 @@ async function scanFrame(){
     // Etiqueta sobre la caja
     ctx.fillStyle=matched?'#3ddc84':'#e8c96a';
     ctx.font='bold 14px Barlow Condensed, sans-serif';
-    ctx.fillText(matched?`✓ ${(1-distancia).toFixed(0)*100||Math.round((1-distancia)*100)}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
+    ctx.fillText(matched?` ${(1-distancia).toFixed(0)*100||Math.round((1-distancia)*100)}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
 
     if(matched){
       matchStreak++;
-      setCamStatus(`🟢 Rostro reconocido (${matchStreak}/${MATCH_NEEDED})...`,'cs-ok');
+      setCamStatus(` Rostro reconocido (${matchStreak}/${MATCH_NEEDED})...`,'cs-ok');
       if(matchStreak>=MATCH_NEEDED){
         detenerScanLoop();
         await confirmarAsistenciaFacial();
       }
     }else{
       matchStreak=0;
-      setCamStatus(`🟡 Rostro detectado — distancia: ${distancia.toFixed(2)}...`,'cs-scan');
+      setCamStatus(` Rostro detectado — distancia: ${distancia.toFixed(2)}...`,'cs-scan');
     }
   }catch(e){
     console.warn('scanFrame error:',e.message);
@@ -807,10 +810,10 @@ async function scanFrame(){
 }
 
 async function confirmarAsistenciaFacial(){
-  setCamStatus('✅ Identidad confirmada — registrando...','cs-ok');
+  setCamStatus(' Identidad confirmada — registrando...','cs-ok');
   const estado=esTardanza()?'tardanza':'presente';
   await registrarAsistencia(estado,true);
-  setCamStatus(`✅ Asistencia registrada — ${estado.toUpperCase()}`,'cs-ok');
+  setCamStatus(` Asistencia registrada — ${estado.toUpperCase()}`,'cs-ok');
   showResultado(true,estado.toUpperCase(),'Verificado por reconocimiento facial en tiempo real');
 }
 
@@ -824,7 +827,7 @@ function showResultado(ok,titulo,sub){
   const el=document.getElementById('facial-result');
   el.style.display='block';
   el.innerHTML=`
-    <div class="result-icon">${ok?'✅':'❌'}</div>
+    <div class="result-icon">${ok?'':''}</div>
     <div class="result-text" style="color:${ok?'var(--green)':'var(--red)'}">${titulo}</div>
     <div class="result-sub">${sub}</div>
     ${ok?`<button class="btn btn-outline" style="margin-top:12px" onclick="document.getElementById('facial-result').style.display='none'">Cerrar</button>`:''}
@@ -847,9 +850,9 @@ async function getGPS(){
     if(devOpts||mockGPS){
       const motivo=mockGPS?'GPS falso (mock location) detectado':'Opciones de desarrollador activas';
       const msg=document.getElementById('gps-msg');
-      msg.textContent=`⛔ ${motivo}. Acción registrada y notificada al administrador.`;
+      msg.textContent=` ${motivo}. Acción registrada y notificada al administrador.`;
       msg.className='msg err show';
-      document.getElementById('gps-coords').textContent='⛔ Ubicación bloqueada por seguridad';
+      document.getElementById('gps-coords').textContent=' Ubicación bloqueada por seguridad';
       alertarAdminGPS(motivo);
       return;
     }
@@ -863,9 +866,9 @@ async function getGPS(){
     },
     err=>{
       const denegado=err.code===1;
-      document.getElementById('gps-coords').textContent=denegado?'⛔ Permiso de ubicación denegado':'❌ Error al obtener ubicación: '+err.message;
+      document.getElementById('gps-coords').textContent=denegado?' Permiso de ubicación denegado':' Error al obtener ubicación: '+err.message;
       const msg=document.getElementById('gps-msg');
-      msg.textContent=denegado?'⚠️ Denegaste el permiso GPS. El administrador será notificado.':'No se pudo obtener la ubicación. Intenta de nuevo.';
+      msg.textContent=denegado?' Denegaste el permiso GPS. El administrador será notificado.':'No se pudo obtener la ubicación. Intenta de nuevo.';
       msg.className='msg err show';
       if(denegado)alertarAdminGPS();
     },
@@ -878,7 +881,7 @@ async function registrarGPS(){
   const estado=esTardanza()?'tardanza':'presente';
   await registrarAsistencia(estado,false,gpsCoords.lat,gpsCoords.lng);
   const msg=document.getElementById('gps-msg');
-  msg.textContent=`✅ ${estado.toUpperCase()} registrado con GPS`;
+  msg.textContent=` ${estado.toUpperCase()} registrado con GPS`;
   msg.className='msg ok show';
   document.getElementById('btn-registrar-gps').disabled=true;
   setTimeout(()=>location.reload(),2000);
@@ -975,12 +978,12 @@ async function loadHistorial(){
   document.getElementById('h-pres').textContent=p;
   document.getElementById('h-tard').textContent=t;
   document.getElementById('h-aus').textContent=au;
-  if(!data?.length){document.getElementById('d-historial').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros aún</div></div>`;return}
+  if(!data?.length){document.getElementById('d-historial').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin registros aún</div></div>`;return}
   document.getElementById('d-historial').innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora ingreso</th><th>Hora salida</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
     const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
     const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
     const metodo=a.verificado_facial?'<span class="badge bb">Facial</span>':(a.latitud?'<span class="badge">GPS</span>':'<span class="badge">Manual</span>');
-    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">📍 Ver</a>`:'--';
+    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase"> Ver</a>`:'--';
     return`<tr><td>${fecha}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td>${a.hora_salida?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${metodo}</td><td>${gps}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
@@ -1017,7 +1020,7 @@ async function alertarAdminGPS(motivo='GPS denegado'){
   //     EXISTS (SELECT 1 FROM perfiles WHERE id=auth.uid() AND rol='profesor'));
   try{
     await sb.from('notificaciones').insert({
-      titulo:`⚠️ Alerta GPS — Prof. ${nombre}`,
+      titulo:` Alerta GPS — Prof. ${nombre}`,
       mensaje:`${motivo} al intentar registrar asistencia el ${ahora}.`,
       tipo:'urgente',global:true,leida:false
     });
@@ -1077,7 +1080,7 @@ let pnTabActual=null;
 async function loadTodasNotas(){
   const el=document.getElementById('d-notas-prof');
   const tabsEl=document.getElementById('pn-tabs');
-  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin materias asignadas</div></div>';tabsEl.innerHTML='';return;}
+  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin materias asignadas</div></div>';tabsEl.innerHTML='';return;}
   const materiaIds=pnMaterias.map(m=>m.id);
   const{data}=await sb.from('notas')
     .select('*,materias(nombre),alumnos(perfiles(nombre,apellido,dni))')
@@ -1086,7 +1089,7 @@ async function loadTodasNotas(){
   // Actualizar datalist con títulos existentes
   const titulos=[...new Set((data||[]).map(n=>n.periodo).filter(Boolean))];
   document.getElementById('pn-titulos-list').innerHTML=titulos.map(t=>`<option value="${t}">`).join('');
-  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📝</div><div class="et">Sin notas registradas</div></div>';tabsEl.innerHTML='';return;}
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>';tabsEl.innerHTML='';return;}
   // Agrupar por título
   const byTitulo={};
   data.forEach(n=>{const t=n.periodo||'Sin título';if(!byTitulo[t])byTitulo[t]=[];byTitulo[t].push(n);});
@@ -1139,13 +1142,13 @@ async function saveNotaProfesor(){
   if(isNaN(nota)||nota<0||nota>20)return showMsg(msg,'Ingresa una nota válida entre 0 y 20','err');
   const{error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo:titulo,nota_1:nota,nota_2:null,nota_3:null,promedio:nota},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Nota guardada ✅','ok');
+  showMsg(msg,'Nota guardada ','ok');
   // FCM al alumno y sus padres
   const _matNota=document.getElementById('pn-materia')?.selectedOptions[0]?.text||'una materia';
   sb.from('alumnos').select('perfil_id').eq('id',alumnoId).single().then(({data:al})=>{
     if(!al?.perfil_id)return;
-    sendFcmToUsers([al.perfil_id],'📝 Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
-    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
+    sendFcmToUsers([al.perfil_id],' Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
+    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),' Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
   });
   loadTodasNotas();
 }
@@ -1166,12 +1169,12 @@ function setProfPracticaFiles(input){
   const pesados=files.filter(f=>f.size>PDF_WARN_MB*1024*1024);
   if(bloqueados.length){
     warn.style.display='block';
-    warn.innerHTML=`⛔ <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a>.`;
+    warn.innerHTML=` <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a>.`;
     return;
   }
   if(pesados.length){
     warn.style.display='block';
-    warn.innerHTML=`⚠️ Archivo pesado. Podés comprimirlo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subir.`;
+    warn.innerHTML=` Archivo pesado. Podés comprimirlo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subir.`;
   } else warn.style.display='none';
   profPracticaFiles=files;
   document.getElementById('pp-fname').textContent=files.length===1?files[0].name:`${files.length} archivos seleccionados`;
@@ -1183,14 +1186,14 @@ function _solPath(pathOrUrl){
     :pathOrUrl;
 }
 async function openSolucion(pathOrUrl,btnEl){
-  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='';}
   try{
     const path=_solPath(pathOrUrl);
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
-    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const resp=await fetch(data.signedUrl);
-    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const blob=await resp.blob();
     const ext=path.split('.').pop()||'jpg';
     const a=document.createElement('a');
@@ -1198,16 +1201,16 @@ async function openSolucion(pathOrUrl,btnEl){
     a.download=`solucion.${ext}`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){await myAlert('Error: '+e.message);}
-  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
 
 async function downloadSolucionesZip(pid,pracTitulo,btnEl){
-  btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
+  btnEl.disabled=true;btnEl.textContent=' Generando ZIP...';
   try{
     const {data,error:qErr}=await sb.from('soluciones')
       .select('*,alumnos(perfiles(nombre,apellido,dni))')
       .eq('practica_id',pid).order('entregado_en');
-    if(qErr||!data?.length){await myAlert('ZIP: '+(qErr?.message||'Sin soluciones para esta práctica ('+pid+')'));btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    if(qErr||!data?.length){await myAlert('ZIP: '+(qErr?.message||'Sin soluciones para esta práctica ('+pid+')'));btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';return;}
     const zip=new JSZip();
     let ok=0;
     for(const s of data){
@@ -1223,14 +1226,14 @@ async function downloadSolucionesZip(pid,pracTitulo,btnEl){
       zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
       ok++;
     }
-    if(!ok){await myAlert('No se pudieron obtener los archivos. Verificá la policy de lectura en storage.');btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    if(!ok){await myAlert('No se pudieron obtener los archivos. Verificá la policy de lectura en storage.');btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';return;}
     const content=await zip.generateAsync({type:'blob'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(content);
     a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){await myAlert('Error generando ZIP: '+e.message);}
-  btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';
+  btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';
 }
 
 async function deleteProfPractica(id){
@@ -1275,7 +1278,7 @@ async function saveProfPractica(){
   const archivoUrl=urls.length===1?urls[0]:JSON.stringify(urls);
   const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true,creado_por:uid});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return;}
-  showMsg(msg,'✅ Práctica subida correctamente','ok');
+  showMsg(msg,' Práctica subida correctamente','ok');
   profPracticaFiles=[];
   document.getElementById('pp-fname').textContent='';
   document.getElementById('pp-warn-pdf').style.display='none';
@@ -1296,23 +1299,23 @@ async function loadProfPracticas(){
   if(!profesorId)return;
   const {data:mpRows}=await sb.from('materia_profesor').select('materia_id').eq('profesor_id',profesorId);
   const matIds=(mpRows||[]).map(r=>r.materia_id);
-  if(!matIds.length){document.getElementById('d-prof-practicas').innerHTML='<div class="empty"><div class="ei">📄</div><div class="et">Sin materias asignadas</div></div>';return;}
+  if(!matIds.length){document.getElementById('d-prof-practicas').innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin materias asignadas</div></div>';return;}
   const {data}=await sb.from('practicas').select('*,materias(nombre)').in('materia_id',matIds).order('semana_inicio',{ascending:false});
   const el=document.getElementById('d-prof-practicas');
-  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas aún</div></div>';return;}
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin prácticas aún</div></div>';return;}
   el.innerHTML=data.map(p=>{
     const urls=parsePracUrls(p.archivo_url);
-    const links=urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 ${urls.length>1?'PDF '+(i+1):'Descargar PDF'}</a>`).join('');
+    const links=urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none"> ${urls.length>1?'PDF '+(i+1):'Descargar PDF'}</a>`).join('');
     return`<div class="prac-card">
       <div class="prac-semana">Semana: ${p.semana_inicio}</div>
       <div class="prac-titulo">${p.titulo}</div>
-      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      <div class="prac-mat">${p.materias?.nombre||'--'}</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:${p.activa!==false?'var(--green)':'var(--red)'}">
-        ${p.activa!==false?'👁️ Visible para alumnos':'🙈 Oculta'}
+        ${p.activa!==false?' Visible para alumnos':' Oculta'}
       </div>
       <div class="prac-btns">
         ${links||'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>'}
-        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deleteProfPractica('${p.id}')">🗑️ Eliminar</button>
+        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deleteProfPractica('${p.id}')"> Eliminar</button>
       </div>
     </div>`;
   }).join('');
@@ -1325,9 +1328,9 @@ async function loadProfPracticas(){
 async function loadProfSoluciones(){
   const pid=document.getElementById('q-prof-sol-practica').value;
   const el=document.getElementById('d-prof-soluciones');
-  if(!pid){el.innerHTML='<div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div>';return;}
+  if(!pid){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una práctica</div></div>';return;}
   const {data}=await sb.from('soluciones').select('*,alumnos(perfiles(nombre,apellido))').eq('practica_id',pid).order('entregado_en',{ascending:false});
-  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei">📥</div><div class="et">Sin entregas aún</div></div>';return;}
+  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin entregas aún</div></div>';return;}
   // Agrupar por alumno
   const byAlumno={};
   data.forEach(s=>{
@@ -1339,17 +1342,17 @@ async function loadProfSoluciones(){
   const pracOpt=document.getElementById('q-prof-sol-practica');
   const pracTitulo=pracOpt.options[pracOpt.selectedIndex]?.text||'practica';
   el.innerHTML=`<div style="margin-bottom:12px">
-    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)">📦 Descargar ZIP de todas las soluciones</button>
+    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)"> Descargar ZIP de todas las soluciones</button>
   </div>
   <div style="background:var(--navy2);border:1px solid var(--border)">
     ${Object.values(byAlumno).map(a=>`<div class="sol-item">
-      <div class="sol-icon">🖼️</div>
+      <div class="sol-icon"></div>
       <div style="flex:1">
         <div class="sol-name">${a.nombre}</div>
         <div class="sol-info">Entregó ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" class="btn btn-outline" style="font-size:11px;padding:6px 10px">⬇️${a.archivos.length>1?' '+(i+1):''}</button>`).join('')}
+        ${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" class="btn btn-outline" style="font-size:11px;padding:6px 10px">⬇${a.archivos.length>1?' '+(i+1):''}</button>`).join('')}
       </div>
     </div>`).join('')}
   </div>`;

@@ -294,40 +294,40 @@
 <div class="sidebar" id="sidebar">
   <div class="sb-section">
     <div class="sb-label">General</div>
-    <button class="sb-link active" onclick="showPanel('inicio',this)"><span class="ic">🏠</span>Dashboard</button>
+    <button class="sb-link active" onclick="showPanel('inicio',this)">Dashboard</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Gestión</div>
-    <button class="sb-link" onclick="showPanel('aulas',this)"><span class="ic">🏫</span>Aulas</button>
-    <button class="sb-link" onclick="showPanel('alumnos',this)"><span class="ic">👮</span>Gestión Alumnos</button>
-    <button class="sb-link" onclick="showPanel('materias',this)"><span class="ic">📚</span>Materias</button>
-    <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Horario Semanal</button>
-    <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none"><span class="ic">👨‍👩‍👧</span>Gestión Padres</button>
-    <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none"><span class="ic">👩‍🏫</span>Gestión Profesores</button>
-    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none"><span class="ic">👤</span>Gestión Administradores</button>
-    <button class="sb-link sb-dueno" onclick="showPanel('academia',this)" style="display:none"><span class="ic">🏛️</span>Datos de la Academia</button>
+    <button class="sb-link" onclick="showPanel('aulas',this)">Aulas</button>
+    <button class="sb-link" onclick="showPanel('alumnos',this)">Gestión Alumnos</button>
+    <button class="sb-link" onclick="showPanel('materias',this)">Materias</button>
+    <button class="sb-link" onclick="showPanel('horario',this)">Horario Semanal</button>
+    <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none">Gestión Padres</button>
+    <button class="sb-link sb-dueno" id="sb-profesores" onclick="showPanel('profesores',this)" style="display:none">Gestión Profesores</button>
+    <button class="sb-link sb-dueno" id="sb-usuarios" onclick="showPanel('usuarios',this)" style="display:none">Gestión Administradores</button>
+    <button class="sb-link sb-dueno" onclick="showPanel('academia',this)" style="display:none">Datos de la Academia</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Asistencia</div>
-    <button class="sb-link" onclick="showPanel('facial',this)"><span class="ic">📸</span>Tomar Asistencia</button>
-    <button class="sb-link" onclick="showPanel('reportes',this)"><span class="ic">📋</span>Reportes</button>
+    <button class="sb-link" onclick="showPanel('facial',this)">Tomar Asistencia</button>
+    <button class="sb-link" onclick="showPanel('reportes',this)">Reportes</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Académico</div>
-    <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📊</span>Notas</button>
-    <button class="sb-link" onclick="showPanel('practicas',this)"><span class="ic">📄</span>Prácticas</button>
-    <button class="sb-link" onclick="showPanel('soluciones',this)"><span class="ic">📥</span>Soluciones</button>
+    <button class="sb-link" onclick="showPanel('notas',this)">Notas</button>
+    <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
+    <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
   </div>
   <div class="sb-section">
     <div class="sb-label">Comunicación</div>
-    <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
-    <button class="sb-link" onclick="showPanel('contacto',this)"><span class="ic">💬</span>Contacto Padres</button>
-    <button class="sb-link" onclick="showPanel('contrasenas',this)"><span class="ic">🔑</span>Contraseñas</button>
+    <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones</button>
+    <button class="sb-link" onclick="showPanel('contacto',this)">Contacto Padres</button>
+    <button class="sb-link" onclick="showPanel('contrasenas',this)">Contraseñas</button>
   </div>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
-<button class="sb-tog" onclick="toggleSb()">☰</button>
+<button class="sb-tog" onclick="toggleSb()"></button>
 <button class="fab-refresh" onclick="location.reload()" title="Actualizar">↻</button>
 
 <div class="layout"><div class="main">
@@ -385,7 +385,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Listado de Aulas</span></div>
-    <div id="d-aulas"><div class="empty"><div class="ei">🏫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-aulas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -402,12 +402,12 @@
     <div id="sug-al" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')">👮 Activos</div>
-    <div class="aula-tab" id="altab-inactivos" onclick="showAlTab('inactivos')">🚫 Inactivos</div>
+    <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')"> Activos</div>
+    <div class="aula-tab" id="altab-inactivos" onclick="showAlTab('inactivos')"> Inactivos</div>
   </div>
   <div class="tw">
-    <div id="d-alumnos-activos"><div class="empty"><div class="ei">👮</div><div class="et">Cargando...</div></div></div>
-    <div id="d-alumnos-inactivos" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-alumnos-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-alumnos-inactivos" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -419,7 +419,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Materias Registradas</span></div>
-    <div id="d-materias"><div class="empty"><div class="ei">📚</div><div class="et">Cargando...</div></div></div>
+    <div id="d-materias"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -428,13 +428,13 @@
   <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px">
     <div><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
     <div id="hor-publicar-wrap" style="display:none">
-      <button class="btn btn-gold" onclick="publicarHorario()" id="btn-publicar-horario">📢 PUBLICAR HORARIO</button>
+      <button class="btn btn-gold" onclick="publicarHorario()" id="btn-publicar-horario"> PUBLICAR HORARIO</button>
       <div class="msg" id="msg-publicar" style="margin-top:6px"></div>
     </div>
   </div>
   <div id="hor-aula-tabs" class="aula-tabs"></div>
   <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="hor-table-wrap">
-    <div class="empty"><div class="ei">🗓️</div><div class="et">Selecciona un aula arriba</div></div>
+    <div class="empty"><div class="ei"></div><div class="et">Selecciona un aula arriba</div></div>
   </div>
   <!-- Cell editor overlay — solo dueño -->
   <div id="hor-cell-editor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:250;align-items:center;justify-content:center;padding:16px">
@@ -465,7 +465,7 @@
       <input type="hidden" id="hor-ed-slot"/>
       <div class="msg" id="hor-ed-msg"></div>
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-        <button class="btn btn-red" style="font-size:11px;padding:8px 14px" onclick="clearCellHorario()">🗑️ Limpiar</button>
+        <button class="btn btn-red" style="font-size:11px;padding:8px 14px" onclick="clearCellHorario()"> Limpiar</button>
         <button class="btn btn-outline" style="font-size:11px;padding:8px 14px" onclick="closeCellEditor()">Cancelar</button>
         <button class="btn btn-gold" style="flex:1" onclick="saveCellHorario()">GUARDAR</button>
       </div>
@@ -481,7 +481,7 @@
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
       <select id="f-aula" onchange="onAulaChange()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:220px"><option value="">-- Selecciona aula --</option></select>
       <div id="f-mat-detectada" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase">
-        📚 <span id="f-mat-nombre" style="color:var(--gold)">--</span>
+         <span id="f-mat-nombre" style="color:var(--gold)">--</span>
         <span id="f-mat-horario" style="color:var(--muted);margin-left:6px"></span>
       </div>
       <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
@@ -489,37 +489,37 @@
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div id="f-sesion-estado" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Sin sesión activa</div>
       <button id="btn-abrir-sesion" class="btn btn-green" style="font-size:11px;padding:6px 14px" onclick="abrirSesion()">▶ Abrir Asistencia</button>
-      <button id="btn-cerrar-sesion" class="btn btn-red" style="font-size:11px;padding:6px 14px;display:none" onclick="cerrarSesion()">⏹ Cerrar Asistencia</button>
+      <button id="btn-cerrar-sesion" class="btn btn-red" style="font-size:11px;padding:6px 14px;display:none" onclick="cerrarSesion()"> Cerrar Asistencia</button>
     </div>
   </div>
   <!-- Tabs -->
   <div class="aula-tabs">
-    <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')">📸 Verificación Facial</div>
-    <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')">✏️ Asistencia Manual</div>
-    <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')">📋 Registros del Día</div>
+    <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')"> Verificación Facial</div>
+    <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')"> Asistencia Manual</div>
+    <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')"> Registros del Día</div>
   </div>
 
   <!-- TAB 1: Verificación Facial -->
   <div id="ftab-content-facial">
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;padding-top:16px">
-      <button class="btn btn-gold" onclick="startCam()">📷 Activar Cámara</button>
-      <button class="btn btn-outline" onclick="flipCam()" id="btn-flip" title="Cambiar cámara">🔄 Cambiar</button>
-      <button class="btn btn-outline" onclick="stopCam()">⏹ Detener</button>
+      <button class="btn btn-gold" onclick="startCam()"> Activar Cámara</button>
+      <button class="btn btn-outline" onclick="flipCam()" id="btn-flip" title="Cambiar cámara"> Cambiar</button>
+      <button class="btn btn-outline" onclick="stopCam()"> Detener</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
       <div class="cam-wrap"><video id="f-video" autoplay muted playsinline></video><canvas id="f-canvas"></canvas></div>
       <div class="cam-status cs-idle" id="f-camst">Cámara detenida</div>
       <div style="display:flex;gap:8px;width:100%;max-width:400px">
-        <button class="btn btn-outline" style="flex:1" onclick="showFacialTab('manual')">✏️ Asistencia Manual</button>
+        <button class="btn btn-outline" style="flex:1" onclick="showFacialTab('manual')"> Asistencia Manual</button>
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center">Reconocimiento automático en tiempo real — apunta la cámara al alumno</div>
       <div class="verify-card" id="verify-card">
         <div class="verify-name" id="v-name"></div>
         <div class="verify-info" id="v-info"></div>
         <div class="verify-btns">
-          <button class="btn btn-green" style="flex:1" onclick="confirmAtt('presente')">✓ Presente</button>
-          <button class="btn btn-outline" style="flex:1" onclick="confirmAtt('tardanza')">⏰ Tardanza</button>
-          <button class="btn btn-red" style="flex:1" onclick="rejectVerify()">✗ Rechazar</button>
+          <button class="btn btn-green" style="flex:1" onclick="confirmAtt('presente')"> Presente</button>
+          <button class="btn btn-outline" style="flex:1" onclick="confirmAtt('tardanza')"> Tardanza</button>
+          <button class="btn btn-red" style="flex:1" onclick="rejectVerify()"> Rechazar</button>
         </div>
       </div>
     </div>
@@ -535,12 +535,12 @@
         <div id="man-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:180px;overflow-y:auto"></div>
       </div>
     </div>
-    <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:12px">✅ <span id="man-selected-name"></span></div>
+    <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:12px"> <span id="man-selected-name"></span></div>
     <div class="fg"><label>Estado</label>
       <select id="man-estado">
-        <option value="presente">✅ Presente</option>
-        <option value="tardanza">⏰ Tardanza</option>
-        <option value="ausente">❌ Ausente</option>
+        <option value="presente"> Presente</option>
+        <option value="tardanza"> Tardanza</option>
+        <option value="ausente"> Ausente</option>
       </select>
     </div>
     <button class="btn btn-gold" style="margin-top:8px" onclick="saveManual()">REGISTRAR ASISTENCIA</button>
@@ -553,7 +553,7 @@
       <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--blue)" id="f-facial-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Facial</div></div>
       <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--yellow)" id="f-man-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Manual</div></div>
     </div>
-    <div class="flog" id="f-log"><div class="empty"><div class="ei">👁️</div><div class="et">Sin registros hoy</div></div></div>
+    <div class="flog" id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
 
@@ -568,7 +568,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Resumen por Alumno</span></div>
-    <div id="d-reporte"><div class="empty"><div class="ei">📋</div><div class="et">Cargando...</div></div></div>
+    <div id="d-reporte"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -582,7 +582,7 @@
     <div class="th"><span class="th-ttl">Notas Registradas</span></div>
     <div id="notas-mat-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
     <div id="notas-per-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-bottom:1px solid var(--border);background:var(--navy)"></div>
-    <div id="d-notas"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -592,7 +592,7 @@
     <div class="ph-left"><div class="eye">Material semanal</div><div class="ttl">PRÁCTICAS</div></div>
     <button class="btn btn-gold" onclick="openMd('md-practica')">+ Subir Práctica</button>
   </div>
-  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei">📄</div><div class="et">Cargando...</div></div></div>
+  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- ══ SOLUCIONES ══ -->
@@ -603,32 +603,32 @@
       <select id="q-sol-practica" onchange="loadSoluciones()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none"><option value="">-- Selecciona práctica --</option></select>
     </div>
   </div>
-  <div id="d-soluciones"><div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div></div>
+  <div id="d-soluciones"><div class="empty"><div class="ei"></div><div class="et">Selecciona una práctica</div></div></div>
 </div>
 
 <!-- ══ NOTIFICACIONES ══ -->
 <div class="panel" id="panel-notificaciones">
   <div class="ph"><div class="ph-left"><div class="eye">Comunicados</div><div class="ttl">NOTIFICACIONES</div></div></div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="ntab-enviar" onclick="showNotifTab('enviar')">📢 Enviar Comunicado</div>
-    <div class="aula-tab" id="ntab-hist" onclick="showNotifTab('hist')">📜 Historial</div>
+    <div class="aula-tab active" id="ntab-enviar" onclick="showNotifTab('enviar')"> Enviar Comunicado</div>
+    <div class="aula-tab" id="ntab-hist" onclick="showNotifTab('hist')"> Historial</div>
   </div>
   <div style="background:var(--navy2);border:1px solid var(--border);padding:20px" id="ntab-enviar-content">
       <div class="msg" id="n-msg"></div>
       <div class="fg"><label>Tipo</label>
         <div class="ntypes">
-          <button class="ntype ai" onclick="setNType('info',this)">ℹ️ Info</button>
-          <button class="ntype" onclick="setNType('alerta',this)">⚠️ Alerta</button>
-          <button class="ntype" onclick="setNType('urgente',this)">🚨 Urgente</button>
+          <button class="ntype ai" onclick="setNType('info',this)">ℹ Info</button>
+          <button class="ntype" onclick="setNType('alerta',this)"> Alerta</button>
+          <button class="ntype" onclick="setNType('urgente',this)"> Urgente</button>
         </div>
       </div>
       <div class="fg"><label>Grupo Destinatario</label>
         <select id="n-grupo" onchange="onChangeGrupo()">
-          <option value="todos">📢 Todos</option>
-          <option value="admin">👤 Admins</option>
-          <option value="padre">👨‍👩‍👧 Padres</option>
-          <option value="alumno">🎓 Alumnos</option>
-          <option value="profesor">📚 Profesores</option>
+          <option value="todos"> Todos</option>
+          <option value="admin"> Admins</option>
+          <option value="padre">‍‍ Padres</option>
+          <option value="alumno"> Alumnos</option>
+          <option value="profesor"> Profesores</option>
         </select>
       </div>
       <div id="n-dest-detail" style="display:none;background:var(--navy);border:1px solid var(--border);padding:14px;margin-bottom:12px;border-radius:4px">
@@ -643,7 +643,7 @@
           <div class="fg"><label>Cargar DNIs desde TXT</label>
             <div class="file-drop">
               <input type="file" accept=".txt" onchange="loadDniFile(this)"/>
-              <div class="fd-icon">📋</div>
+              <div class="fd-icon"></div>
               <div class="fd-txt">Arrastra o click para subir TXT</div>
               <div class="fd-name" id="dni-name"></div>
             </div>
@@ -665,7 +665,7 @@
       <div class="fg"><label>Adjunto (imagen o PDF, opcional)</label>
         <div class="file-drop" id="n-adj-drop">
           <input type="file" accept="image/*,.pdf" onchange="setNotifFile(this)"/>
-          <div class="fd-icon">📎</div>
+          <div class="fd-icon"></div>
           <div class="fd-txt">Imagen o PDF · máx 20 MB</div>
           <div class="fd-name" id="n-adj-name"></div>
         </div>
@@ -676,9 +676,9 @@
   <div style="background:var(--navy2);border:1px solid var(--border);padding:20px;display:none" id="ntab-hist-content">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px">Historial de comunicados</div>
-      <button id="btn-del-all-notif" class="btn btn-red" style="display:none;font-size:10px;padding:5px 10px" onclick="deleteAllNotif()">🗑️ Borrar todo</button>
+      <button id="btn-del-all-notif" class="btn btn-red" style="display:none;font-size:10px;padding:5px 10px" onclick="deleteAllNotif()"> Borrar todo</button>
     </div>
-    <div id="d-notif-hist"><div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div></div>
+    <div id="d-notif-hist"><div class="empty"><div class="ei"></div><div class="et">Sin notificaciones</div></div></div>
   </div>
 </div>
 
@@ -686,14 +686,14 @@
 <div class="panel" id="panel-contacto">
   <div class="ph"><div class="ph-left"><div class="eye">Mensajes entrantes</div><div class="ttl">CONTACTO PADRES</div></div></div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="ctab-noleidos" onclick="showContactoTab('noleidos')">🟡 No leídos <span id="ctab-count" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 6px;margin-left:4px;display:none"></span></div>
-    <div class="aula-tab" id="ctab-leidos" onclick="showContactoTab('leidos')">✅ Leídos</div>
+    <div class="aula-tab active" id="ctab-noleidos" onclick="showContactoTab('noleidos')"> No leídos <span id="ctab-count" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 6px;margin-left:4px;display:none"></span></div>
+    <div class="aula-tab" id="ctab-leidos" onclick="showContactoTab('leidos')"> Leídos</div>
   </div>
-  <div id="d-contacto-noleidos"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
+  <div id="d-contacto-noleidos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px" id="del-all-leidos-wrap">
-    <button class="btn btn-red" style="font-size:10px;padding:5px 10px;display:none" id="btn-del-all-leidos" onclick="deleteAllMensajesLeidos()">🗑️ Borrar todos los leídos</button>
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px;display:none" id="btn-del-all-leidos" onclick="deleteAllMensajesLeidos()"> Borrar todos los leídos</button>
   </div>
-  <div id="d-contacto-leidos" style="display:none"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
+  <div id="d-contacto-leidos" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- ══ GESTIÓN PADRES ══ -->
@@ -707,12 +707,12 @@
     <div id="sug-pad" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="padtab-activos" onclick="showPadTab('activos')">✅ Activos</div>
-    <div class="aula-tab" id="padtab-deshabilitados" onclick="showPadTab('deshabilitados')">🚫 Deshabilitados</div>
+    <div class="aula-tab active" id="padtab-activos" onclick="showPadTab('activos')"> Activos</div>
+    <div class="aula-tab" id="padtab-deshabilitados" onclick="showPadTab('deshabilitados')"> Deshabilitados</div>
   </div>
   <div class="tw">
-    <div id="d-padres-activos"><div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Cargando...</div></div></div>
-    <div id="d-padres-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-padres-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-padres-deshabilitados" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -727,12 +727,12 @@
     <div id="sug-adm" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="admtab-activos" onclick="showAdmTab('activos')">✅ Activos</div>
-    <div class="aula-tab" id="admtab-deshabilitados" onclick="showAdmTab('deshabilitados')">🚫 Deshabilitados</div>
+    <div class="aula-tab active" id="admtab-activos" onclick="showAdmTab('activos')"> Activos</div>
+    <div class="aula-tab" id="admtab-deshabilitados" onclick="showAdmTab('deshabilitados')"> Deshabilitados</div>
   </div>
   <div class="tw">
-    <div id="d-admins-activos"><div class="empty"><div class="ei">👤</div><div class="et">Cargando...</div></div></div>
-    <div id="d-admins-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-admins-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-admins-deshabilitados" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -742,7 +742,7 @@
     <div class="ph-left"><div class="eye">Configuración</div><div class="ttl">DATOS DE LA ACADEMIA</div></div>
   </div>
   <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:10px">📍 Ubicación de la Academia</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:10px"> Ubicación de la Academia</div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:14px">
       Los admins solo pueden tomar asistencia dentro de <strong id="acad-radio-lbl">200</strong>m de la academia.<br>
       Dirección actual: <strong id="acad-dir-lbl">Cargando...</strong>
@@ -755,7 +755,7 @@
     </div>
     <div class="msg" id="msg-acad"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn btn-outline" onclick="usarMiUbicacion()">📍 Usar mi ubicación actual</button>
+      <button class="btn btn-outline" onclick="usarMiUbicacion()"> Usar mi ubicación actual</button>
       <button class="btn btn-gold" onclick="saveAcademiaConfig()">GUARDAR UBICACIÓN</button>
     </div>
   </div>
@@ -773,7 +773,7 @@
     <div class="fg"><label>Nueva contraseña</label>
       <div style="display:flex;gap:8px">
         <input type="text" id="pass-nueva" placeholder="Nueva contraseña..." style="flex:1"/>
-        <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAleatoria()">🔀 Generar</button>
+        <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAleatoria()"> Generar</button>
       </div>
     </div>
     <div class="msg" id="pass-msg"></div>
@@ -782,7 +782,7 @@
   </div>
   <div style="margin-top:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px">Todas las contraseñas registradas</div>
-    <div id="d-contrasenas"><div class="empty"><div class="ei">🔑</div><div class="et">Cargando...</div></div></div>
+    <div id="d-contrasenas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -797,12 +797,12 @@
     <div id="sug-prof" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="proftab-activos" onclick="showProfTab('activos')">✅ Activos</div>
-    <div class="aula-tab" id="proftab-deshabilitados" onclick="showProfTab('deshabilitados')">🚫 Deshabilitados</div>
+    <div class="aula-tab active" id="proftab-activos" onclick="showProfTab('activos')"> Activos</div>
+    <div class="aula-tab" id="proftab-deshabilitados" onclick="showProfTab('deshabilitados')"> Deshabilitados</div>
   </div>
   <div class="tw">
-    <div id="d-profesores-activos"><div class="empty"><div class="ei">👩‍🏫</div><div class="et">Cargando...</div></div></div>
-    <div id="d-profesores-deshabilitados" style="display:none"><div class="empty"><div class="ei">🚫</div><div class="et">Cargando...</div></div></div>
+    <div id="d-profesores-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-profesores-deshabilitados" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -813,7 +813,7 @@
 <!-- MODAL AULA -->
 <div class="mo" id="md-aula">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">NUEVA AULA</div><button class="md-x" onclick="closeMd('md-aula')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVA AULA</div><button class="md-x" onclick="closeMd('md-aula')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-aula"></div>
       <div class="fgrid">
@@ -831,7 +831,7 @@
 <!-- MODAL ALUMNO -->
 <div class="mo" id="md-alumno">
   <div class="md" style="max-width:600px">
-    <div class="md-hd"><div class="md-ttl">NUEVO ALUMNO</div><button class="md-x" onclick="closeMd('md-alumno')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVO ALUMNO</div><button class="md-x" onclick="closeMd('md-alumno')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-alumno"></div>
       <div class="fgrid">
@@ -845,7 +845,7 @@
         <div class="fg full"><label>Contraseña inicial</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
       </div>
       <div class="fg" style="margin-top:8px">
-        <label>📸 Foto Facial (para reconocimiento)</label>
+        <label> Foto Facial (para reconocimiento)</label>
         <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="cam-wrap" style="max-width:220px;min-height:160px;display:flex;align-items:center;justify-content:center">
@@ -854,15 +854,15 @@
               <span id="reg-placeholder" style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRegCam()">📷 Cámara</button>
-              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="reg-snap-btn" onclick="snapPhoto()" disabled>📸 Capturar</button>
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRegCam()"> Cámara</button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="reg-snap-btn" onclick="snapPhoto()" disabled> Capturar</button>
             </div>
           </div>
           <div class="fg" style="flex:1;min-width:140px">
             <label>O subir imagen</label>
             <div class="file-drop" style="padding:16px">
               <input type="file" accept="image/*" onchange="setFotoFile(this)"/>
-              <div class="fd-icon">🖼️</div>
+              <div class="fd-icon"></div>
               <div class="fd-txt">Subir foto</div>
               <div class="fd-name" id="foto-name"></div>
             </div>
@@ -880,7 +880,7 @@
 <!-- MODAL MATERIA -->
 <div class="mo" id="md-materia">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">NUEVA MATERIA</div><button class="md-x" onclick="closeMd('md-materia')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVA MATERIA</div><button class="md-x" onclick="closeMd('md-materia')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-materia"></div>
       <div class="fgrid">
@@ -898,7 +898,7 @@
 <!-- MODAL ASIGNAR PROFESORES A MATERIA -->
 <div class="mo" id="md-mat-prof">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">PROFESORES DE MATERIA</div><button class="md-x" onclick="closeMd('md-mat-prof')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">PROFESORES DE MATERIA</div><button class="md-x" onclick="closeMd('md-mat-prof')"></button></div>
     <div class="md-bd">
       <input type="hidden" id="mmp-materia-id"/>
       <div class="msg" id="msg-mat-prof"></div>
@@ -926,7 +926,7 @@
 <!-- MODAL HORARIO -->
 <div class="mo" id="md-horario">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">AGREGAR CLASE</div><button class="md-x" onclick="closeMd('md-horario')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">AGREGAR CLASE</div><button class="md-x" onclick="closeMd('md-horario')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-horario"></div>
       <div class="fgrid">
@@ -954,7 +954,7 @@
 <!-- MODAL NOTA -->
 <div class="mo" id="md-nota">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">CARGAR NOTA</div><button class="md-x" onclick="closeMd('md-nota')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">CARGAR NOTA</div><button class="md-x" onclick="closeMd('md-nota')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-nota"></div>
       <div class="fgrid">
@@ -985,7 +985,7 @@
 <!-- MODAL PRÁCTICA -->
 <div class="mo" id="md-practica">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">SUBIR PRÁCTICA</div><button class="md-x" onclick="closeMd('md-practica')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">SUBIR PRÁCTICA</div><button class="md-x" onclick="closeMd('md-practica')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-practica"></div>
       <div class="fgrid">
@@ -996,7 +996,7 @@
         <div class="fg full"><label>Archivos PDF</label>
           <div class="file-drop">
             <input type="file" accept=".pdf" multiple onchange="setPracticaFiles(this)"/>
-            <div class="fd-icon">📄</div>
+            <div class="fd-icon"></div>
             <div class="fd-txt">Arrastra uno o varios PDFs aquí</div>
             <div class="fd-name" id="p-fname"></div>
           </div>
@@ -1014,7 +1014,7 @@
 <!-- MODAL EDITAR HORARIO -->
 <div class="mo" id="md-edit-horario">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">EDITAR CLASE</div><button class="md-x" onclick="closeMd('md-edit-horario')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">EDITAR CLASE</div><button class="md-x" onclick="closeMd('md-edit-horario')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-edit-horario"></div>
       <input type="hidden" id="edit-hor-id"/>
@@ -1033,7 +1033,7 @@
       </div>
     </div>
     <div class="md-ft">
-      <button class="btn btn-red" onclick="deleteHorario()">🗑️ Eliminar</button>
+      <button class="btn btn-red" onclick="deleteHorario()"> Eliminar</button>
       <button class="btn btn-outline" onclick="closeMd('md-edit-horario')">Cancelar</button>
       <button class="btn btn-gold" onclick="updateHorario()">GUARDAR CAMBIOS</button>
     </div>
@@ -1043,7 +1043,7 @@
 <!-- MODAL PADRE -->
 <div class="mo" id="md-padre">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">NUEVO PADRE / APODERADO</div><button class="md-x" onclick="closeMd('md-padre')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVO PADRE / APODERADO</div><button class="md-x" onclick="closeMd('md-padre')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-padre"></div>
       <div class="fgrid">
@@ -1056,7 +1056,7 @@
           <label>Contraseña de acceso</label>
           <div style="display:flex;gap:8px;align-items:center">
             <input type="text" id="pad-pass" placeholder="Mín. 6 caracteres" style="flex:1"/>
-            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px;white-space:nowrap" onclick="generarPassPadre()">🔀 Generar</button>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px;white-space:nowrap" onclick="generarPassPadre()"> Generar</button>
           </div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:5px">Si lo dejas vacío se usará el DNI como contraseña</div>
         </div>
@@ -1091,7 +1091,7 @@
 <!-- MODAL NUEVO PROFESOR -->
 <div class="mo" id="md-profesor">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">NUEVO PROFESOR</div><button class="md-x" onclick="closeMd('md-profesor')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVO PROFESOR</div><button class="md-x" onclick="closeMd('md-profesor')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-profesor"></div>
       <div class="fgrid">
@@ -1104,13 +1104,13 @@
           <label>Contraseña</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="pr-pass" placeholder="Mín. 6 caracteres" style="flex:1"/>
-            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="document.getElementById('pr-pass').value=generarPass()">🔀</button>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="document.getElementById('pr-pass').value=generarPass()"></button>
           </div>
         </div>
         <div class="fg full"><label>Materia inicial (opcional)</label><select id="pr-materia"><option value="">-- Sin asignar --</option></select></div>
       </div>
       <div class="fg" style="margin-top:8px">
-        <label>📸 Foto para reconocimiento facial (opcional)</label>
+        <label> Foto para reconocimiento facial (opcional)</label>
         <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="cam-wrap" style="max-width:200px;min-height:150px;display:flex;align-items:center;justify-content:center">
@@ -1119,15 +1119,15 @@
               <span id="pr-placeholder" style="color:var(--muted);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startProfesorCam()">📷</button>
-              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="pr-snap-btn" onclick="snapProfesor()" disabled>📸</button>
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startProfesorCam()"></button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="pr-snap-btn" onclick="snapProfesor()" disabled></button>
             </div>
           </div>
           <div class="fg" style="flex:1;min-width:120px">
             <label>O subir imagen</label>
             <div class="file-drop" style="padding:14px">
               <input type="file" accept="image/*" onchange="setProfesorFoto(this)"/>
-              <div class="fd-icon">🖼️</div>
+              <div class="fd-icon"></div>
               <div class="fd-txt">Subir foto</div>
               <div class="fd-name" id="pr-foto-name"></div>
             </div>
@@ -1145,7 +1145,7 @@
 <!-- MODAL NUEVO ADMIN -->
 <div class="mo" id="md-admin">
   <div class="md">
-    <div class="md-hd"><div class="md-ttl">NUEVO ADMINISTRADOR</div><button class="md-x" onclick="closeMd('md-admin')">✕</button></div>
+    <div class="md-hd"><div class="md-ttl">NUEVO ADMINISTRADOR</div><button class="md-x" onclick="closeMd('md-admin')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-admin"></div>
       <div class="fgrid">
@@ -1157,7 +1157,7 @@
           <label>Contraseña</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="adm-pass" placeholder="Mín. 8 caracteres" style="flex:1"/>
-            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAdmin()">🔀</button>
+            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAdmin()"></button>
           </div>
         </div>
         <div class="fg full"><label>Rol</label>
@@ -1258,7 +1258,7 @@ async function saveAcademiaConfig(){
   academiaLoc={...payload};
   document.getElementById('acad-dir-lbl').textContent=dir||`${lat}, ${lng}`;
   document.getElementById('acad-radio-lbl').textContent=radio;
-  showMsg(msg,'✅ Ubicación de la academia actualizada','ok');
+  showMsg(msg,' Ubicación de la academia actualizada','ok');
 }
 async function usarMiUbicacion(){
   if(!navigator.geolocation)return await myAlert('Tu dispositivo no soporta geolocalización');
@@ -1544,7 +1544,7 @@ async function loadDashboardDueno(){
   const badge=document.getElementById('dtab-padres-badge');
   if(badge){badge.textContent=noLeidosCount;badge.style.display=noLeidosCount?'':'none';}
   if(!noLeidosCount){
-    msgsEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin mensajes no leídos ✅</div></div>`;
+    msgsEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin mensajes no leídos </div></div>`;
   } else {
     msgsEl.innerHTML=msgs.map(m=>`
       <div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -1646,7 +1646,7 @@ async function abrirSesion(){
   sesionActual={id:data.id,aula_id:aulaId,materia_id:clase?.materia_id||null,aula_nombre:aulaOpt?.text||'',mat_nombre:clase?.materias?.nombre||'Sin materia asignada'};
   document.getElementById('btn-abrir-sesion').style.display='none';
   document.getElementById('btn-cerrar-sesion').style.display='';
-  document.getElementById('f-sesion-estado').textContent=`🔴 Sesión abierta — ${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`;
+  document.getElementById('f-sesion-estado').textContent=` Sesión abierta — ${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`;
   document.getElementById('f-sesion-estado').style.color='var(--green)';
 }
 
@@ -1680,16 +1680,16 @@ async function loadNotifHist(){
   const {data}=await sb.from('notificaciones').select('*').order('creado_en',{ascending:false}).limit(50);
   const delAllBtn=document.getElementById('btn-del-all-notif');
   if(delAllBtn)delAllBtn.style.display=esDueno&&data?.length?'block':'none';
-  if(!data?.length){document.getElementById('d-notif-hist').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return;}
-  const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
+  if(!data?.length){document.getElementById('d-notif-hist').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notificaciones</div></div>`;return;}
+  const icons={info:'INFO',alerta:'AVISO',urgente:'URGENTE'};
   document.getElementById('d-notif-hist').innerHTML=data.map(n=>{
     const clr=n.tipo==='urgente'?'var(--red)':n.tipo==='alerta'?'var(--yellow)':'var(--blue)';
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
-      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:320px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
-    const delBtn=esDueno?`<button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
-    return`<div style="border-left:3px solid ${clr};padding:10px 14px;background:var(--navy);margin-bottom:3px">${delBtn}<div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase">${icons[n.tipo]||'🔔'} ${n.titulo}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${n.mensaje}</div>${adj}<div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div></div>`;
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:320px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px"> Abrir PDF</a></div>`):'';
+    const delBtn=esDueno?`<button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar"></button>`:'';
+    return`<div style="border-left:3px solid ${clr};padding:10px 14px;background:var(--navy);margin-bottom:3px">${delBtn}<div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase">${icons[n.tipo]||''} ${n.titulo}</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${n.mensaje}</div>${adj}<div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha}</div></div>`;
   }).join('');
 }
 async function deleteNotif(id){
@@ -1742,12 +1742,12 @@ function _padreRow(p,deshabilitado=false){
 }
 function renderPadresActivos(data){
   const el=document.getElementById('d-padres-activos');if(!el)return;
-  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">👨‍👩‍👧</div><div class="et">Sin padres activos</div></div>`;return}
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin padres activos</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_padreRow(p,false)).join('')}</tbody></table>`;
 }
 function renderPadresDeshabilitados(data){
   const el=document.getElementById('d-padres-deshabilitados');if(!el)return;
-  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin padres deshabilitados</div></div>`;return}
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin padres deshabilitados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Email</th><th>Alumno(s)</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_padreRow(p,true)).join('')}</tbody></table>`;
 }
 function filterPadres(){
@@ -1795,7 +1795,7 @@ async function buscarAlumnoPorDNI(contexto){
     document.getElementById(infoId).style.display='block';
     document.getElementById(infoId).style.borderColor='var(--red)';
     document.getElementById(infoId).style.color='var(--red)';
-    document.getElementById(infoId).textContent='❌ No se encontró un alumno con ese DNI o apellido';
+    document.getElementById(infoId).textContent=' No se encontró un alumno con ese DNI o apellido';
     document.getElementById(hiddenId).value='';
     return;
   }
@@ -1805,7 +1805,7 @@ async function buscarAlumnoPorDNI(contexto){
   document.getElementById(infoId).style.display='block';
   document.getElementById(infoId).style.borderColor='var(--green)';
   document.getElementById(infoId).style.color='var(--green)';
-  document.getElementById(infoId).textContent=`✅ ${data.nombre} ${data.apellido} · DNI: ${data.dni}`;
+  document.getElementById(infoId).textContent=` ${data.nombre} ${data.apellido} · DNI: ${data.dni}`;
 }
 
 // ── GENERADORES DE CONTRASEÑA ──
@@ -1840,7 +1840,7 @@ async function saveAdmin(){
   await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol,email_ref:email});
   // Guardar en gestión de contraseñas
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
-  showMsg(msg,`Admin creado ✅ — Email: ${email} / Pass: ${pass}`,'ok');
+  showMsg(msg,`Admin creado  — Email: ${email} / Pass: ${pass}`,'ok');
   await loadAdmins();
   btn.disabled=false; btn.textContent='CREAR ADMIN';
   setTimeout(()=>closeMd('md-admin'),2000);
@@ -1876,12 +1876,12 @@ function _adminRow(a,deshabilitado=false){
 }
 function renderAdminsActivos(data){
   const el=document.getElementById('d-admins-activos');if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👤</div><div class="et">Sin administradores activos</div></div>`;return}
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin administradores activos</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>_adminRow(a,false)).join('')}</tbody></table>`;
 }
 function renderAdminsDeshabilitados(data){
   const el=document.getElementById('d-admins-deshabilitados');if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin administradores deshabilitados</div></div>`;return}
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin administradores deshabilitados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>_adminRow(a,true)).join('')}</tbody></table>`;
 }
 function renderAdminsFiltrados(data){ renderAdminsActivos(data); }
@@ -1930,10 +1930,10 @@ async function cambiarContrasena(){
   if(!pass||pass.length<6)return showMsg(msg,'Mínimo 6 caracteres','err');
   // Update in gestion_contrasenas table
   await sb.from('gestion_contrasenas').upsert({perfil_id:uid,contrasena_actual:pass,actualizado_en:new Date().toISOString()},{onConflict:'perfil_id'});
-  sendFcmToUsers([uid],'🔑 Contraseña actualizada','Tu contraseña en la academia fue modificada por un administrador.');
+  sendFcmToUsers([uid],' Contraseña actualizada','Tu contraseña en la academia fue modificada por un administrador.');
   // Note: changing Supabase auth password requires admin API key (service_role)
   // With anon key we can only store the new password for reference
-  showMsg(msg,'✅ Contraseña actualizada en registros. Para aplicarla en el sistema de auth, usa el panel de Supabase → Authentication → Users','ok');
+  showMsg(msg,' Contraseña actualizada en registros. Para aplicarla en el sistema de auth, usa el panel de Supabase → Authentication → Users','ok');
 }
 let allContrasenaData=[];
 async function loadContrasenas(){
@@ -1946,7 +1946,7 @@ async function loadContrasenas(){
 function renderContrasenasFiltradas(data){
   const el=document.getElementById('d-contrasenas');
   if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🔑</div><div class="et">Sin registros</div></div>`;return}
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin registros</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Usuario</th><th>DNI</th><th>Rol</th><th>Contraseña</th><th>Actualizado</th></tr></thead><tbody>${data.map(c=>{
     const fecha=new Date(c.actualizado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
     return`<tr>
@@ -2011,7 +2011,7 @@ async function savePadre(){
   const acceso=emailInput
     ? `Email: ${email} / Contraseña: ${pass}`
     : `Login por DNI: ${dni} / Contraseña: ${pass}`;
-  showMsg(msg,`✅ Padre creado — ${acceso}`,'ok');
+  showMsg(msg,` Padre creado — ${acceso}`,'ok');
   await loadPadres();
   btn.disabled=false; btn.textContent='CREAR PADRE';
   setTimeout(()=>closeMd('md-padre'),2500);
@@ -2030,7 +2030,7 @@ async function loadContacto(){
     .order('creado_en',{ascending:false});
   const noLeidosEl=document.getElementById('d-contacto-noleidos');
   const leidosEl=document.getElementById('d-contacto-leidos');
-  const empty=`<div class="empty"><div class="ei">💬</div><div class="et">Sin mensajes</div></div>`;
+  const empty=`<div class="empty"><div class="ei"></div><div class="et">Sin mensajes</div></div>`;
   if(!data?.length){noLeidosEl.innerHTML=empty;leidosEl.innerHTML=empty;document.getElementById('s-msgs').textContent='0';return}
   const enriched=await Promise.all(data.map(async m=>{
     const {data:link}=await sb.from('padres_alumnos')
@@ -2039,10 +2039,10 @@ async function loadContacto(){
     return{...m,al:link?.alumnos};
   }));
   const renderMsg=m=>{
-    const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px">📎 Ver adjunto</a>`:'';
+    const adj=m.archivo_url?`<a href="${m.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:6px"> Ver adjunto</a>`:'';
     const fecha=new Date(m.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const al=m.al;
-    const delBtn=m.leido&&esDueno?`<button onclick="deleteMensajeContacto('${m.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar">🗑️</button>`:'';
+    const delBtn=m.leido&&esDueno?`<button onclick="deleteMensajeContacto('${m.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Eliminar"></button>`:'';
     return`<div style="background:var(--navy2);border:1px solid var(--border);border-left:3px solid ${m.leido?'var(--border)':'var(--gold)'};padding:14px 18px;margin-bottom:4px">
       ${delBtn}
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -2050,7 +2050,7 @@ async function loadContacto(){
           <span style="font-family:'Bebas Neue',sans-serif;font-size:16px">${m.perfiles?.nombre||'--'} ${m.perfiles?.apellido||''}</span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px">DNI: ${m.perfiles?.dni||'--'}</span>
         </div>
-        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')">✓ Leído</button>`:''}
+        ${!m.leido?`<button class="btn btn-outline" style="font-size:10px;padding:5px 10px" onclick="this.disabled=true;this.textContent='...';markLeido('${m.id}')"> Leído</button>`:''}
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:6px;letter-spacing:.08em">
         Alumno: <strong style="color:var(--white)">${al?.perfiles?.nombre||'No vinculado'} ${al?.perfiles?.apellido||''}</strong>
@@ -2096,7 +2096,7 @@ async function loadHorario(){
       <div class="hday-name">${dia.toUpperCase()}</div>
       ${clases.length?clases.map(c=>`<div class="hclase" onclick='openEditHorario(${JSON.stringify({id:c.id,dia:c.dia,aula_id:c.aula_id,materia_id:c.materia_id,hora_inicio:c.hora_inicio,hora_fin:c.hora_fin})})' title="Click para editar/eliminar" style="cursor:pointer">
         <div class="hclase-mat">${c.materias?.nombre||'--'}</div>
-        <div class="hclase-info">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)} · ${c.aulas?.nombre||'--'} <span style="color:var(--gold)">✏️</span></div>
+        <div class="hclase-info">${c.hora_inicio?.slice(0,5)}–${c.hora_fin?.slice(0,5)} · ${c.aulas?.nombre||'--'} <span style="color:var(--gold)"></span></div>
       </div>`).join(''):`<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Libre</div>`}
     </div>`;
   }).join('');
@@ -2123,7 +2123,7 @@ async function updateHorario(){
   if(!materiaId||!inicio||!fin)return showMsg(msg,'Completa materia y horario','err');
   const {error}=await sb.from('horario_semanal').update({dia,aula_id:aulaId,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin}).eq('id',id);
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Clase actualizada ✅','ok');
+  showMsg(msg,'Clase actualizada ','ok');
   await loadHorario();
   setTimeout(()=>closeMd('md-edit-horario'),900);
 }
@@ -2146,14 +2146,14 @@ function _solPath(pathOrUrl){
     :pathOrUrl;
 }
 async function openSolucion(pathOrUrl,btnEl){
-  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='';}
   try{
     const path=_solPath(pathOrUrl);
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
-    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const resp=await fetch(data.signedUrl);
-    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const blob=await resp.blob();
     const ext=path.split('.').pop()||'jpg';
     const a=document.createElement('a');
@@ -2161,15 +2161,15 @@ async function openSolucion(pathOrUrl,btnEl){
     a.download=`solucion.${ext}`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){await myAlert('Error: '+e.message);}
-  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
 async function downloadSolucionesZip(pid,pracTitulo,btnEl){
-  btnEl.disabled=true;btnEl.textContent='⏳ Generando ZIP...';
+  btnEl.disabled=true;btnEl.textContent=' Generando ZIP...';
   try{
     const {data,error:qErr}=await sb.from('soluciones')
       .select('*,alumnos(perfiles(nombre,apellido,dni))')
       .eq('practica_id',pid).order('entregado_en');
-    if(qErr||!data?.length){await myAlert('ZIP: '+(qErr?.message||'Sin soluciones para esta práctica ('+pid+')'));btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    if(qErr||!data?.length){await myAlert('ZIP: '+(qErr?.message||'Sin soluciones para esta práctica ('+pid+')'));btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';return;}
     const zip=new JSZip();
     let ok=0;
     for(const s of data){
@@ -2185,33 +2185,33 @@ async function downloadSolucionesZip(pid,pracTitulo,btnEl){
       zip.folder(folder).file(`foto_${idx}.${ext}`,blob);
       ok++;
     }
-    if(!ok){await myAlert('No se pudieron obtener los archivos. Verificá la policy de lectura en storage.');btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';return;}
+    if(!ok){await myAlert('No se pudieron obtener los archivos. Verificá la policy de lectura en storage.');btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';return;}
     const content=await zip.generateAsync({type:'blob'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(content);
     a.download=`${pracTitulo.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_')}_soluciones.zip`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){await myAlert('Error generando ZIP: '+e.message);}
-  btnEl.disabled=false;btnEl.textContent='📦 Descargar ZIP';
+  btnEl.disabled=false;btnEl.textContent=' Descargar ZIP';
 }
 async function loadSoluciones(){
   const pid=document.getElementById('q-sol-practica').value;
-  if(!pid){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei">📥</div><div class="et">Selecciona una práctica</div></div>`;return}
+  if(!pid){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Selecciona una práctica</div></div>`;return}
   const {data}=await sb.from('soluciones').select('*,alumnos(perfiles(nombre,apellido,dni)),practicas(titulo)').eq('practica_id',pid).order('entregado_en',{ascending:false});
-  if(!data?.length){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei">📥</div><div class="et">Sin soluciones entregadas</div></div>`;return}
+  if(!data?.length){document.getElementById('d-soluciones').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin soluciones entregadas</div></div>`;return}
   const pracTitulo=data[0]?.practicas?.titulo||'practica';
   // Agrupar por alumno
   const byAlumno={};
   data.forEach(s=>{if(!byAlumno[s.alumno_id]){byAlumno[s.alumno_id]={pf:s.alumnos?.perfiles,archivos:[]};}byAlumno[s.alumno_id].archivos.push(s);});
   document.getElementById('d-soluciones').innerHTML=
-    `<div style="margin-bottom:12px"><button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)">📦 Descargar ZIP de todas las soluciones</button></div>`+
+    `<div style="margin-bottom:12px"><button class="btn btn-outline" style="font-size:11px;padding:8px 16px" data-pid="${pid}" data-titulo="${pracTitulo.replace(/"/g,'&quot;')}" onclick="downloadSolucionesZip(this.dataset.pid,this.dataset.titulo,this)"> Descargar ZIP de todas las soluciones</button></div>`+
     `<div style="background:var(--navy2);border:1px solid var(--border)">`+
     Object.values(byAlumno).map(a=>{
       const fecha=new Date(a.archivos[0].entregado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
       return`<div class="sol-item">
-        <div class="sol-icon">🖼️</div>
+        <div class="sol-icon"></div>
         <div style="flex:1"><div class="sol-name">${a.pf?.nombre} ${a.pf?.apellido}</div><div class="sol-info">DNI ${a.pf?.dni||'--'} · ${a.archivos.length} archivo${a.archivos.length>1?'s':''} · ${fecha}</div></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" class="btn btn-outline" style="font-size:11px;padding:6px 10px">⬇️${a.archivos.length>1?' '+(i+1):''}</button>`).join('')}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${a.archivos.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" class="btn btn-outline" style="font-size:11px;padding:6px 10px">⬇${a.archivos.length>1?' '+(i+1):''}</button>`).join('')}</div>
       </div>`;
     }).join('')+`</div>`;
 }
@@ -2219,7 +2219,7 @@ async function loadSoluciones(){
 // ── RENDERERS ──
 function renderAlumnos(data){
   const el=document.getElementById('d-alumnos-activos')||document.getElementById('d-alumnos');
-  if(!data.length){if(el)el.innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos activos</div></div>`;return}
+  if(!data.length){if(el)el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin alumnos activos</div></div>`;return}
   if(el)el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
@@ -2236,7 +2236,7 @@ function renderAlumnos(data){
 function renderAlumnosInactivos(data){
   const el=document.getElementById('d-alumnos-inactivos');
   if(!el)return;
-  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin alumnos inactivos</div></div>`;return}
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin alumnos inactivos</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
     <td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
     <td>${a.perfiles?.dni||'--'}</td>
@@ -2251,7 +2251,7 @@ function renderAlumnosInactivos(data){
   </tr>`).join('')}</tbody></table>`;
 }
 function renderAulas(){
-  if(!allAulas.length){document.getElementById('d-aulas').innerHTML=`<div class="empty"><div class="ei">🏫</div><div class="et">Sin aulas registradas</div></div>`;return}
+  if(!allAulas.length){document.getElementById('d-aulas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin aulas registradas</div></div>`;return}
   document.getElementById('d-aulas').innerHTML=`<table><thead><tr><th>Nombre</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${allAulas.map(a=>`<tr>
     <td><strong>${a.nombre}</strong></td><td>${a.capacidad}</td>
     <td><span class="badge ${a.activa?'bg':'br'}">${a.activa?'Activa':'Inactiva'}</span></td>
@@ -2259,21 +2259,21 @@ function renderAulas(){
   </tr>`).join('')}</tbody></table>`;
 }
 function renderMaterias(){
-  if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei">📚</div><div class="et">Sin materias registradas</div></div>`;return}
+  if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin materias registradas</div></div>`;return}
   document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Profesores</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>{
     const profs=(m.materia_profesor||[]).map(mp=>`${mp.profesores?.perfiles?.nombre||''} ${mp.profesores?.perfiles?.apellido||''}`.trim()).filter(Boolean).join(', ')||'<span style="color:var(--muted)">Sin asignar</span>';
     return`<tr>
     <td><strong>${m.nombre}</strong></td>
     <td>${m.codigo||'--'}</td>
     <td style="font-size:11px">${profs}</td>
-    <td style="display:flex;gap:4px;flex-wrap:wrap">${esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">👩‍🏫 Asignar</button><button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">${esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">‍ Asignar</button><button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
   </tr>`;}).join('')}</tbody></table>`;
 }
 function renderNotas(){
   const matTabsEl=document.getElementById('notas-mat-tabs');
   const perTabsEl=document.getElementById('notas-per-tabs');
   const el=document.getElementById('d-notas');
-  if(!allNotas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;return;}
+  if(!allNotas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;return;}
   // Agrupar por materia
   const byMat={};
   allNotas.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',notas:[]};byMat[k].notas.push(n);});
@@ -2326,7 +2326,7 @@ function nNotaSelect(id,nombre,dni){
   document.getElementById('n-alumno-sug').style.display='none';
   const info=document.getElementById('n-alumno-info');
   info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';
-  info.textContent=`✅ ${nombre} · DNI: ${dni}`;
+  info.textContent=` ${nombre} · DNI: ${dni}`;
 }
 async function adminEliminarNota(id){
   if(!await myConfirm('¿Eliminar esta nota?'))return;
@@ -2338,7 +2338,7 @@ function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
   document.getElementById('n-alumno').value=alumnoId;
   document.getElementById('n-alumno-inp').value=nombre;
   const info=document.getElementById('n-alumno-info');
-  info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';info.textContent='✅ '+nombre;
+  info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';info.textContent=' '+nombre;
   document.getElementById('n-materia').value=materiaId;
   document.getElementById('n-periodo').value=periodo;
   document.getElementById('n-n1').value=n1!=='null'?n1:'';
@@ -2347,33 +2347,33 @@ function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function renderPracticas(){
   const el=document.getElementById('d-practicas');
-  if(!allPracticas.length){el.innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas</div></div>`;return}
+  if(!allPracticas.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin prácticas</div></div>`;return}
   el.innerHTML=allPracticas.map(p=>{
     const urls=parsePracUrls(p.archivo_url);
-    const links=urls.length?urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none">📥 PDF${urls.length>1?' '+(i+1):''}</a>`).join(''):'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>';
+    const links=urls.length?urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none"> PDF${urls.length>1?' '+(i+1):''}</a>`).join(''):'<span style="font-size:11px;color:var(--muted)">Sin archivo</span>';
     return`<div class="prac-card">
       <div class="prac-semana">Semana: ${p.semana_inicio}</div>
       <div class="prac-titulo">${p.titulo}</div>
-      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}</div>
+      <div class="prac-mat">${p.materias?.nombre||'--'}</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;margin-bottom:8px;color:${p.activa!==false?'var(--green)':'var(--red)'}">
-        ${p.activa!==false?'👁️ VISIBLE PARA ALUMNOS':'🙈 OCULTA PARA ALUMNOS'}
+        ${p.activa!==false?' VISIBLE PARA ALUMNOS':' OCULTA PARA ALUMNOS'}
       </div>
       <div class="prac-btns">
         ${links}
         <button class="btn btn-outline" style="font-size:10px;padding:7px 12px" onclick="togglePractica('${p.id}',${p.activa!==false})">${p.activa!==false?'Ocultar':'Mostrar'}</button>
-        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')">🗑️</button>
+        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')"></button>
       </div>
     </div>`;
   }).join('');
 }
 function renderAttGrid(data){
   const el=document.getElementById('d-att');if(!el)return;
-  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">👮</div><div class="et">Sin alumnos</div></div>`;return}
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin alumnos</div></div>`;return}
   data.forEach(a=>{if(!attState[a.id])attState[a.id]=null});
   el.innerHTML=data.map(a=>{
     const s=attState[a.id];const cls=s==='presente'?'p':s==='tardanza'?'t':s==='ausente'?'a':'';
     const st=s?s.toUpperCase():'Sin marcar';
-    const foto=a.foto_url?`<img src="${a.foto_url}" alt="foto">`:'👮';
+    const foto=a.foto_url?`<img src="${a.foto_url}" alt="foto">`:'';
     return`<div class="att-card ${cls}" id="att-${a.id}">
       <div class="att-av">${foto}</div>
       <div style="flex:1;min-width:0">
@@ -2381,9 +2381,9 @@ function renderAttGrid(data){
         <div class="att-st" id="attst-${a.id}">${st}</div>
       </div>
       <div class="att-acts">
-        <button class="att-btn bp" onclick="markAtt('${a.id}','presente')" title="Presente">✓</button>
-        <button class="att-btn bt" onclick="markAtt('${a.id}','tardanza')" title="Tardanza">⏰</button>
-        <button class="att-btn ba" onclick="markAtt('${a.id}','ausente')" title="Ausente">✗</button>
+        <button class="att-btn bp" onclick="markAtt('${a.id}','presente')" title="Presente"></button>
+        <button class="att-btn bt" onclick="markAtt('${a.id}','tardanza')" title="Tardanza"></button>
+        <button class="att-btn ba" onclick="markAtt('${a.id}','ausente')" title="Ausente"></button>
       </div>
     </div>`;
   }).join('');
@@ -2397,8 +2397,8 @@ async function saveAula(){
   if(!nombre)return showMsg(msg,'Ingresa el nombre del aula','err');
   const {error}=await sb.from('aulas').insert({nombre,capacidad:cap});
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Aula creada ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🏫 Nueva aula disponible',`Se incorporó el aula "${nombre}" a la academia. Revisá el horario.`);});
+  showMsg(msg,'Aula creada ','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Nueva aula disponible',`Se incorporó el aula "${nombre}" a la academia. Revisá el horario.`);});
   await loadAulas(); populateSelects();
   setTimeout(()=>closeMd('md-aula'),1200);
 }
@@ -2450,7 +2450,7 @@ async function saveAlumno(){
   // 5. Guardar contraseña
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
 
-  showMsg(msg,'Alumno creado correctamente ✅','ok');
+  showMsg(msg,'Alumno creado correctamente ','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
@@ -2500,8 +2500,8 @@ async function saveMateria(){
   if(!nombre)return showMsg(msg,'Ingresa el nombre de la materia','err');
   const {error}=await sb.from('materias').insert({nombre,codigo:codigo||null,creditos:3});
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Materia creada ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📚 Nueva materia',`Se incorporó la materia "${nombre}" a la academia.`);});
+  showMsg(msg,'Materia creada ','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Nueva materia',`Se incorporó la materia "${nombre}" a la academia.`);});
   await loadMaterias(); populateSelects();
   setTimeout(()=>closeMd('md-materia'),1200);
 }
@@ -2516,7 +2516,7 @@ function renderMmpChips(){
     const chip=document.createElement('div');
     chip.className='mmp-chip';
     chip.style.cssText='display:flex;align-items:center;gap:6px;background:var(--navy3);border:1px solid var(--gold);padding:4px 10px;font-family:"Barlow Condensed",sans-serif;font-size:12px;letter-spacing:.06em';
-    chip.innerHTML=`<span>${nombre}</span><button onclick="mmpRemove('${id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0">✕</button>`;
+    chip.innerHTML=`<span>${nombre}</span><button onclick="mmpRemove('${id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0"></button>`;
     el.appendChild(chip);
   });
 }
@@ -2580,8 +2580,8 @@ async function saveHorario(){
   if(!semana||!dia||!materiaId||!inicio||!fin)return showMsg(msg,'Completa todos los campos','err');
   const {error}=await sb.from('horario_semanal').insert({semana_inicio:semana,dia,aula_id:aulaId||null,materia_id:materiaId,hora_inicio:inicio,hora_fin:fin});
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Clase agregada ✅','ok');
-  sb.from('perfiles').select('id').in('rol',['alumno','profesor','admin','dueno']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📅 Horario actualizado','Se realizó un cambio en el horario de clases. Revisalo en la app.');});
+  showMsg(msg,'Clase agregada ','ok');
+  sb.from('perfiles').select('id').in('rol',['alumno','profesor','admin','dueno']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Horario actualizado','Se realizó un cambio en el horario de clases. Revisalo en la app.');});
   await loadHorario();
   setTimeout(()=>closeMd('md-horario'),1200);
 }
@@ -2598,12 +2598,12 @@ async function saveNota(){
   const prom=ns.length?parseFloat((ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(2)):null;
   const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Nota guardada ✅','ok');
+  showMsg(msg,'Nota guardada ','ok');
   const _matNota=document.getElementById('n-materia')?.selectedOptions[0]?.text||'una materia';
   sb.from('alumnos').select('perfil_id').eq('id',alumnoId).single().then(({data:al})=>{
     if(!al?.perfil_id)return;
-    sendFcmToUsers([al.perfil_id],'📝 Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
-    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),'📝 Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}. Revisalas en la app.`);});
+    sendFcmToUsers([al.perfil_id],' Notas actualizadas',`El administrador registró calificaciones en ${_matNota}. Revisalas en la app.`);
+    sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),' Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}. Revisalas en la app.`);});
   });
   await loadNotas();
   setTimeout(()=>closeMd('md-nota'),1200);
@@ -2630,15 +2630,15 @@ async function savePractica(){
   const archivoUrl=urls.length===1?urls[0]:JSON.stringify(urls);
   const {error}=await sb.from('practicas').insert({semana_inicio:semana,materia_id:materiaId,titulo,descripcion:desc,archivo_url:archivoUrl,activa:true});
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='SUBIR PRÁCTICA';return}
-  showMsg(msg,'Práctica subida ✅','ok');
+  showMsg(msg,'Práctica subida ','ok');
   sb.from('perfiles').select('id,rol').in('rol',['alumno','padre','admin']).then(({data})=>{
     if(!data?.length)return;
     const alIds=data.filter(p=>p.rol==='alumno').map(p=>p.id);
     const paIds=data.filter(p=>p.rol==='padre').map(p=>p.id);
     const adIds=data.filter(p=>p.rol==='admin').map(p=>p.id);
-    if(alIds.length)sendFcmToUsers(alIds,'📄 Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);
-    if(paIds.length)sendFcmToUsers(paIds,'📄 Nueva práctica para tu hijo/a',`Tu hijo/a tiene una nueva práctica disponible: ${titulo}.`);
-    if(adIds.length)sendFcmToUsers(adIds,'📄 Práctica subida',`Se publicó la práctica: ${titulo}.`);
+    if(alIds.length)sendFcmToUsers(alIds,' Nueva práctica disponible',`Se publicó una nueva práctica: ${titulo}. Revisala en la app.`);
+    if(paIds.length)sendFcmToUsers(paIds,' Nueva práctica para tu hijo/a',`Tu hijo/a tiene una nueva práctica disponible: ${titulo}.`);
+    if(adIds.length)sendFcmToUsers(adIds,' Práctica subida',`Se publicó la práctica: ${titulo}.`);
   });
   practicaFiles=[]; document.getElementById('p-fname').textContent=''; document.getElementById('p-warn-pdf').style.display='none';
   await loadPracticas();
@@ -2667,7 +2667,7 @@ async function togglePractica(id,activa){
   await sb.from('practicas').update({activa:!activa}).eq('id',id);
   if(activa){// estaba visible, ahora se oculta — avisar a alumnos
     sb.from('practicas').select('titulo').eq('id',id).single().then(({data:pr})=>{
-      sb.from('perfiles').select('id').eq('rol','alumno').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'📄 Práctica retirada',`La práctica "${pr?.titulo||''}" fue retirada. Revisá el panel de prácticas.`);});
+      sb.from('perfiles').select('id').eq('rol','alumno').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Práctica retirada',`La práctica "${pr?.titulo||''}" fue retirada. Revisá el panel de prácticas.`);});
     });
   }
   await loadPracticas();
@@ -2692,7 +2692,7 @@ async function sendNotif(){
     const {error}=await sb.from('notificaciones').insert({titulo,mensaje,tipo:nTypeCur,global:true,leida:false,archivo_url:archivoUrl,archivo_tipo:archivoTipo});
     if(error)return showMsg(msg,'Error: '+error.message,'err');
     sb.from('perfiles').select('id').then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),titulo,mensaje);});
-    showMsg(msg,'Enviada a todos ✅','ok');
+    showMsg(msg,'Enviada a todos ','ok');
   } else {
     const todosGrupo=document.getElementById('n-todos-grupo')?.checked;
     if(todosGrupo){
@@ -2715,7 +2715,7 @@ async function sendNotif(){
     const err=results.find(r=>r.error);
     if(err)return showMsg(msg,'Error: '+err.error.message,'err');
     sendFcmToUsers(recipientIds,titulo,mensaje);
-    showMsg(msg,`Enviada a ${recipientIds.length} destinatario(s) ✅`,'ok');
+    showMsg(msg,`Enviada a ${recipientIds.length} destinatario(s) `,'ok');
   }
   document.getElementById('n-titulo').value='';document.getElementById('n-msg-txt').value='';
   if(document.getElementById('n-dni-area'))document.getElementById('n-dni-area').value='';
@@ -2729,21 +2729,21 @@ async function markLeido(id){
   if(msg?.padre_id){
     const esUbicacion=msg.mensaje&&(msg.mensaje.includes('se rehúsa')||msg.mensaje.includes('rechazó compartir')||msg.mensaje.includes('no respondió a la solicitud')||msg.mensaje.includes('GPS falso')||msg.mensaje.includes('opciones de desarrollador')||msg.mensaje.includes('app de GPS falso')||msg.mensaje.includes('no tiene GPS')||msg.mensaje.includes('tuvo un error al obtener'));
     if(esUbicacion){
-      const tPadre='✅ Academia al tanto';
+      const tPadre=' Academia al tanto';
       const bPadre='La academia está al tanto de que tu hijo/a se rehúsa a compartir su ubicación. Estamos gestionando la situación.';
       sendFcmToUsers([msg.padre_id],tPadre,bPadre);
       await sb.from('notificaciones').insert({destinatario_id:msg.padre_id,titulo:tPadre,mensaje:bPadre,tipo:'urgente',global:false});
       if(msg.alumno_id){
         const{data:alRec}=await sb.from('alumnos').select('perfil_id').eq('id',msg.alumno_id).single();
         if(alRec?.perfil_id){
-          const tHijo='📢 Academia informada';
+          const tHijo=' Academia informada';
           const bHijo='La academia está al tanto de que te rehusás a compartir tu ubicación.';
           sendFcmToUsers([alRec.perfil_id],tHijo,bHijo);
           await sb.from('notificaciones').insert({destinatario_id:alRec.perfil_id,titulo:tHijo,mensaje:bHijo,tipo:'urgente',global:false});
         }
       }
     } else {
-      const tPadre='✅ Mensaje leído';
+      const tPadre=' Mensaje leído';
       const bPadre='La academia ha leído tu mensaje y está al tanto de tu consulta.';
       sendFcmToUsers([msg.padre_id],tPadre,bPadre);
       await sb.from('notificaciones').insert({destinatario_id:msg.padre_id,titulo:tPadre,mensaje:bPadre,tipo:'urgente',global:false});
@@ -2762,17 +2762,17 @@ function markAtt(id,estado){
 }
 async function saveAllAtt(){
   const geo=await verificarUbicacionAdmin();
-  if(!geo.ok){await myAlert('⛔ No puedes tomar asistencia\n\n'+geo.msg);return}
+  if(!geo.ok){await myAlert(' No puedes tomar asistencia\n\n'+geo.msg);return}
   const materiaId=document.getElementById('a-materia').value||null;
   const rows=Object.entries(attState).filter(([,v])=>v!==null).map(([alumno_id,estado])=>({alumno_id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:materiaId,verificado_facial:false,latitud:geo.lat,longitud:geo.lng}));
   if(!rows.length)return await myAlert('No has marcado ningún alumno.');
   const {error}=await sb.from('asistencias').upsert(rows,{onConflict:'alumno_id,fecha,materia_id'});
   if(error)await myAlert('Error: '+error.message);
-  else{await myAlert(`✅ ${rows.length} asistencias guardadas.`);
+  else{await myAlert(` ${rows.length} asistencias guardadas.`);
   const _aMat=document.getElementById('a-materia')?.selectedOptions[0]?.text||'clase',_aHora=nowTime(),_aIds=rows.map(r=>r.alumno_id);
   const _aPerfIds=_aIds.map(id=>allAlumnos.find(a=>a.id===id)?.perfil_id).filter(Boolean);
-  if(_aPerfIds.length)sendFcmToUsers(_aPerfIds,'✅ Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
-  sb.from('padres_alumnos').select('padre_id').in('alumno_id',_aIds).then(({data})=>{if(data?.length)sendFcmToUsers([...new Set(data.map(l=>l.padre_id))],'📋 Asistencia registrada',`Tu hijo se presentó a ${_aMat} a las ${_aHora}.`);});
+  if(_aPerfIds.length)sendFcmToUsers(_aPerfIds,' Asistencia registrada',`Tu asistencia a ${_aMat} fue registrada a las ${_aHora}.`);
+  sb.from('padres_alumnos').select('padre_id').in('alumno_id',_aIds).then(({data})=>{if(data?.length)sendFcmToUsers([...new Set(data.map(l=>l.padre_id))],' Asistencia registrada',`Tu hijo se presentó a ${_aMat} a las ${_aHora}.`);});
   loadDashboard()}
 }
 
@@ -2786,22 +2786,22 @@ function showFacialTab(tab){
 
 // ── FACIAL ──
 async function startCam(){
-  setCamSt('📍 Verificando ubicación...','cs-scan');
+  setCamSt(' Verificando ubicación...','cs-scan');
   document.getElementById('f-status-top').textContent='Verificando GPS...';
   const geo=await verificarUbicacionAdmin();
   if(!geo.ok){
-    setCamSt('⛔ Fuera de rango — '+geo.msg,'cs-fail');
+    setCamSt(' Fuera de rango — '+geo.msg,'cs-fail');
     document.getElementById('f-status-top').textContent='';
-    await myAlert('⛔ No puedes tomar asistencia\n\n'+geo.msg);
+    await myAlert(' No puedes tomar asistencia\n\n'+geo.msg);
     return;
   }
-  document.getElementById('f-status-top').textContent=`✅ Ubicación OK (${geo.dist}m de la academia)`;
+  document.getElementById('f-status-top').textContent=` Ubicación OK (${geo.dist}m de la academia)`;
   try{
     facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
     v.addEventListener('loadedmetadata',()=>{const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight});
     iniciarFacialScan();
-  }catch(e){setCamSt('❌ Error: '+e.message,'cs-fail')}
+  }catch(e){setCamSt(' Error: '+e.message,'cs-fail')}
 }
 function stopCam(){
   detenerFacialScan();
@@ -2813,7 +2813,7 @@ function stopCam(){
 async function flipCam(){
   facingMode=facingMode==='environment'?'user':'environment';
   const lbl=facingMode==='environment'?'Trasera':'Frontal';
-  document.getElementById('btn-flip').textContent=`🔄 ${lbl}`;
+  document.getElementById('btn-flip').textContent=` ${lbl}`;
   if(facialStream){await stopCam();await startCam();}
 }
 function setCamSt(txt,cls){const el=document.getElementById('f-camst');el.textContent=txt;el.className='cam-status '+cls}
@@ -2821,15 +2821,15 @@ function iniciarFacialScan(){
   if(facialScanLoop)return;
   facialMatchStreak=0;
   if(!faceApiLoaded){
-    setCamSt('⏳ Cargando modelos de reconocimiento...','cs-scan');
+    setCamSt(' Cargando modelos de reconocimiento...','cs-scan');
     const wait=setInterval(()=>{if(faceApiLoaded){clearInterval(wait);iniciarFacialScan();}},500);
     return;
   }
   if(!facialFaceMatcher){
-    setCamSt('⚠️ Ningún alumno tiene foto registrada — usa Asistencia Manual','cs-scan');
+    setCamSt(' Ningún alumno tiene foto registrada — usa Asistencia Manual','cs-scan');
     return;
   }
-  setCamSt('🔍 Escaneando rostros en tiempo real...','cs-scan');
+  setCamSt(' Escaneando rostros en tiempo real...','cs-scan');
   facialScanLoop=setInterval(scanFrameFacial,FACIAL_SCAN_MS);
 }
 function detenerFacialScan(){
@@ -2848,7 +2848,7 @@ async function scanFrameFacial(){
     const det=await faceapi
       .detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
       .withFaceLandmarks().withFaceDescriptor();
-    if(!det){facialMatchStreak=0;setCamSt('🔍 Buscando rostro...','cs-scan');return;}
+    if(!det){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
     const resized=faceapi.resizeResults(det,{width:v.videoWidth,height:v.videoHeight});
     const box=resized.detection.box;
     const match=facialFaceMatcher.findBestMatch(det.descriptor);
@@ -2861,10 +2861,10 @@ async function scanFrameFacial(){
     ctx.fillStyle=matched?'#4caf7d':'#e8c96a';
     ctx.font='bold 14px Barlow Condensed, sans-serif';
     const pct=matched?Math.round((1-match.distance)*100):null;
-    ctx.fillText(matched?`✓ ${pct}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
+    ctx.fillText(matched?` ${pct}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
     if(matched){
       facialMatchStreak++;
-      setCamSt(`🟢 Reconociendo... (${facialMatchStreak}/${FACIAL_MATCH_NEEDED})`,'cs-ok');
+      setCamSt(` Reconociendo... (${facialMatchStreak}/${FACIAL_MATCH_NEEDED})`,'cs-ok');
       if(facialMatchStreak>=FACIAL_MATCH_NEEDED){
         detenerFacialScan();
         const alumno=allAlumnos.find(a=>a.id===match.label);
@@ -2873,7 +2873,7 @@ async function scanFrameFacial(){
           document.getElementById('v-name').textContent=`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`;
           document.getElementById('v-info').textContent=`Código: ${alumno.codigo} · ${alumno.turno||''}`;
           document.getElementById('verify-card').style.display='block';
-          setCamSt(`👤 Identificado: ${alumno.perfiles?.nombre}`,'cs-ok');
+          setCamSt(` Identificado: ${alumno.perfiles?.nombre}`,'cs-ok');
         }else{
           facialMatchStreak=0;
           iniciarFacialScan();
@@ -2881,7 +2881,7 @@ async function scanFrameFacial(){
       }
     }else{
       facialMatchStreak=0;
-      setCamSt(`🟡 Rostro detectado — buscando coincidencia...`,'cs-scan');
+      setCamSt(` Rostro detectado — buscando coincidencia...`,'cs-scan');
     }
   }catch(e){console.warn('scanFrameFacial error:',e.message);}
 }
@@ -2891,17 +2891,17 @@ async function confirmAtt(estado){
   const aulaId=sesionActual?.aula_id||null;
   await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
   const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=sesionActual?.mat_nombre||'clase',_cHora=nowTime();
-  if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
+  if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],' Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
   addFacialLog(verifyAlumno,estado,true);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
-  setCamSt('✅ Registrado — Siguiente cadete','cs-ok');loadDashboard();
+  setCamSt(' Registrado — Siguiente cadete','cs-ok');loadDashboard();
   if(facialStream)iniciarFacialScan();
 }
 function rejectVerify(){
   verifyAlumno=null;
   document.getElementById('verify-card').style.display='none';
-  setCamSt('⚠️ Rechazado — Buscando siguiente...','cs-scan');
+  setCamSt(' Rechazado — Buscando siguiente...','cs-scan');
   if(facialStream)iniciarFacialScan();
 }
 function addFacialLog(alumno,estado,facial){
@@ -2911,7 +2911,7 @@ function addFacialLog(alumno,estado,facial){
   document.getElementById('f-facial-cnt').textContent=f;
   document.getElementById('f-man-cnt').textContent=m;
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
-  document.getElementById('f-log').innerHTML=[...facialLog].reverse().map(l=>`<div class="flog-item ${l.facial?'':'man'}"><span style="font-size:16px">${l.facial?'📸':'✏️'}</span><span style="flex:1">${l.nombre}</span><span style="color:var(--muted);font-size:10px">${l.hora}</span><span class="badge ${bc[l.estado]}">${l.estado}</span></div>`).join('');
+  document.getElementById('f-log').innerHTML=[...facialLog].reverse().map(l=>`<div class="flog-item ${l.facial?'':'man'}"><span style="font-size:16px">${l.facial?'':''}</span><span style="flex:1">${l.nombre}</span><span style="color:var(--muted);font-size:10px">${l.hora}</span><span class="badge ${bc[l.estado]}">${l.estado}</span></div>`).join('');
 }
 // ── BÚSQUEDA MANUAL POR APELLIDO / DNI ──
 function manSuggest(inp){
@@ -2948,8 +2948,8 @@ async function saveManual(){
   if(error){await myAlert('Error al guardar asistencia: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
   const _mMat=sesionActual?.mat_nombre||'clase',_mHora=nowTime();
-  if(a?.perfil_id)sendFcmToUsers([a.perfil_id],'✅ Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),`📋 Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
+  if(a?.perfil_id)sendFcmToUsers([a.perfil_id],' Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
   if(a)addFacialLog(a,estado,false);
   document.getElementById('man-alumno').value='';
   document.getElementById('man-search-inp').value='';
@@ -2980,12 +2980,12 @@ function stopRegCam(){if(regStream){regStream.getTracks().forEach(t=>t.stop());r
 
 // ── FILE HANDLERS ──
 const PDF_WARN_MB=10,PDF_MAX_MB=20;
-const PDF_WARN_MSG=`⚠️ Archivo pesado. Podés comprimirlo gratis en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;
+const PDF_WARN_MSG=` Archivo pesado. Podés comprimirlo gratis en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;
 function checkPdfSize(files,warnElId){
   const warn=document.getElementById(warnElId);
   const pesados=[...files].filter(f=>f.size>PDF_WARN_MB*1024*1024);
   const bloqueados=[...files].filter(f=>f.size>PDF_MAX_MB*1024*1024);
-  if(bloqueados.length){warn.style.display='block';warn.innerHTML=`⛔ El archivo <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;return false;}
+  if(bloqueados.length){warn.style.display='block';warn.innerHTML=` El archivo <strong>${bloqueados[0].name}</strong> supera los ${PDF_MAX_MB} MB. Comprimilo en <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" style="color:var(--gold)">ilovepdf.com</a> antes de subirlo.`;return false;}
   if(pesados.length){warn.style.display='block';warn.innerHTML=`${PDF_WARN_MSG}<br>Archivos pesados: ${pesados.map(f=>`<strong>${f.name}</strong> (${(f.size/1024/1024).toFixed(1)} MB)`).join(', ')}`;return true;}
   warn.style.display='none';return true;
 }
@@ -3064,7 +3064,7 @@ function searchDest(){
   res_el.innerHTML=res.map(p=>{
     const sel=nSelectedIds.has(p.id);
     return`<div onclick="toggleDestId('${p.id}')" style="padding:6px 10px;background:${sel?'rgba(232,181,60,.15)':'var(--navy2)'};border:1px solid ${sel?'var(--gold)':'var(--border)'};cursor:pointer;font-size:12px;border-radius:3px">
-      <strong>${p.apellido||''}, ${p.nombre||''}</strong> <span style="color:var(--muted)">${p.dni||''}</span>${sel?' ✓':''}
+      <strong>${p.apellido||''}, ${p.nombre||''}</strong> <span style="color:var(--muted)">${p.dni||''}</span>${sel?' ':''}
     </div>`;
   }).join('');
 }
@@ -3078,7 +3078,7 @@ function renderChips(){
   chips.innerHTML=[...nSelectedIds].map(id=>{
     const p=nDestPerfiles.find(x=>x.id===id);
     const name=p?`${p.nombre} ${p.apellido}`:id.slice(0,8);
-    return`<span style="background:rgba(232,181,60,.15);border:1px solid var(--gold);padding:3px 8px;font-size:11px;font-family:'Barlow Condensed',sans-serif;border-radius:3px">${name} <span onclick="toggleDestId('${id}')" style="cursor:pointer;color:var(--red)">✕</span></span>`;
+    return`<span style="background:rgba(232,181,60,.15);border:1px solid var(--gold);padding:3px 8px;font-size:11px;font-family:'Barlow Condensed',sans-serif;border-radius:3px">${name} <span onclick="toggleDestId('${id}')" style="cursor:pointer;color:var(--red)"></span></span>`;
   }).join('');
 }
 
@@ -3111,12 +3111,12 @@ function _profesorRow(p,deshabilitado=false){
 }
 function renderProfesoresActivos(data){
   const el=document.getElementById('d-profesores-activos');if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">👩‍🏫</div><div class="et">Sin profesores activos</div></div>`;return}
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin profesores activos</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,false)).join('')}</tbody></table>`;
 }
 function renderProfesoresDeshabilitados(data){
   const el=document.getElementById('d-profesores-deshabilitados');if(!el)return;
-  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei">🚫</div><div class="et">Sin profesores deshabilitados</div></div>`;return}
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin profesores deshabilitados</div></div>`;return}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,true)).join('')}</tbody></table>`;
 }
 function renderProfesoresFiltrados(data){ renderProfesoresActivos(data); }
@@ -3201,7 +3201,7 @@ async function saveProfesor(){
     const {data:profRow}=await sb.from('profesores').select('id').eq('perfil_id',uid).single();
     if(profRow) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
   }
-  showMsg(msg,`✅ Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
+  showMsg(msg,` Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects(); if(esDueno) loadProfesoresTexto();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
   prPhotoBlob=null;prFotoFile=null;
@@ -3216,7 +3216,7 @@ function populateSelects(){
   const fAula=document.getElementById('f-aula');if(fAula)fAula.innerHTML='<option value="">-- Selecciona aula --</option>'+aulaOpts;
   ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   // man-alumno is now a hidden input populated via search — no select to fill
-  const nDest=document.getElementById('n-dest');if(nDest)nDest.innerHTML='<option value="global">📢 Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
+  const nDest=document.getElementById('n-dest');if(nDest)nDest.innerHTML='<option value="global"> Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
 
 function filterAlumnos(){
@@ -3437,7 +3437,7 @@ async function loadHorarioPlantilla(aulaId){
   const wrap=document.getElementById('hor-table-wrap');
   if(!wrap)return;
   const{data,error}=await sb.from('horario_plantilla').select('*,materias(nombre)').eq('aula_id',aulaId);
-  if(error){wrap.innerHTML=`<div class="empty"><div class="ei">⚠️</div><div class="et">${error.message}</div></div>`;return}
+  if(error){wrap.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">${error.message}</div></div>`;return}
   horData={};
   (data||[]).forEach(r=>{horData[`${r.dia}__${r.hora_slot}`]=r;});
   renderHorarioTable(aulaId);
@@ -3500,8 +3500,8 @@ async function saveCellHorario(){
     {onConflict:'aula_id,dia,hora_slot'}
   );
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Guardado ✅','ok');
-  if(!isWeekend())sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🗓️ Cambio de horario','Hubo un cambio en el horario de clases. Revisalo en la app.');});
+  showMsg(msg,'Guardado ','ok');
+  if(!isWeekend())sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Cambio de horario','Hubo un cambio en el horario de clases. Revisalo en la app.');});
   await loadHorarioPlantilla(aulaId);
   setTimeout(()=>closeCellEditor(),600);
 }
@@ -3512,8 +3512,8 @@ async function clearCellHorario(){
   const msg=document.getElementById('hor-ed-msg');
   const{error}=await sb.from('horario_plantilla').delete().eq('aula_id',aulaId).eq('dia',dia).eq('hora_slot',slot);
   if(error)return showMsg(msg,error.message,'err');
-  showMsg(msg,'Eliminado ✅','ok');
-  if(!isWeekend())sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),'🗓️ Cambio de horario','Hubo un cambio en el horario de clases. Revisalo en la app.');});
+  showMsg(msg,'Eliminado ','ok');
+  if(!isWeekend())sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Cambio de horario','Hubo un cambio en el horario de clases. Revisalo en la app.');});
   await loadHorarioPlantilla(aulaId);
   setTimeout(()=>closeCellEditor(),600);
 }
@@ -3527,12 +3527,12 @@ async function publicarHorario(){
     const alIds=data.filter(p=>p.rol==='alumno').map(p=>p.id);
     const paIds=data.filter(p=>p.rol==='padre').map(p=>p.id);
     const adIds=data.filter(p=>p.rol==='admin').map(p=>p.id);
-    if(alIds.length)sendFcmToUsers(alIds,'🗓️ Horario de la semana publicado','El horario semanal fue actualizado. Revisalo en la app.');
-    if(paIds.length)sendFcmToUsers(paIds,'🗓️ Horario de la semana publicado','El horario semanal de la academia fue actualizado. Revisalo en la app.');
-    if(adIds.length)sendFcmToUsers(adIds,'🗓️ Horario publicado','El dueño publicó el horario semanal.');
+    if(alIds.length)sendFcmToUsers(alIds,' Horario de la semana publicado','El horario semanal fue actualizado. Revisalo en la app.');
+    if(paIds.length)sendFcmToUsers(paIds,' Horario de la semana publicado','El horario semanal de la academia fue actualizado. Revisalo en la app.');
+    if(adIds.length)sendFcmToUsers(adIds,' Horario publicado','El dueño publicó el horario semanal.');
   }
-  showMsg(msg,'Horario publicado y notificaciones enviadas ✅','ok');
-  btn.disabled=false;btn.textContent='📢 PUBLICAR HORARIO';
+  showMsg(msg,'Horario publicado y notificaciones enviadas ','ok');
+  btn.disabled=false;btn.textContent=' PUBLICAR HORARIO';
 }
 async function loadProfesoresTexto(){
   const{data}=await sb.from('profesores').select('perfiles(nombre,apellido)').eq('activo',true);

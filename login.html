@@ -26,7 +26,7 @@ async function loginProfesor(){
   if(!pf.email_ref){showMsg('Cuenta sin email. Contacta al administrador.','error');btn.disabled=false;btn.textContent='INGRESAR';return}
   const{data,error}=await sb.auth.signInWithPassword({email:pf.email_ref,password:pass});
   if(error){showMsg('Contraseña incorrecta','error');btn.disabled=false;btn.textContent='INGRESAR';return}
-  showMsg('Acceso concedido ✅','success');
+  showMsg('Acceso concedido ','success');
   setTimeout(()=>location.replace('profesor.html'),600);
 }
 </script>
@@ -91,7 +91,7 @@ async function loginProfesor(){
     <!-- ALUMNO -->
     <div id="f-alumno">
       <div class="fg"><label>Correo electrónico</label><input type="email" id="al-email" placeholder="tu@correo.com" autocomplete="username"/></div>
-      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAlumno()"/><button type="button" class="eye-btn" onclick="togglePass('al-pass',this)">👁</button></div></div>
+      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAlumno()"/><button type="button" class="eye-btn" onclick="togglePass('al-pass',this)"></button></div></div>
       <button class="btn" id="btn-al" onclick="loginAlumno()">INGRESAR</button>
     </div>
 
@@ -99,14 +99,14 @@ async function loginProfesor(){
     <div id="f-padre" style="display:none">
       <div class="hint">Ingresa tu DNI y la contraseña que te asignó la academia</div>
       <div class="fg"><label>DNI</label><input type="text" id="p-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="username"/></div>
-      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="p-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPadre()"/><button type="button" class="eye-btn" onclick="togglePass('p-pass',this)">👁</button></div></div>
+      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="p-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginPadre()"/><button type="button" class="eye-btn" onclick="togglePass('p-pass',this)"></button></div></div>
       <button class="btn" id="btn-padre" onclick="loginPadre()">INGRESAR</button>
     </div>
 
     <!-- ADMIN -->
     <div id="f-admin" style="display:none">
       <div class="fg"><label>Correo electrónico</label><input type="email" id="adm-email" placeholder="admin@correo.com" autocomplete="username"/></div>
-      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="adm-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAdmin()"/><button type="button" class="eye-btn" onclick="togglePass('adm-pass',this)">👁</button></div></div>
+      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="adm-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginAdmin()"/><button type="button" class="eye-btn" onclick="togglePass('adm-pass',this)"></button></div></div>
       <button class="btn" id="btn-adm" onclick="loginAdmin()">INGRESAR</button>
     </div>
 
@@ -114,7 +114,7 @@ async function loginProfesor(){
     <div id="f-profesor" style="display:none">
       <div class="hint">Ingresa tu DNI y la contraseña que te asignó la academia</div>
       <div class="fg"><label>DNI</label><input type="text" id="prof-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="username"/></div>
-      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="prof-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginProfesor()"/><button type="button" class="eye-btn" onclick="togglePass('prof-pass',this)">👁</button></div></div>
+      <div class="fg"><label>Contraseña</label><div class="pass-wrap"><input type="password" id="prof-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginProfesor()"/><button type="button" class="eye-btn" onclick="togglePass('prof-pass',this)"></button></div></div>
       <button class="btn" id="btn-prof" onclick="loginProfesor()">INGRESAR</button>
     </div>
 
@@ -160,7 +160,7 @@ function redirigir(rol){
 }
 
 function showMsg(txt,tipo){const el=document.getElementById('msg');el.textContent=txt;el.className='msg '+tipo}
-function togglePass(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁':'🙈';}
+function togglePass(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'':'';}
 
 async function loginAlumno(){
   const email=document.getElementById('al-email').value.trim();
@@ -175,7 +175,7 @@ async function loginAlumno(){
     await sb.auth.signOut();
     showMsg('Esta cuenta no es de alumno','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
-  showMsg('Acceso concedido ✅','success');
+  showMsg('Acceso concedido ','success');
   setTimeout(()=>location.replace('dashboard.html'),600);
 }
 
@@ -208,7 +208,7 @@ async function loginPadre(){
     showMsg('Contraseña incorrecta','error');
     btn.disabled=false;btn.textContent='INGRESAR';return;
   }
-  showMsg('Acceso concedido ✅','success');
+  showMsg('Acceso concedido ','success');
   setTimeout(()=>location.replace('padres.html'),600);
 }
 
@@ -225,7 +225,7 @@ async function loginAdmin(){
     await sb.auth.signOut();
     showMsg('Sin permisos de administrador','error');btn.disabled=false;btn.textContent='INGRESAR';return;
   }
-  showMsg('Acceso concedido ✅','success');
+  showMsg('Acceso concedido ','success');
   setTimeout(()=>location.replace('admin.html'),600);
 }
 
@@ -240,7 +240,7 @@ async function loginProfesor(){
   if(!pf.email_ref){showMsg('Cuenta sin email. Contacta al administrador.','error');btn.disabled=false;btn.textContent='INGRESAR';return}
   const{data,error}=await sb.auth.signInWithPassword({email:pf.email_ref,password:pass});
   if(error){showMsg('Contraseña incorrecta','error');btn.disabled=false;btn.textContent='INGRESAR';return}
-  showMsg('Acceso concedido ✅','success');
+  showMsg('Acceso concedido ','success');
   setTimeout(()=>location.replace('profesor.html'),600);
 }
 </script>

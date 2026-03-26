@@ -21,7 +21,7 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
     html{scroll-behavior:smooth}
-    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh}
+    body{background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh;overscroll-behavior-y:contain}
     body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
 
     .topbar{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(11,17,32,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
@@ -145,13 +145,15 @@
     .empty .et{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
 
     .sb-tog{display:none;position:fixed;bottom:max(20px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--gold);color:var(--navy);border:none;width:52px;height:52px;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.4);will-change:transform;-webkit-transform:translateZ(0);transform:translateZ(0);border-radius:50%}
+    .fab-refresh{display:none;position:fixed;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 64px);right:max(20px,env(safe-area-inset-right));z-index:200;background:var(--navy3);color:var(--gold);border:1px solid var(--border);width:44px;height:44px;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.4);border-radius:50%;align-items:center;justify-content:center;transition:transform .2s}
+    .fab-refresh:active{transform:rotate(180deg)}
     .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     .overlay.show{display:block}
 
     @media(max-width:959px) and (min-width:768px){.sidebar{width:190px}.main{margin-left:190px;padding:20px 16px}}
     @media(max-width:767px){
       .sidebar{transform:translateX(-100%);width:250px}.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}
-      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}
+      .main{margin-left:0;padding:18px 14px}.sb-tog{display:flex;align-items:center;justify-content:center}.fab-refresh{display:flex}
       .tb-user{display:none}.cg{grid-template-columns:repeat(2,1fr)}.ttl{font-size:28px}
       .prac-grid{grid-template-columns:1fr}
     }
@@ -170,35 +172,36 @@
 <div class="sidebar" id="sidebar">
   <div class="sb-sec">
     <div class="sb-lbl">Mi cuenta</div>
-    <button class="sb-link active" onclick="showPanel('inicio',this)"><span class="ic">🏠</span>Inicio</button>
-    <button class="sb-link" onclick="showPanel('horario',this)"><span class="ic">🗓️</span>Horario</button>
-    <button class="sb-link" onclick="showPanel('asistencias',this)"><span class="ic">📅</span>Asistencias</button>
-    <button class="sb-link" onclick="showPanel('notas',this)"><span class="ic">📊</span>Mis Notas</button>
-    <button class="sb-link" onclick="showPanel('practicas',this)"><span class="ic">📄</span>Prácticas</button>
-    <button class="sb-link" onclick="showPanel('notificaciones',this)"><span class="ic">🔔</span>Notificaciones</button>
+    <button class="sb-link active" onclick="showPanel('inicio',this)">Inicio</button>
+    <button class="sb-link" onclick="showPanel('horario',this)">Horario</button>
+    <button class="sb-link" onclick="showPanel('asistencias',this)">Asistencias</button>
+    <button class="sb-link" onclick="showPanel('notas',this)">Mis Notas</button>
+    <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
+    <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones</button>
   </div>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
-<button class="sb-tog" onclick="toggleSb()">☰</button>
+<button class="sb-tog" onclick="toggleSb()"></button>
+<button class="fab-refresh" onclick="location.reload()" title="Actualizar">↻</button>
 
 <!-- DIÁLOGO SOLICITUD UBICACIÓN -->
 <div id="dlg-ubicacion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--navy2);border:2px solid var(--gold);width:100%;max-width:360px;padding:28px 24px;text-align:center;animation:fi .3s ease">
-    <div style="font-size:44px;margin-bottom:12px">📍</div>
+    <div style="font-size:44px;margin-bottom:12px"></div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-bottom:8px;color:var(--gold)">SOLICITUD DE UBICACIÓN</div>
     <div style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--muted);margin-bottom:6px;line-height:1.6">
       Tu padre / apoderado quiere conocer tu ubicación actual.
     </div>
     <div id="dlg-status" style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--white);margin:12px 0;min-height:44px;line-height:1.5;padding:10px;background:var(--navy3);border:1px solid var(--border)">
-      🔍 Verificando dispositivo...
+      Verificando dispositivo...
     </div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.12em;color:var(--yellow);text-transform:uppercase;margin-bottom:20px">
       Esta solicitud expira en <span id="dlg-countdown">10:00</span>
     </div>
     <div style="display:flex;gap:10px">
-      <button id="dlg-btn-deny" class="btn" style="flex:1;background:var(--red);color:var(--white);border:none;display:none" onclick="denegarUbicacion('rechazado')">✗ RECHAZAR</button>
-      <button id="dlg-btn-retry" class="btn btn-gold" style="flex:1;display:none" onclick="procesarUbicacionAuto()">🔄 REINTENTAR</button>
+      <button id="dlg-btn-deny" class="btn" style="flex:1;background:var(--red);color:var(--white);border:none;display:none" onclick="denegarUbicacion('rechazado')">RECHAZAR</button>
+      <button id="dlg-btn-retry" class="btn btn-gold" style="flex:1;display:none" onclick="procesarUbicacionAuto()">REINTENTAR</button>
     </div>
   </div>
 </div>
@@ -217,7 +220,7 @@
   <!-- Estado del dispositivo — solo visible en app Android -->
   <div id="device-status-card" style="display:none;margin-top:16px;background:var(--navy2);border:1px solid var(--border);overflow:hidden">
     <div style="background:var(--navy3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)">📱 Estado del Dispositivo</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold)"> Estado del Dispositivo</span>
       <span id="device-status-badge" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700"></span>
     </div>
     <div id="device-status-list" style="padding:12px 16px;display:flex;flex-direction:column;gap:8px"></div>
@@ -225,7 +228,7 @@
   </div>
   <div class="tw" style="margin-top:16px">
     <div class="th"><span class="th-ttl">Mis Notas — Resumen</span></div>
-    <div id="d-notas-res"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas-res"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -234,7 +237,7 @@
   <div class="ph"><div class="eye">Plantilla semanal por aula</div><div class="ttl">HORARIOS</div></div>
   <div id="hor-aula-tabs" class="aula-tabs"></div>
   <div style="background:var(--navy2);border:1px solid var(--border);overflow-x:auto" id="d-horario">
-    <div class="empty"><div class="ei">🗓️</div><div class="et">Cargando horario...</div></div>
+    <div class="empty"><div class="ei"></div><div class="et">Cargando horario...</div></div>
   </div>
 </div>
 
@@ -248,7 +251,7 @@
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Historial de Asistencias</span></div>
-    <div id="d-asist"><div class="empty"><div class="ei">📅</div><div class="et">Cargando...</div></div></div>
+    <div id="d-asist"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -257,23 +260,23 @@
   <div class="ph"><div class="eye">Rendimiento académico</div><div class="ttl">MIS NOTAS</div></div>
   <div class="tw">
     <div class="th"><span class="th-ttl">Calificaciones por Materia</span></div>
-    <div id="d-notas"><div class="empty"><div class="ei">📊</div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
 <!-- PRÁCTICAS -->
 <div class="panel" id="panel-practicas">
   <div class="ph"><div class="eye">Material semanal</div><div class="ttl">MIS PRÁCTICAS</div></div>
-  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei">📄</div><div class="et">Cargando...</div></div></div>
+  <div class="prac-grid" id="d-practicas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- NOTIFICACIONES -->
 <div class="panel" id="panel-notificaciones">
   <div class="ph">
     <div class="ph-left"><div class="eye">Comunicados institucionales</div><div class="ttl">NOTIFICACIONES</div></div>
-    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()">🗑️ Borrar todo</button>
+    <button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAllNotifs()"> Borrar todo</button>
   </div>
-  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei">🔔</div><div class="et">Cargando...</div></div></div>
+  <div class="nlist" id="d-notifs"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 </div></div>
@@ -358,7 +361,7 @@ async function checkPendingSolicitud(){
 }
 
 async function loadNotas(){
-  if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei">📊</div><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
+  if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
   const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
   document.getElementById('s-mat').textContent=data?.length||0;
   if(data?.length){
@@ -371,7 +374,7 @@ async function loadNotas(){
 }
 
 function renderNotasTable(data){
-  if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
+  if(!data.length)return`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;
   const byMat={};
   data.forEach(n=>{
     const key=n.materia_id||'sin';
@@ -403,7 +406,7 @@ function renderNotasTable(data){
   }).join('');
 }
 function renderNotasResumen(data){
-  if(!data.length)return`<div class="empty"><div class="ei">📊</div><div class="et">Sin notas registradas</div></div>`;
+  if(!data.length)return`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;
   const byMat={};
   data.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
   return`<div style="display:flex;flex-direction:column;gap:6px">${Object.values(byMat).map(mat=>{
@@ -418,7 +421,7 @@ function renderNotasResumen(data){
 }
 
 async function loadAsistencias(){
-  if(!alumnoId){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin datos de alumno</div></div>`;return;}
+  if(!alumnoId){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;return;}
   const {data}=await sb.from('asistencias').select('*,materias(nombre)').eq('alumno_id',alumnoId).order('fecha',{ascending:false});
   const p=data?.filter(a=>a.estado==='presente').length||0;
   const t=data?.filter(a=>a.estado==='tardanza').length||0;
@@ -428,11 +431,11 @@ async function loadAsistencias(){
   document.getElementById('a-tard').textContent=t;
   document.getElementById('a-aus').textContent=au;
   document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
-  if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei">📅</div><div class="et">Sin registros</div></div>`;return}
+  if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin registros</div></div>`;return}
   document.getElementById('d-asist').innerHTML=`<table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
     const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
     const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
-    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">📍 Ver mapa</a>`:'--';
+    const gps=(a.latitud&&a.longitud)?`<a href="https://maps.google.com?q=${a.latitud},${a.longitud}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase"> Ver mapa</a>`:'--';
     return`<tr><td>${fecha}</td><td>${a.materias?.nombre||'--'}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td><td>${gps}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
@@ -447,14 +450,14 @@ async function loadNotifs(){
   const visible=(data||[]).filter(n=>!ocultasIds.has(n.id));
   const unread=visible.filter(n=>!n.leida).length;
   document.getElementById('s-notif').textContent=unread;
-  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones</div></div>`;return}
-  const icons={info:'ℹ️',alerta:'⚠️',urgente:'🚨'};
+  if(!visible.length){document.getElementById('d-notifs').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notificaciones</div></div>`;return}
+  const icons={info:'INFO',alerta:'AVISO',urgente:'URGENTE'};
   document.getElementById('d-notifs').innerHTML=visible.map(n=>{
     const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
-      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px">📎 Abrir PDF</a></div>`):'';
-    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar">🗑️</button><div class="nico">${icons[n.tipo]||'📢'}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
+      :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px"> Abrir PDF</a></div>`):'';
+    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar"></button><div class="nico">${icons[n.tipo]||''}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
 }
 async function deleteNotif(id){
@@ -474,7 +477,7 @@ async function deleteAllNotifs(){
 }
 
 async function loadPracticas(){
-  if(!alumnoId){document.getElementById('d-practicas').innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin datos de alumno</div></div>`;return;}
+  if(!alumnoId){document.getElementById('d-practicas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin datos de alumno</div></div>`;return;}
   // Get materias of this alumno
   const {data:mats}=await sb.from('alumno_materia').select('materia_id').eq('alumno_id',alumnoId);
   const matIds=mats?.map(m=>m.materia_id)||[];
@@ -486,7 +489,7 @@ async function loadPracticas(){
   const {data:sols}=alumnoId?await sb.from('soluciones').select('*').eq('alumno_id',alumnoId):{data:[]};
   const solMap={};sols?.forEach(s=>{if(!solMap[s.practica_id])solMap[s.practica_id]=[];solMap[s.practica_id].push(s);});
   const el=document.getElementById('d-practicas');
-  if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="ei">📄</div><div class="et">Sin prácticas disponibles</div></div>`;return}
+  if(!practicas?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin prácticas disponibles</div></div>`;return}
   el.innerHTML=practicas.map(p=>{
     const pracUrls=parsePracUrls(p.archivo_url);
     const solList=solMap[p.id]||[];
@@ -494,16 +497,16 @@ async function loadPracticas(){
     return`<div class="prac-card">
       <div class="prac-sem">Semana: ${p.semana_inicio}</div>
       <div class="prac-ttl">${p.titulo}</div>
-      <div class="prac-mat">📚 ${p.materias?.nombre||'--'}${p.perfiles?` · <span style="color:var(--blue)">Prof. ${p.perfiles.nombre} ${p.perfiles.apellido}</span>`:''}</div>
+      <div class="prac-mat">${p.materias?.nombre||'--'}${p.perfiles?` · <span style="color:var(--blue)">Prof. ${p.perfiles.nombre} ${p.perfiles.apellido}</span>`:''}</div>
       ${p.descripcion?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.descripcion}</div>`:''}
       <div class="prac-btns">
-        ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center">📥 ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
+        ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center"> ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
         ${entregada
-          ?`<div class="entrega-ok">✅ ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">⬇️${solList.length>1?' '+(i+1):''}</button>`).join('')}</div>`
+          ?`<div class="entrega-ok"> ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">⬇${solList.length>1?' '+(i+1):''}</button>`).join('')}</div>`
           :`<div id="upzone-${p.id}" style="margin-top:4px">
               <div class="file-drop" style="padding:14px" onclick="document.getElementById('file-${p.id}').click()">
                 <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="setSolFile('${p.id}',this)"/>
-                <div class="fd-icon">📷</div>
+                <div class="fd-icon"></div>
                 <div class="fd-txt">Tocá para agregar fotos (podés seleccionar varias)</div>
               </div>
               <div id="preview-${p.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
@@ -519,16 +522,16 @@ async function loadPracticas(){
 
 const IMG_WARN_MB=5,IMG_MAX_MB=15;
 async function openSolucion(pathOrUrl,btnEl){
-  if(btnEl){btnEl.disabled=true;btnEl.textContent='⏳';}
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='';}
   try{
     const path=pathOrUrl.startsWith('http')
       ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
       :pathOrUrl;
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(!path){alert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
-    if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!path){alert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const resp=await fetch(data.signedUrl);
-    if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}return;}
+    if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const blob=await resp.blob();
     const ext=path.split('.').pop()||'jpg';
     const a=document.createElement('a');
@@ -536,7 +539,7 @@ async function openSolucion(pathOrUrl,btnEl){
     a.download=`solucion.${ext}`;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){alert('Error: '+e.message);}
-  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇️';}
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
 function renderSolPreview(pid){
@@ -547,12 +550,12 @@ function renderSolPreview(pid){
   el.innerHTML=`<div style="background:var(--navy2,#1a2236);border:1px solid var(--border);border-radius:6px;padding:8px;width:100%;box-sizing:border-box">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">ARCHIVOS SELECCIONADOS (${files.length})</div>
     ${files.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);gap:8px">
-      <span style="font-size:12px;color:var(--text,#fff);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${f.name}</span>
+      <span style="font-size:12px;color:var(--text,#fff);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"> ${f.name}</span>
       <span style="font-size:10px;color:var(--muted);white-space:nowrap">${(f.size/1024/1024).toFixed(1)} MB</span>
-      <button onclick="removeSolFile('${pid}',${i})" style="background:none;border:none;color:var(--red,#e53935);cursor:pointer;font-size:13px;padding:0 4px;flex-shrink:0">✕</button>
+      <button onclick="removeSolFile('${pid}',${i})" style="background:none;border:none;color:var(--red,#e53935);cursor:pointer;font-size:13px;padding:0 4px;flex-shrink:0"></button>
     </div>`).join('')}
     <div style="margin-top:8px;padding:7px 10px;background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.3);border-radius:4px;font-size:11px;color:var(--yellow,#ffc107);font-family:'Barlow Condensed',sans-serif">
-      ⚠️ Revisá bien los archivos antes de entregar. Una vez enviado <strong>no podrás volver a entregar</strong>.
+       Revisá bien los archivos antes de entregar. Una vez enviado <strong>no podrás volver a entregar</strong>.
     </div>
   </div>`;
 }
@@ -575,18 +578,18 @@ async function setSolFile(pid,input){
   if(!nuevas.length)return;
   const warnEl=document.getElementById(`swarn-${pid}`);
   const bloqueadas=nuevas.filter(f=>f.size>IMG_MAX_MB*1024*1024);
-  if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=`⛔ ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;input.value='';return;}
+  if(bloqueadas.length){warnEl.style.display='block';warnEl.textContent=` ${bloqueadas[0].name} supera los ${IMG_MAX_MB} MB. Tomá la foto con menor resolución.`;input.value='';return;}
   // Leer todos en paralelo inmediatamente (evita revocación de acceso en Android)
   const resultados=await Promise.allSettled(nuevas.map(f=>_leerArchivo(f).then(buf=>({buf,name:f.name,type:f.type||'image/jpeg',size:f.size}))));
   input.value='';
   const leidos=resultados.filter(r=>r.status==='fulfilled').map(r=>r.value);
   const fallidos=resultados.filter(r=>r.status==='rejected').length;
-  if(fallidos>0){warnEl.style.display='block';warnEl.textContent=`⚠️ ${fallidos} archivo${fallidos>1?'s':''} no se pudo${fallidos>1?'ron':''} leer y se omitió${fallidos>1?'ron':''}. Seleccionalos desde Archivos en lugar de Galería.`;}
+  if(fallidos>0){warnEl.style.display='block';warnEl.textContent=` ${fallidos} archivo${fallidos>1?'s':''} no se pudo${fallidos>1?'ron':''} leer y se omitió${fallidos>1?'ron':''}. Seleccionalos desde Archivos en lugar de Galería.`;}
   if(!leidos.length)return;
   if(!solucionFiles[pid])solucionFiles[pid]=[];
   solucionFiles[pid]=[...solucionFiles[pid],...leidos];
   const pesadas=solucionFiles[pid].filter(f=>f.size>IMG_WARN_MB*1024*1024);
-  if(pesadas.length){warnEl.style.display='block';warnEl.textContent=`⚠️ Algunas fotos son pesadas. Si podés, reducí la resolución antes de subir.`;}
+  if(pesadas.length){warnEl.style.display='block';warnEl.textContent=` Algunas fotos son pesadas. Si podés, reducí la resolución antes de subir.`;}
   else warnEl.style.display='none';
   renderSolPreview(pid);
 }
@@ -606,7 +609,7 @@ async function submitSolucion(pid){
     const {error}=await sb.from('soluciones').insert({alumno_id:alumnoId,practica_id:pid,archivo_url:upData.path,tipo:'imagen'});
     if(error){showMsg(msgEl,error.message,'err');return}
   }
-  showMsg(msgEl,`✅ ${files.length} foto${files.length>1?'s':''} entregada${files.length>1?'s':''}`,'ok');
+  showMsg(msgEl,` ${files.length} foto${files.length>1?'s':''} entregada${files.length>1?'s':''}`,'ok');
   solucionFiles[pid]=[];
   setTimeout(()=>loadPracticas(),1200);
 }
@@ -635,7 +638,7 @@ async function loadHorario(){
     selectHorAulaTab(horAulasData[0].id);
   }else{
     const wrap=document.getElementById('d-horario');
-    if(wrap)wrap.innerHTML=`<div class="empty"><div class="ei">🗓️</div><div class="et">Sin horario disponible</div></div>`;
+    if(wrap)wrap.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin horario disponible</div></div>`;
   }
 }
 function renderHorAulaTabs(){
@@ -690,15 +693,15 @@ function checkDeviceStatus(){
   const warn=document.getElementById('device-status-warn');
   list.innerHTML=checks.map(c=>`
     <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:16px">${c.ok?'✅':'❌'}</span>
+      <span style="font-size:16px">${c.ok?'':''}</span>
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.05em;color:${c.ok?'var(--muted)':'var(--red)'};text-transform:uppercase">${c.label}</span>
     </div>`).join('');
   if(problemas.length){
-    badge.textContent='⚠️ PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.12)';
+    badge.textContent=' PROBLEMA';badge.style.color='var(--red)';badge.style.background='rgba(224,85,85,.12)';
     warn.style.display='block';
-    warn.innerHTML='⚠️ <strong>Si tu padre solicita tu ubicación ahora, no podremos compartirla automáticamente y la academia será notificada.</strong><br><br>'+problemas.map(p=>`• ${p.failMsg}`).join('<br>');
+    warn.innerHTML=' <strong>Si tu padre solicita tu ubicación ahora, no podremos compartirla automáticamente y la academia será notificada.</strong><br><br>'+problemas.map(p=>`• ${p.failMsg}`).join('<br>');
   }else{
-    badge.textContent='✅ TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.12)';
+    badge.textContent=' TODO OK';badge.style.color='var(--green)';badge.style.background='rgba(76,175,125,.12)';
     warn.style.display='none';
   }
 }
@@ -796,27 +799,27 @@ async function submitUbicacionNativa(solicitudId, lat, lng){
   else console.log('submitUbicacionNativa OK');
 }
 async function procesarUbicacionAuto(){
-  setDlgStatus('🔍 Verificando dispositivo...');
+  setDlgStatus('Verificando dispositivo...');
   if(window.AndroidNative){
     if(AndroidNative.isDeveloperOptionsEnabled()){
-      setDlgStatus('⚠️ Tenés las opciones de desarrollador activadas.<br>Desactiválas en Ajustes → Opciones de desarrollador y presioná Reintentar.',true);
+      setDlgStatus(' Tenés las opciones de desarrollador activadas.<br>Desactiválas en Ajustes → Opciones de desarrollador y presioná Reintentar.',true);
       return;
     }
     if(AndroidNative.isMockLocationEnabled()){
-      setDlgStatus('⚠️ Se detectó ubicación simulada (GPS falso) activa.<br>Desactivála y presioná Reintentar.',true);
+      setDlgStatus(' Se detectó ubicación simulada (GPS falso) activa.<br>Desactivála y presioná Reintentar.',true);
       return;
     }
     if(AndroidNative.hasMockLocationApps()){
-      setDlgStatus('⚠️ Tenés una app de GPS falso instalada.<br>Desinstalála y presioná Reintentar.',true);
+      setDlgStatus(' Tenés una app de GPS falso instalada.<br>Desinstalála y presioná Reintentar.',true);
       return;
     }
   }
   if(!navigator.geolocation){denegarUbicacion('sin_gps');return;}
-  setDlgStatus('📡 Obteniendo ubicación GPS...');
+  setDlgStatus(' Obteniendo ubicación GPS...');
   navigator.geolocation.getCurrentPosition(
     async pos=>{
       if(!pendingSolicitudId)return;
-      setDlgStatus('✅ Ubicación compartida correctamente.');
+      setDlgStatus(' Ubicación compartida correctamente.');
       await sb.from('solicitudes_ubicacion').update({
         estado:'aceptada',latitud:pos.coords.latitude,longitud:pos.coords.longitude,
         respondido_en:new Date().toISOString()
@@ -855,13 +858,13 @@ async function denegarUbicacion(motivo='rechazado'){
   };
   const msgTexto=mensajes[motivo]||'no compartió su ubicación';
   await sb.from('notificaciones').insert({destinatario_id:sol.padre_id,titulo:'ALERTA: Alumno no compartió ubicación',mensaje:`Su hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`,tipo:'urgente',global:false});
-  sendFcmToUsers([sol.padre_id],`🚨 ALERTA: ${nombre} no compartió ubicación`,`Tu hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
+  sendFcmToUsers([sol.padre_id],` ALERTA: ${nombre} no compartió ubicación`,`Tu hijo/a ${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
   const{data:admins,error:adminsErr}=await sb.from('perfiles').select('id').in('rol',['admin','dueno','profesor']);
   console.log('admins query result:',admins,'error:',adminsErr);
   if(admins?.length){
     await Promise.all(admins.map(a=>sb.from('notificaciones').insert({destinatario_id:a.id,titulo:`ALERTA UBICACIÓN: ${nombre}`,mensaje:`El alumno ${nombre} (DNI: ${dniAlumno}), hijo/a de ${nombrePadre} (DNI: ${dniPadre}), ${msgTexto}.`,tipo:'urgente',global:false})));
     console.log('sending FCM to admins:',admins.map(a=>a.id));
-    sendFcmToUsers(admins.map(a=>a.id),`🚨 ALERTA UBICACIÓN: ${nombre}`,`${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
+    sendFcmToUsers(admins.map(a=>a.id),` ALERTA UBICACIÓN: ${nombre}`,`${nombre} (DNI: ${dniAlumno}) ${msgTexto}.`);
   }
   // Crear mensaje automático en contacto_mensajes en nombre del padre
   const{error:cErr}=await sb.from('contacto_mensajes').insert({
