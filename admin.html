@@ -908,22 +908,6 @@
         </div>
       </div>
     </div>
-      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:10px">Pago de inscripción (opcional)</div>
-        <div class="fgrid">
-          <div class="fg"><label>Monto (S/)</label><input type="number" id="al-pago-monto" step="0.01" min="0" placeholder="150.00"/></div>
-          <div class="fg"><label>Fecha</label><input type="date" id="al-pago-fecha"/></div>
-          <div class="fg"><label>Método</label>
-            <select id="al-pago-metodo">
-              <option value="Efectivo">Efectivo</option>
-              <option value="Transferencia">Transferencia</option>
-              <option value="Yape">Yape</option>
-              <option value="Plin">Plin</option>
-            </select>
-          </div>
-          <div class="fg"><label>Notas</label><input type="text" id="al-pago-notas" placeholder="Observaciones..."/></div>
-        </div>
-      </div>
     </div>
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-alumno')">Cancelar</button>
@@ -2624,31 +2608,14 @@ async function saveAlumno(){
   // 5. Guardar contraseña
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
 
-  // 6. Registrar pago de inscripción si se ingresó monto
-  const pagoMonto=parseFloat(document.getElementById('al-pago-monto').value);
-  if(pagoMonto>0){
-    const pagoFecha=document.getElementById('al-pago-fecha').value||new Date().toISOString().slice(0,10);
-    const {data:{user:me}}=await sb.auth.getUser();
-    await sb.from('pagos').insert({
-      alumno_id:alData.id,
-      monto:pagoMonto,
-      fecha:pagoFecha,
-      concepto:'Inscripción',
-      metodo_pago:document.getElementById('al-pago-metodo').value||'Efectivo',
-      notas:document.getElementById('al-pago-notas').value.trim()||null,
-      registrado_por:me?.id||null
-    });
-  }
-
   showMsg(msg,'Alumno creado correctamente','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
-  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla','al-fnac','al-direccion','al-size','al-escuela','al-tel1','al-tel2','al-pago-monto','al-pago-notas'].forEach(id=>{
+  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla','al-fnac','al-direccion','al-size','al-escuela','al-tel1','al-tel2'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('al-sexo').value='';
-  document.getElementById('al-pago-metodo').value='Efectivo';
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
 // ── INGRESOS / PAGOS ────────────────────────────────────────
