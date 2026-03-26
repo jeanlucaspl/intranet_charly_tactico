@@ -1980,13 +1980,12 @@ async function saveAdmin(){
   if(pass.length<6) return showMsg(msg,'Contraseña mínimo 6 caracteres','err');
   const btn=document.getElementById('btn-crear-admin');
   btn.disabled=true; btn.textContent='CREANDO...';
-  const {data,error}=await sb.auth.signUp({email,password:pass});
-  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR ADMIN';return}
-  const uid=data?.user?.id;
-  if(!uid){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR ADMIN';return}
-  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol,email_ref:email});
-  // Guardar en gestión de contraseñas
-  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
+  const uid=await signUpSeguro(email,pass,dni,msg,btn,'CREAR ADMIN');
+  if(!uid)return;
+  const {error:rpcErr}=await sb.rpc('crear_perfil_admin',{
+    p_uid:uid,p_nombre:nombre,p_apellido:apellido,p_dni:dni,p_email:email,p_rol:rol,p_pass:pass
+  });
+  if(rpcErr){showMsg(msg,'Error al guardar datos: '+rpcErr.message,'err');btn.disabled=false;btn.textContent='CREAR ADMIN';return}
   showMsg(msg,`Admin creado  — Email: ${email} / Pass: ${pass}`,'ok');
   await loadAdmins();
   btn.disabled=false; btn.textContent='CREAR ADMIN';
@@ -2131,29 +2130,16 @@ async function savePadre(){
   const btn=document.getElementById('btn-crear-padre');
   btn.disabled=true; btn.textContent='CREANDO...';
 
-  // Guardar sesión del dueño antes de signUp (que cambia la sesión activa)
-  const {data:{session:duSession}}=await sb.auth.getSession();
+  const uid=await signUpSeguro(email,pass,dni,msg,btn,'CREAR PADRE');
+  if(!uid)return;
 
-  const {data,error}=await sb.auth.signUp({email,password:pass});
-  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-  const userId=data?.user?.id;
-  if(!userId){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-
-  const {error:pfErr}=await sb.from('perfiles').upsert({
-    id:userId, nombre, apellido, dni, rol:'padre',
-    telefono:tel||null,
-    email_ref:email
+  const {error:rpcErr}=await sb.rpc('crear_perfil_padre',{
+    p_uid:uid, p_nombre:nombre, p_apellido:apellido, p_dni:dni,
+    p_email:email, p_telefono:tel||null, p_pass:pass,
+    p_alumno_id:alumnoId||null, p_parentesco:parentesco
   });
-  if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
-
-  // Restaurar sesión del dueño para las siguientes operaciones
-  if(duSession) await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
-
-  if(alumnoId){
-    const {error:paErr}=await sb.from('padres_alumnos').insert({padre_id:userId,alumno_id:alumnoId,parentesco});
-    if(paErr) showMsg(msg,'Advertencia al vincular alumno: '+paErr.message,'err');
-  }
-  await sb.from('gestion_contrasenas').insert({perfil_id:userId,contrasena_actual:pass});
+  if(rpcErr){showMsg(msg,'Error al guardar datos: '+rpcErr.message,'err');btn.disabled=false;btn.textContent='CREAR PADRE';return}
+  const userId=uid;
 
   const acceso=emailInput
     ? `Email: ${email} / Contraseña: ${pass}`
@@ -2560,6 +2546,33 @@ async function deleteAula(id){
   await sb.from('aulas').update({activa:false}).eq('id',id);
   await loadAulas();
 }
+// Helper: signUp con detección de registro incompleto anterior
+async function signUpSeguro(email, pass, dni, msg, btnEl, btnLabel){
+  const {data:dniCheck}=await sb.from('perfiles').select('id').eq('dni',dni).maybeSingle();
+  if(dniCheck){
+    showMsg(msg,'Ya existe un usuario con ese DNI','err');
+    btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
+  }
+  const {data,error}=await sb.auth.signUp({email,password:pass});
+  if(error){
+    const yaExiste=error.message.toLowerCase().includes('already registered')||error.message.toLowerCase().includes('already been registered');
+    if(yaExiste){
+      const {data:perfilExistente}=await sb.from('perfiles').select('id').eq('email_ref',email).maybeSingle();
+      if(perfilExistente){
+        showMsg(msg,'Este email ya tiene un registro completo. Verificá la lista.','err');
+      } else {
+        showMsg(msg,'Este email ya existe en Auth sin perfil completo. Usá otro email o eliminá el usuario huérfano desde Supabase.','err');
+      }
+    } else {
+      showMsg(msg,error.message,'err');
+    }
+    btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
+  }
+  const uid=data?.user?.id;
+  if(!uid){showMsg(msg,'Error al crear usuario en Auth','err');btnEl.disabled=false;btnEl.textContent=btnLabel;return null;}
+  return uid;
+}
+
 async function saveAlumno(){
   const nombre   = document.getElementById('al-nombre').value.trim();
   const apellido = document.getElementById('al-apellido').value.trim();
@@ -2581,29 +2594,9 @@ async function saveAlumno(){
   const talla_uni = document.getElementById('al-size').value.trim()||null;
   const escuela   = document.getElementById('al-escuela').value.trim()||null;
 
-  // 1. Verificar si el DNI ya existe en perfiles
-  const {data:dniCheck}=await sb.from('perfiles').select('id').eq('dni',dni).maybeSingle();
-  if(dniCheck){showMsg(msg,'Ya existe un usuario con ese DNI','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-
-  // 2. Crear usuario en Auth
-  const {data,error}=await sb.auth.signUp({email,password:pass});
-  let uid=data?.user?.id;
-
-  // Si el email ya existe en Auth (registro interrumpido anterior)
-  if(error?.message?.toLowerCase().includes('already registered')||error?.message?.toLowerCase().includes('already been registered')){
-    // Verificar si tiene perfil completo
-    const {data:perfilExistente}=await sb.from('perfiles').select('id').eq('email_ref',email).maybeSingle();
-    if(perfilExistente){
-      showMsg(msg,'Este email ya tiene un registro completo. Verificá la lista de alumnos.','err');
-      btn.disabled=false;btn.textContent='CREAR ALUMNO';return;
-    }
-    // No tiene perfil → registro incompleto anterior, continuar con uid existente
-    // No podemos obtener el uid sin login, mostrar mensaje de acción manual
-    showMsg(msg,'Este email ya existe en Auth pero sin perfil. Usá otro email o contactá al administrador del sistema.','err');
-    btn.disabled=false;btn.textContent='CREAR ALUMNO';return;
-  }
-  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-  if(!uid){showMsg(msg,'Error: no se pudo crear el usuario en Auth','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+  // 1 y 2. Verificar DNI + crear en Auth con detección de incompletos
+  const uid=await signUpSeguro(email,pass,dni,msg,btn,'CREAR ALUMNO');
+  if(!uid)return;
 
   // 3. Crear perfil + alumno en transacción atómica (función PostgreSQL)
   const {data:alumnoId,error:rpcErr}=await sb.rpc('crear_perfil_alumno',{
@@ -3586,14 +3579,11 @@ async function saveProfesor(){
   if(!nombre||!apellido||!dni||!email||!pass)return showMsg(msg,'Todos los campos marcados son obligatorios','err');
   const btn=document.getElementById('btn-crear-profesor');
   btn.disabled=true;btn.textContent='CREANDO...';
-  // Guardar sesión del dueño antes de signUp (que cambia la sesión activa)
-  const{data:{session:duSession}}=await sb.auth.getSession();
-  const{data,error}=await sb.auth.signUp({email,password:pass});
-  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
-  const uid=data?.user?.id;
-  if(!uid){showMsg(msg,'Error al crear usuario','err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
-  await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'profesor',email_ref:email,telefono:telefono||null});
-  // Upload foto if provided
+
+  const uid=await signUpSeguro(email,pass,dni,msg,btn,'CREAR PROFESOR');
+  if(!uid)return;
+
+  // Subir foto si existe (antes del RPC para tener la URL)
   let fotoUrl=null;
   const blob=prPhotoBlob||prFotoFile;
   if(blob){
@@ -3601,24 +3591,13 @@ async function saveProfesor(){
     const{data:upData}=await sb.storage.from('fotos-alumnos').upload(`prof_${uid}.${ext}`,blob,{upsert:true,contentType:prPhotoBlob?'image/jpeg':prFotoFile?.type});
     if(upData)fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
   }
-  const{error:prErr}=await sb.from('profesores').insert({perfil_id:uid,activo:true,foto_url:fotoUrl});
-  if(prErr){showMsg(msg,prErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
-  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
-  // Restaurar sesión del dueño ANTES de escribir en materia_profesor (requiere permisos de dueño)
-  if(duSession)await sb.auth.setSession({access_token:duSession.access_token,refresh_token:duSession.refresh_token});
-  // Assign materia if selected → usar service role via RPC o query directa con sesión dueño
-  if(materiaId){
-    // Buscar con sesión dueño ya restaurada
-    const {data:profRow,error:profRowErr}=await sb.from('profesores').select('id').eq('perfil_id',uid).maybeSingle();
-    if(profRow?.id){
-      await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:profRow.id},{onConflict:'materia_id,profesor_id'});
-    } else {
-      // fallback: buscar en toda la tabla (sin filtro RLS adicional)
-      const {data:allProf}=await sb.from('profesores').select('id,perfil_id');
-      const match=(allProf||[]).find(p=>p.perfil_id===uid);
-      if(match) await sb.from('materia_profesor').upsert({materia_id:materiaId,profesor_id:match.id},{onConflict:'materia_id,profesor_id'});
-    }
-  }
+
+  const{error:rpcErr}=await sb.rpc('crear_perfil_profesor',{
+    p_uid:uid, p_nombre:nombre, p_apellido:apellido, p_dni:dni,
+    p_email:email, p_telefono:telefono||null, p_pass:pass,
+    p_materia_id:materiaId||null, p_foto_url:fotoUrl
+  });
+  if(rpcErr){showMsg(msg,'Error al guardar datos: '+rpcErr.message,'err');btn.disabled=false;btn.textContent='CREAR PROFESOR';return}
   showMsg(msg,` Profesor creado — Email: ${email} / Pass: ${pass}`,'ok');
   await loadProfesores(); populateSelects(); if(esDueno) loadProfesoresTexto();
   btn.disabled=false;btn.textContent='CREAR PROFESOR';
