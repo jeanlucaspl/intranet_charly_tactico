@@ -22,21 +22,18 @@ Deno.serve(async (req) => {
 
   const token = authHeader.replace('Bearer ', '')
 
-  // Crear cliente con el JWT del usuario que llama
-  const sbCaller = createClient(
+  // Usar service role para verificar el JWT del llamador y su rol
+  const sbAdmin = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Verificar que el token es válido y obtener el usuario
-  const { data: { user }, error: userErr } = await sbCaller.auth.getUser()
+  const { data: { user }, error: userErr } = await sbAdmin.auth.getUser(token)
   if (userErr || !user) {
-    return new Response(JSON.stringify({ error: 'Token inválido' }), { status: 401, headers: corsHeaders })
+    return new Response(JSON.stringify({ error: 'Token inválido: ' + (userErr?.message||'sin usuario') }), { status: 401, headers: corsHeaders })
   }
 
-  // Verificar que el usuario es admin o dueno (NO instructor)
-  const { data: perfil, error: perfilErr } = await sbCaller
+  const { data: perfil, error: perfilErr } = await sbAdmin
     .from('perfiles')
     .select('rol')
     .eq('id', user.id)
