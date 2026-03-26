@@ -2933,7 +2933,7 @@ async function eliminarUsuario(perfilId,extraId,tipo){
   const body={perfil_id:perfilId};
   if(tipo==='alumno'&&extraId) body.alumno_id=extraId;
   if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
-  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify(body)});
+  const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`},body:JSON.stringify(body)});
   const json=await res.json();
   if(json.error){await myAlert('Error al eliminar: '+json.error);return;}
   if(tipo==='alumno') await loadAlumnos();
