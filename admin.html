@@ -2581,28 +2581,41 @@ async function saveAlumno(){
   const talla_uni = document.getElementById('al-size').value.trim()||null;
   const escuela   = document.getElementById('al-escuela').value.trim()||null;
 
-  // 1. Crear usuario en Auth
+  // 1. Verificar si el DNI ya existe en perfiles
+  const {data:dniCheck}=await sb.from('perfiles').select('id').eq('dni',dni).maybeSingle();
+  if(dniCheck){showMsg(msg,'Ya existe un usuario con ese DNI','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+
+  // 2. Crear usuario en Auth
   const {data,error}=await sb.auth.signUp({email,password:pass});
+  let uid=data?.user?.id;
+
+  // Si el email ya existe en Auth (registro interrumpido anterior)
+  if(error?.message?.toLowerCase().includes('already registered')||error?.message?.toLowerCase().includes('already been registered')){
+    // Verificar si tiene perfil completo
+    const {data:perfilExistente}=await sb.from('perfiles').select('id').eq('email_ref',email).maybeSingle();
+    if(perfilExistente){
+      showMsg(msg,'Este email ya tiene un registro completo. Verificá la lista de alumnos.','err');
+      btn.disabled=false;btn.textContent='CREAR ALUMNO';return;
+    }
+    // No tiene perfil → registro incompleto anterior, continuar con uid existente
+    // No podemos obtener el uid sin login, mostrar mensaje de acción manual
+    showMsg(msg,'Este email ya existe en Auth pero sin perfil. Usá otro email o contactá al administrador del sistema.','err');
+    btn.disabled=false;btn.textContent='CREAR ALUMNO';return;
+  }
   if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-  if(!data.user){showMsg(msg,'Error: no se pudo crear el usuario en Auth','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-  const uid=data.user.id;
+  if(!uid){showMsg(msg,'Error: no se pudo crear el usuario en Auth','err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
-  // 2. Insertar perfil
-  const {error:pfErr}=await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email,telefono,telefono2});
-  if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
-
-  // 3. Insertar alumno
-  const {data:alData,error:alErr}=await sb.from('alumnos').insert({
-    perfil_id:uid,activo:true,
-    sexo:document.getElementById('al-sexo').value||null,
-    peso:parseFloat(document.getElementById('al-peso').value)||null,
-    talla:parseFloat(document.getElementById('al-talla').value)||null,
-    fecha_nacimiento:fnac,
-    direccion,
-    talla_uniforme:talla_uni,
-    escuela
-  }).select('id').single();
-  if(alErr){showMsg(msg,'Error en alumno: '+alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
+  // 3. Crear perfil + alumno en transacción atómica (función PostgreSQL)
+  const {data:alumnoId,error:rpcErr}=await sb.rpc('crear_perfil_alumno',{
+    p_uid:uid, p_nombre:nombre, p_apellido:apellido, p_dni:dni, p_email:email,
+    p_telefono:telefono, p_telefono2:telefono2,
+    p_sexo:document.getElementById('al-sexo').value||null,
+    p_peso:parseFloat(document.getElementById('al-peso').value)||null,
+    p_talla:parseFloat(document.getElementById('al-talla').value)||null,
+    p_fecha_nac:fnac, p_direccion:direccion,
+    p_talla_uniforme:talla_uni, p_escuela:escuela, p_pass:pass
+  });
+  if(rpcErr){showMsg(msg,'Error al guardar datos: '+rpcErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
   // 4. Subir foto si existe (opcional)
   if(capturedPhotoBlob||fotoFile){
@@ -2610,14 +2623,11 @@ async function saveAlumno(){
     const ext=capturedPhotoBlob?'jpg':(fotoFile?.name.split('.').pop()||'jpg');
     const path=`${uid}.${ext}`;
     const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
-    if(!upErr){
+    if(!upErr&&upData){
       const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-      await sb.from('alumnos').update({foto_url:fotoUrl}).eq('id',alData.id);
+      await sb.from('alumnos').update({foto_url:fotoUrl}).eq('id',alumnoId);
     }
   }
-
-  // 5. Guardar contraseña
-  await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
 
   showMsg(msg,'Alumno creado correctamente','ok');
   await loadAlumnos(); populateSelects();
