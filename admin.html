@@ -822,8 +822,10 @@
 <div class="panel" id="panel-profesores">
   <div class="ph">
     <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN PROFESORES</div></div>
-    <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
-    <button class="btn btn-outline" onclick="openRegistrarFoto('','','','profesor')">Registrar Foto</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
+      <button class="btn btn-outline" onclick="openRegistrarFoto('','','','profesor')">Registrar Foto</button>
+    </div>
   </div>
   <div class="dni-wrap" style="margin-bottom:12px">
     <input type="text" id="q-prof-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-prof','profesores')" onblur="setTimeout(()=>hideSug('sug-prof'),200)"/>
@@ -3484,7 +3486,7 @@ let allProfesoresData=[],allProfesoresActivos=[],allProfesoresDeshabilitados=[];
 async function loadProfesores(){
   const elA=document.getElementById('d-profesores-activos');
   if(!elA)return;
-  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref,telefono)').order('creado_en');
+  const{data}=await sb.from('profesores').select('*,perfiles(nombre,apellido,dni,email_ref,telefono),materia_profesor(materias(nombre))').order('creado_en');
   allProfesoresData=data||[];
   allProfesoresActivos=allProfesoresData.filter(p=>p.activo!==false);
   allProfesoresDeshabilitados=allProfesoresData.filter(p=>p.activo===false);
@@ -3503,19 +3505,19 @@ function _profesorRow(p,deshabilitado=false){
     <td><span class="badge bb">${p.perfiles?.dni||'--'}</span></td>
     <td style="font-size:12px;color:var(--muted)">${p.perfiles?.email_ref||'--'}</td>
     <td style="font-size:12px">${p.perfiles?.telefono||'--'}</td>
-    <td>${p.especialidad||'--'}</td>
+    <td style="font-size:12px">${(p.materia_profesor||[]).map(mp=>mp.materias?.nombre).filter(Boolean).join(', ')||'<span style="color:var(--muted)">Sin asignar</span>'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">${acciones}</td>
   </tr>`;
 }
 function renderProfesoresActivos(data){
   const el=document.getElementById('d-profesores-activos');if(!el)return;
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin profesores activos</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,false)).join('')}</tbody></table>`;
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Materias</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,false)).join('')}</tbody></table>`;
 }
 function renderProfesoresDeshabilitados(data){
   const el=document.getElementById('d-profesores-deshabilitados');if(!el)return;
   if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin profesores deshabilitados</div></div>`;return}
-  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Especialidad</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,true)).join('')}</tbody></table>`;
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Email</th><th>Celular</th><th>Materias</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>_profesorRow(p,true)).join('')}</tbody></table>`;
 }
 function renderProfesoresFiltrados(data){ renderProfesoresActivos(data); }
 function filterProfesores(){
