@@ -1157,6 +1157,29 @@ async function saveNotaProfesor(){
 // ── PRÁCTICAS PROFESOR ──
 const PDF_WARN_MB=10,PDF_MAX_MB=20;
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
+function _pracPath(u){return u.replace(/.*\/object\/(?:public|sign)\/practicas\//,'').replace(/\?.*$/,'');}
+async function openPractica(urlOrPath,btnEl){
+  const origTxt=btnEl?btnEl.textContent:'';
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='...';}
+  try{
+    const path=urlOrPath.startsWith('http')?_pracPath(urlOrPath):urlOrPath;
+    const {data,error}=await sb.storage.from('practicas').createSignedUrl(path,3600);
+    if(error||!data?.signedUrl){await myAlert('No se pudo descargar: '+(error?.message||'sin URL'));return;}
+    if(window.AndroidNative&&AndroidNative.openUrl){
+      AndroidNative.openUrl(data.signedUrl);
+    }else{
+      const resp=await fetch(data.signedUrl);
+      if(!resp.ok){await myAlert('Error al descargar ('+resp.status+')');return;}
+      const blob=await resp.blob();
+      const ext=path.split('.').pop()||'pdf';
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`practica.${ext}`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
+  }catch(e){await myAlert('Error: '+e.message);}
+  if(btnEl){btnEl.disabled=false;btnEl.textContent=origTxt;}
+}
 let profPracticaFiles=[];
 
 function openMd(id){document.getElementById(id).classList.add('open');}
@@ -1190,17 +1213,21 @@ async function openSolucion(pathOrUrl,btnEl){
   if(btnEl){btnEl.disabled=true;btnEl.textContent='';}
   try{
     const path=_solPath(pathOrUrl);
-    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
     if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
     if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
-    const resp=await fetch(data.signedUrl);
-    if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
-    const blob=await resp.blob();
-    const ext=path.split('.').pop()||'jpg';
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`solucion.${ext}`;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    if(window.AndroidNative&&AndroidNative.openUrl){
+      AndroidNative.openUrl(data.signedUrl);
+    }else{
+      const resp=await fetch(data.signedUrl);
+      if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+      const blob=await resp.blob();
+      const ext=path.split('.').pop()||'jpg';
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`solucion.${ext}`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
   }catch(e){await myAlert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
@@ -1306,7 +1333,7 @@ async function loadProfPracticas(){
   if(!data?.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin prácticas aún</div></div>';return;}
   el.innerHTML=data.map(p=>{
     const urls=parsePracUrls(p.archivo_url);
-    const links=urls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none"> ${urls.length>1?'PDF '+(i+1):'Descargar PDF'}</a>`).join('');
+    const links=urls.map((u,i)=>`<button onclick="openPractica('${u}',this)" class="btn btn-gold" style="font-size:11px;padding:7px 12px">${urls.length>1?'PDF '+(i+1):'Descargar PDF'}</button>`).join('');
     return`<div class="prac-card">
       <div class="prac-semana">Semana: ${p.semana_inicio}</div>
       <div class="prac-titulo">${p.titulo}</div>

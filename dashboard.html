@@ -500,7 +500,7 @@ async function loadPracticas(){
       <div class="prac-mat">${p.materias?.nombre||'--'}${p.perfiles?` · <span style="color:var(--blue)">Prof. ${p.perfiles.nombre} ${p.perfiles.apellido}</span>`:''}</div>
       ${p.descripcion?`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${p.descripcion}</div>`:''}
       <div class="prac-btns">
-        ${pracUrls.map((u,i)=>`<a href="${u}" target="_blank" class="btn btn-gold" style="font-size:11px;padding:7px 12px;text-decoration:none;text-align:center"> ${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</a>`).join('')}
+        ${pracUrls.map((u,i)=>`<button onclick="openPractica('${u}',this)" class="btn btn-gold" style="font-size:11px;padding:7px 12px">${pracUrls.length>1?'PDF '+(i+1):'Descargar Práctica'}</button>`).join('')}
         ${entregada
           ?`<div class="entrega-ok"> ${solList.length} foto${solList.length>1?'s':''} entregada${solList.length>1?'s':''} ${solList.map((s,i)=>`<button onclick="openSolucion('${s.archivo_url}',this)" style="background:none;border:none;color:var(--gold);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px">⬇${solList.length>1?' '+(i+1):''}</button>`).join('')}</div>`
           :`<div id="upzone-${p.id}" style="margin-top:4px">
@@ -527,21 +527,48 @@ async function openSolucion(pathOrUrl,btnEl){
     const path=pathOrUrl.startsWith('http')
       ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
       :pathOrUrl;
-    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
     if(!path){alert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
     if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
-    const resp=await fetch(data.signedUrl);
-    if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
-    const blob=await resp.blob();
-    const ext=path.split('.').pop()||'jpg';
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`solucion.${ext}`;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    if(window.AndroidNative&&AndroidNative.openUrl){
+      AndroidNative.openUrl(data.signedUrl);
+    }else{
+      const resp=await fetch(data.signedUrl);
+      if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+      const blob=await resp.blob();
+      const ext=path.split('.').pop()||'jpg';
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`solucion.${ext}`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
   }catch(e){alert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
+function _pracPath(u){return u.replace(/.*\/object\/(?:public|sign)\/practicas\//,'').replace(/\?.*$/,'');}
+async function openPractica(urlOrPath,btnEl){
+  const origTxt=btnEl?btnEl.textContent:'';
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='...';}
+  try{
+    const path=urlOrPath.startsWith('http')?_pracPath(urlOrPath):urlOrPath;
+    const {data,error}=await sb.storage.from('practicas').createSignedUrl(path,3600);
+    if(error||!data?.signedUrl){alert('No se pudo descargar: '+(error?.message||'sin URL'));return;}
+    if(window.AndroidNative&&AndroidNative.openUrl){
+      AndroidNative.openUrl(data.signedUrl);
+    }else{
+      const resp=await fetch(data.signedUrl);
+      if(!resp.ok){alert('Error al descargar ('+resp.status+')');return;}
+      const blob=await resp.blob();
+      const ext=path.split('.').pop()||'pdf';
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`practica.${ext}`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
+  }catch(e){alert('Error: '+e.message);}
+  if(btnEl){btnEl.disabled=false;btnEl.textContent=origTxt;}
+}
 function renderSolPreview(pid){
   const files=solucionFiles[pid]||[];
   const el=document.getElementById(`preview-${pid}`);
