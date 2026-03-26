@@ -823,6 +823,7 @@
   <div class="ph">
     <div class="ph-left"><div class="eye">Solo dueño</div><div class="ttl">GESTIÓN PROFESORES</div></div>
     <button class="btn btn-gold" onclick="openMd('md-profesor')">+ Nuevo Profesor</button>
+    <button class="btn btn-outline" onclick="openRegistrarFoto('','','','profesor')">Registrar Foto</button>
   </div>
   <div class="dni-wrap" style="margin-bottom:12px">
     <input type="text" id="q-prof-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-prof','profesores')" onblur="setTimeout(()=>hideSug('sug-prof'),200)"/>
@@ -940,6 +941,7 @@
       </div>
       <div id="rf-selected" style="display:none;padding:10px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.06em"></div>
       <input type="hidden" id="rf-alumno-id"/>
+      <input type="hidden" id="rf-tipo" value="alumno"/>
       <input type="hidden" id="rf-perfil-id"/>
       <div class="fg" style="margin-top:4px">
         <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
@@ -2738,14 +2740,16 @@ async function savePago(){
 // ── REGISTRAR FOTO ──────────────────────────────────────────
 let rfPhotoBlob=null, rfFotoFile=null, rfStream=null;
 
-function openRegistrarFoto(alumnoId,perfilId,nombre){
+function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
   rfPhotoBlob=null; rfFotoFile=null;
-  document.getElementById('rf-alumno-id').value=alumnoId||'';
+  document.getElementById('rf-alumno-id').value=entidadId||'';
   document.getElementById('rf-perfil-id').value=perfilId||'';
+  document.getElementById('rf-tipo').value=tipo;
   document.getElementById('rf-search').value='';
   document.getElementById('rf-sug').style.display='none';
-  // Mostrar buscador solo cuando no se preseleccionó un alumno
-  document.getElementById('rf-search-wrap').style.display=alumnoId?'none':'block';
+  document.getElementById('rf-search-wrap').style.display=entidadId?'none':'block';
+  // Título dinámico
+  document.querySelector('#md-reg-foto .md-ttl').textContent=tipo==='profesor'?'REGISTRAR FOTO DE PROFESOR':'REGISTRAR FOTO DE ALUMNO';
   const sel=document.getElementById('rf-selected');
   if(alumnoId){
     sel.style.display='block';
@@ -2767,7 +2771,9 @@ function rfSuggest(inp){
   const q=(inp.value||'').trim().toLowerCase();
   const sug=document.getElementById('rf-sug');
   if(!q){sug.style.display='none';return;}
-  const matches=allAlumnos.filter(a=>{
+  const tipo=document.getElementById('rf-tipo').value;
+  const pool=tipo==='profesor'?allProfesoresActivos:allAlumnos;
+  const matches=pool.filter(a=>{
     const ap=(a.perfiles?.apellido||'').toLowerCase();
     const dni=(a.perfiles?.dni||'').toLowerCase();
     return ap.startsWith(q)||dni.startsWith(q);
@@ -2837,13 +2843,15 @@ async function saveRegistrarFoto(){
   btn.disabled=true; btn.textContent='GUARDANDO...';
   const ext=rfPhotoBlob?'jpg':(rfFotoFile?.name.split('.').pop()||'jpg');
   const path=`${perfilId}.${ext}`;
+  const tipo=document.getElementById('rf-tipo').value;
   const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,blob,{upsert:true,contentType:rfPhotoBlob?'image/jpeg':rfFotoFile?.type});
   if(upErr){showMsg(msg,'Error al subir: '+upErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
   const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
-  const {error:updErr}=await sb.from('alumnos').update({foto_url:fotoUrl,foto_descriptor:null}).eq('id',alumnoId);
+  const tabla=tipo==='profesor'?'profesores':'alumnos';
+  const {error:updErr}=await sb.from(tabla).update({foto_url:fotoUrl,foto_descriptor:null}).eq('id',alumnoId);
   if(updErr){showMsg(msg,'Error al guardar: '+updErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
   showMsg(msg,'Foto registrada correctamente','ok');
-  await loadAlumnos();
+  if(tipo==='profesor') await loadProfesores(); else await loadAlumnos();
   btn.disabled=false; btn.textContent='GUARDAR FOTO';
   stopRegFotoCam(); rfPhotoBlob=null; rfFotoFile=null;
   setTimeout(()=>{closeMd('md-reg-foto');},1500);
@@ -3487,7 +3495,8 @@ function _profesorRow(p,deshabilitado=false){
   const acciones=deshabilitado
     ? `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarProfesor('${p.id}')">Reactivar</button>
        <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`
-    : `<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarProfesor('${p.id}')">Inhabilitar</button>
+    : `${!p.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${p.id}','${p.perfil_id}','${p.perfiles?.nombre||''} ${p.perfiles?.apellido||''}','profesor')">+ Foto</button>`:''}
+       <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarProfesor('${p.id}')">Inhabilitar</button>
        <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`;
   return`<tr>
     <td><strong>${p.perfiles?.nombre||'--'} ${p.perfiles?.apellido||''}</strong></td>
