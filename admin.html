@@ -2769,7 +2769,7 @@ async function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
     await loadAlumnos();
   }
   const sel=document.getElementById('rf-selected');
-  if(alumnoId){
+  if(entidadId){
     sel.style.display='block';
     sel.textContent=nombre;
   } else {
