@@ -2577,8 +2577,8 @@ async function signUpSeguro(email, pass, dni, msg, btnEl, btnLabel){
       const {data:{session:adminSess}}=await sb.auth.getSession();
       const delRes=await fetch(`${SB_URL}/functions/v1/delete-user`,{
         method:'POST',
-        headers:{'Authorization':`Bearer ${adminSess?.access_token}`,'Content-Type':'application/json','apikey':SB_KEY},
-        body:JSON.stringify({orphan_email:email})
+        headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},
+        body:JSON.stringify({orphan_email:email,user_token:adminSess?.access_token})
       });
       const delJson=await delRes.json();
       if(!delRes.ok){
@@ -2932,10 +2932,10 @@ async function eliminarUsuario(perfilId,extraId,tipo){
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session){await myAlert('Sesión expirada. Recargá la página.');return;}
-    const body={perfil_id:perfilId};
+    const body={perfil_id:perfilId,user_token:session.access_token};
     if(tipo==='alumno'&&extraId) body.alumno_id=extraId;
     if(tipo==='profesor'&&extraId) body.profesor_id=extraId;
-    const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SB_KEY},body:JSON.stringify(body)});
+    const res=await fetch(FNURL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${SB_KEY}`},body:JSON.stringify(body)});
     let json;
     try{json=await res.json();}catch(_){await myAlert('Error al eliminar: respuesta inesperada del servidor (HTTP '+res.status+')');return;}
     if(!res.ok||json.error){await myAlert('Error al eliminar: '+(json.error||'HTTP '+res.status));return;}

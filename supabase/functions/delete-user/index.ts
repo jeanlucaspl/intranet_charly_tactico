@@ -15,49 +15,29 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   // ── VERIFICACIÓN DE AUTENTICACIÓN ──────────────────────────
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: corsHeaders })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-
-  // Usar service role para verificar el JWT del llamador y su rol
-  const sbAdmin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
-  const { data: { user }, error: userErr } = await sbAdmin.auth.getUser(token)
-  if (userErr || !user) {
-    return new Response(JSON.stringify({ error: 'Token inválido: ' + (userErr?.message||'sin usuario') }), { status: 401, headers: corsHeaders })
-  }
-
-  const { data: perfil, error: perfilErr } = await sbAdmin
-    .from('perfiles')
-    .select('rol')
-    .eq('id', user.id)
-    .single()
-
-  if (perfilErr || !perfil) {
-    return new Response(JSON.stringify({ error: 'Perfil no encontrado' }), { status: 403, headers: corsHeaders })
-  }
-
-  if (!['admin', 'dueno'].includes(perfil.rol)) {
-    return new Response(JSON.stringify({ error: 'Solo admin o dueño pueden eliminar usuarios' }), { status: 403, headers: corsHeaders })
-  }
-  // ── FIN VERIFICACIÓN ────────────────────────────────────────
-
   try {
     const body = await req.json()
-    const { perfil_id, alumno_id, profesor_id, orphan_email } = body
-    const errors: string[] = []
+    const { perfil_id, alumno_id, profesor_id, orphan_email, user_token } = body
 
-    // Usar service role solo para la eliminación en cascada
-    const sb = createClient(
+    // Usar service role para verificar el token del llamador y su rol
+    const sbAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
+
+    if (!user_token) {
+      return new Response(JSON.stringify({ error: 'Token de usuario requerido' }), { status: 401, headers: corsHeaders })
+    }
+    const { data: { user }, error: userErr } = await sbAdmin.auth.getUser(user_token)
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Token inválido' }), { status: 401, headers: corsHeaders })
+    }
+    const { data: perfil } = await sbAdmin.from('perfiles').select('rol').eq('id', user.id).single()
+    if (!perfil || !['admin','dueno'].includes(perfil.rol)) {
+      return new Response(JSON.stringify({ error: 'Sin permisos' }), { status: 403, headers: corsHeaders })
+    }
+    const errors: string[] = []
+    const sb = sbAdmin  // mismo cliente service role
 
     // ── HUÉRFANO POR EMAIL (usuario Auth sin perfil) ──
     if (orphan_email) {
