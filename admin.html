@@ -2685,45 +2685,35 @@ function renderIngresos(data){
   const grupos={};
   data.forEach(p=>{
     const aid=p.alumno_id;
-    if(!grupos[aid]) grupos[aid]={pf:p.alumnos?.perfiles, pagos:[], total:0};
+    if(!grupos[aid]) grupos[aid]={pf:p.alumnos?.perfiles,pagos:[],total:0};
     grupos[aid].pagos.push(p);
     grupos[aid].total+=parseFloat(p.monto||0);
   });
 
-  el.innerHTML=Object.entries(grupos).map(([aid,g])=>{
+  const rows=Object.entries(grupos).map(([aid,g])=>{
     const nombre=`${g.pf?.apellido||''} ${g.pf?.nombre||''}`.trim()||'Sin nombre';
     const dni=g.pf?.dni||'--';
-    const filas=g.pagos.map(p=>`
-      <tr style="background:var(--navy)">
-        <td style="padding-left:32px;color:var(--muted);font-size:11px">${p.fecha||'--'}</td>
-        <td><span class="badge br">${p.concepto||'--'}</span></td>
-        <td style="font-size:11px;color:var(--muted)">${p.metodo_pago||'--'}</td>
-        <td style="color:var(--gold);font-weight:700">S/ ${parseFloat(p.monto).toFixed(2)}</td>
-        <td style="color:var(--muted);font-size:11px">${p.notas||''}</td>
-      </tr>`).join('');
+    const detalle=g.pagos.map(p=>`
+      <div style="display:flex;gap:8px;align-items:center;padding:5px 12px 5px 28px;border-top:1px solid rgba(255,255,255,.04);font-size:11px;flex-wrap:wrap">
+        <span style="color:var(--muted);min-width:80px">${p.fecha||'--'}</span>
+        <span class="badge br" style="font-size:10px">${p.concepto||'--'}</span>
+        <span style="color:var(--muted)">${p.metodo_pago||'--'}</span>
+        <span style="color:var(--gold);font-weight:700;margin-left:auto">S/ ${parseFloat(p.monto).toFixed(2)}</span>
+        ${p.notas?`<span style="color:var(--muted);width:100%;padding-left:80px">${p.notas}</span>`:''}
+      </div>`).join('');
     return`
-      <tr style="cursor:pointer;background:var(--navy2)" onclick="togglePagosAlumno('${aid}')">
-        <td style="font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.05em">
-          <span id="ing-arrow-${aid}" style="display:inline-block;margin-right:8px;transition:transform .2s">▶</span>${nombre}
-        </td>
-        <td style="color:var(--muted);font-size:12px">${dni}</td>
-        <td colspan="2"></td>
-        <td style="color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:18px">S/ ${g.total.toFixed(2)}</td>
-      </tr>
-      <tr id="ing-detail-${aid}" style="display:none">
-        <td colspan="5" style="padding:0">
-          <table style="width:100%">
-            <thead><tr style="background:rgba(0,0,0,.2)">
-              <th>Fecha</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Notas</th>
-            </tr></thead>
-            <tbody>${filas}</tbody>
-          </table>
-        </td>
-      </tr>`;
+      <div style="border-bottom:1px solid var(--border)">
+        <div onclick="togglePagosAlumno('${aid}')" style="display:flex;align-items:center;padding:8px 12px;cursor:pointer;gap:10px;background:var(--navy2)">
+          <span id="ing-arrow-${aid}" style="font-size:10px;transition:transform .2s;color:var(--muted)">▶</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.05em;flex:1">${nombre}</span>
+          <span style="color:var(--muted);font-size:11px">${dni}</span>
+          <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:16px;margin-left:12px">S/ ${g.total.toFixed(2)}</span>
+        </div>
+        <div id="ing-detail-${aid}" style="display:none">${detalle}</div>
+      </div>`;
   }).join('');
 
-  // Wrappear en tabla
-  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th colspan="2"></th><th>Total</th></tr></thead><tbody>${el.innerHTML}</tbody></table>`;
+  el.innerHTML=rows;
 }
 
 function togglePagosAlumno(aid){
@@ -2731,8 +2721,8 @@ function togglePagosAlumno(aid){
   const arrow=document.getElementById('ing-arrow-'+aid);
   if(!detail)return;
   const open=detail.style.display==='none';
-  detail.style.display=open?'':'none';
-  arrow.style.transform=open?'rotate(90deg)':'rotate(0deg)';
+  detail.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(90deg)':'';
 }
 
 function filtrarPagos(q){
