@@ -904,6 +904,7 @@
             </div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRegCam()">Cámara</button>
+              <button class="btn btn-outline" style="font-size:11px;padding:7px" id="reg-flip-btn" onclick="flipRegCam()">Frontal</button>
               <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="reg-snap-btn" onclick="snapPhoto()" disabled>Capturar</button>
             </div>
           </div>
@@ -955,6 +956,7 @@
             </div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRfCam()">Cámara</button>
+              <button class="btn btn-outline" style="font-size:11px;padding:7px" id="rf-flip-btn" onclick="flipRfCam()">Frontal</button>
               <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="rf-snap-btn" onclick="snapRfPhoto()" disabled>Capturar</button>
             </div>
           </div>
@@ -1266,8 +1268,9 @@
               <span id="pr-placeholder" style="color:var(--muted);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startProfesorCam()"></button>
-              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="pr-snap-btn" onclick="snapProfesor()" disabled></button>
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startProfesorCam()">Cámara</button>
+              <button class="btn btn-outline" style="font-size:11px;padding:7px" id="pr-flip-btn" onclick="flipPrCam()">Frontal</button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="pr-snap-btn" onclick="snapProfesor()" disabled>Capturar</button>
             </div>
           </div>
           <div class="fg" style="flex:1;min-width:120px">
@@ -1362,7 +1365,7 @@ let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFiles=[];
 let esDueno = false, uid = null;
 let allProfesoresTexto = [];
-let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment';
+let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment', regFacingMode='environment';
 let faceApiLoaded=false, facialScanLoop=null, facialMatchStreak=0, facialFaceMatcher=null;
 const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.45, FACIAL_SCAN_MS=600;
 
@@ -2749,7 +2752,7 @@ async function savePago(){
 // ────────────────────────────────────────────────────────────
 
 // ── REGISTRAR FOTO ──────────────────────────────────────────
-let rfPhotoBlob=null, rfFotoFile=null, rfStream=null;
+let rfPhotoBlob=null, rfFotoFile=null, rfStream=null, rfFacingMode='environment';
 
 async function openRegistrarFoto(entidadId,perfilId,nombre,tipo='alumno'){
   rfPhotoBlob=null; rfFotoFile=null;
@@ -2819,13 +2822,18 @@ async function startRfCam(){
   const ph=document.getElementById('rf-placeholder');
   const canvas=document.getElementById('rf-canvas');
   try{
-    rfStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    rfStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:rfFacingMode}});
     video.srcObject=rfStream;
     video.style.display='block';
     canvas.style.display='none';
     ph.style.display='none';
     document.getElementById('rf-snap-btn').disabled=false;
+    document.getElementById('rf-flip-btn').textContent=rfFacingMode==='environment'?'Frontal':'Trasera';
   }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message);}
+}
+async function flipRfCam(){
+  rfFacingMode=rfFacingMode==='environment'?'user':'environment';
+  if(rfStream) await startRfCam();
 }
 
 function snapRfPhoto(){
@@ -3379,11 +3387,16 @@ async function startRegCam(){
   if(facialStream){facialStream.getTracks().forEach(t=>t.stop());facialStream=null;}
   if(regStream){regStream.getTracks().forEach(t=>t.stop());regStream=null;}
   try{
-    regStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    regStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:regFacingMode}});
     const v=document.getElementById('reg-video');v.srcObject=regStream;await v.play();
     v.style.display='block';document.getElementById('reg-canvas').style.display='none';document.getElementById('reg-placeholder').style.display='none';
     document.getElementById('reg-snap-btn').disabled=false;
+    document.getElementById('reg-flip-btn').textContent=regFacingMode==='environment'?'Frontal':'Trasera';
   }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message)}
+}
+async function flipRegCam(){
+  regFacingMode=regFacingMode==='environment'?'user':'environment';
+  if(regStream) await startRegCam();
 }
 function snapPhoto(){
   const v=document.getElementById('reg-video'),c=document.getElementById('reg-canvas');
@@ -3560,16 +3573,21 @@ async function reactivarProfesor(id){
 }
 async function deleteProfesor(id,perfilId){ await inhabilitarProfesor(id); }
 
-let prStream=null,prPhotoBlob=null,prFotoFile=null;
+let prStream=null,prPhotoBlob=null,prFotoFile=null,prFacingMode='environment';
 async function startProfesorCam(){
   if(facialStream){facialStream.getTracks().forEach(t=>t.stop());facialStream=null;}
   if(prStream){prStream.getTracks().forEach(t=>t.stop());prStream=null;}
   try{
-    prStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    prStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:prFacingMode}});
     const v=document.getElementById('pr-video');v.srcObject=prStream;await v.play();
     v.style.display='block';document.getElementById('pr-canvas').style.display='none';document.getElementById('pr-placeholder').style.display='none';
     document.getElementById('pr-snap-btn').disabled=false;
+    document.getElementById('pr-flip-btn').textContent=prFacingMode==='environment'?'Frontal':'Trasera';
   }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message)}
+}
+async function flipPrCam(){
+  prFacingMode=prFacingMode==='environment'?'user':'environment';
+  if(prStream) await startProfesorCam();
 }
 function snapProfesor(){
   const v=document.getElementById('pr-video'),c=document.getElementById('pr-canvas');

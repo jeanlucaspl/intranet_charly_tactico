@@ -296,6 +296,7 @@
           <div class="cam-status cs-idle" id="cam-status">Cámara detenida</div>
           <div style="display:flex;gap:8px;width:100%;max-width:360px">
             <button class="btn btn-blue" style="flex:1" id="btn-start-cam" onclick="startCam()"> Activar Cámara</button>
+            <button class="btn btn-outline" id="btn-flip-cam" onclick="flipCam()">Frontal</button>
             <button class="btn btn-outline" onclick="stopCam()"></button>
           </div>
           <div id="btn-verificar" style="width:100%;max-width:360px;padding:10px;background:rgba(61,220,132,0.08);border:1px solid rgba(61,220,132,0.25);text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:#6b7a99;text-transform:uppercase">
@@ -465,7 +466,7 @@ sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.replace('index.ht
 window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().then(({data})=>{if(!data.session)location.replace('login.html');});});
 
 let uid=null, profesorId=null, profesorData=null;
-let camStream=null, gpsCoords=null;
+let camStream=null, gpsCoords=null, camFacingMode='environment';
 let faceApiLoaded=false, myDescriptor=null;
 let scanLoop=null, matchStreak=0;
 const MATCH_NEEDED=3, UMBRAL=0.45, SCAN_MS=600;
@@ -703,7 +704,7 @@ async function startCam(){
   const dentro=await checkGeofence();
   if(!dentro)return;
   try{
-    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:camFacingMode,width:640,height:480}});
     const v=document.getElementById('cam-video');
     v.srcObject=camStream; await v.play();
     v.addEventListener('loadedmetadata',()=>{
@@ -726,6 +727,11 @@ function stopCam(){
   canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
   setCamStatus('Cámara detenida','cs-idle');
   document.getElementById('btn-verificar').disabled=true;
+}
+async function flipCam(){
+  camFacingMode=camFacingMode==='environment'?'user':'environment';
+  document.getElementById('btn-flip-cam').textContent=camFacingMode==='environment'?'Frontal':'Trasera';
+  if(camStream){stopCam();await startCam();}
 }
 function setCamStatus(txt,cls){
   const el=document.getElementById('cam-status');
