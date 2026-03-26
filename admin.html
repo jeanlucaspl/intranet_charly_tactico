@@ -2546,14 +2546,20 @@ async function deleteAula(id){
   await sb.from('aulas').update({activa:false}).eq('id',id);
   await loadAulas();
 }
-// Helper: signUp con detección de registro incompleto anterior
+// Helper: signUp con detección de registro incompleto anterior.
+// Guarda la sesión del admin/dueno antes del signUp y la restaura después,
+// porque auth.signUp() cambia la sesión activa al nuevo usuario.
 async function signUpSeguro(email, pass, dni, msg, btnEl, btnLabel){
   const {data:dniCheck}=await sb.from('perfiles').select('id').eq('dni',dni).maybeSingle();
   if(dniCheck){
     showMsg(msg,'Ya existe un usuario con ese DNI','err');
     btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
   }
+  // Guardar sesión del llamador (admin/dueno) antes de que signUp la cambie
+  const {data:{session:callerSession}}=await sb.auth.getSession();
   const {data,error}=await sb.auth.signUp({email,password:pass});
+  // Restaurar sesión inmediatamente para que el RPC se llame con los permisos correctos
+  if(callerSession) await sb.auth.setSession({access_token:callerSession.access_token,refresh_token:callerSession.refresh_token});
   if(error){
     const yaExiste=error.message.toLowerCase().includes('already registered')||error.message.toLowerCase().includes('already been registered');
     if(yaExiste){

@@ -21,3 +21,9 @@ WHERE profesor_id NOT IN (SELECT id FROM profesores);
 -- (ejecutar solo si la consulta 1 muestra un valor incorrecto)
 -- UPDATE profesores SET foto_url = NULL, foto_descriptor = NULL
 -- WHERE id = '66a28334-f322-4e20-ad0c-ec87fbde5113';
+
+-- 5. Ver materias asignadas a Jean Lucas Perez Labra
+SELECT mp.id, mp.profesor_id, mp.materia_id, m.nombre as materia
+FROM materia_profesor mp
+JOIN materias m ON m.id = mp.materia_id
+WHERE mp.profesor_id = '66a28334-f322-4e20-ad0c-ec87fbde5113';
