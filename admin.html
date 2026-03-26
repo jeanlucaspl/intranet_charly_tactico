@@ -309,6 +309,7 @@
     <div class="sb-section-body">
       <button class="sb-link" onclick="showPanel('aulas',this)">Aulas</button>
       <button class="sb-link" onclick="showPanel('alumnos',this)">Gestión Alumnos</button>
+      <button class="sb-link" onclick="showPanel('ingresos',this)">Ingresos</button>
       <button class="sb-link" onclick="showPanel('materias',this)">Materias</button>
       <button class="sb-link" onclick="showPanel('horario',this)">Horario Semanal</button>
       <button class="sb-link sb-dueno" onclick="showPanel('padres',this)" style="display:none">Gestión Padres</button>
@@ -426,6 +427,20 @@
     <div id="d-alumnos-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
     <div id="d-alumnos-inactivos" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
+</div>
+
+<!-- ══ INGRESOS ══ -->
+<div class="panel" id="panel-ingresos">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Finanzas</div><div class="ttl">INGRESOS</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-pago')">+ Registrar Pago</button>
+  </div>
+  <div style="margin-bottom:14px">
+    <input type="text" id="q-pago-search" placeholder="Buscar por apellido o DNI..." autocomplete="off"
+      style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"
+      oninput="filtrarPagos(this.value)"/>
+  </div>
+  <div class="tw" id="d-ingresos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
 </div>
 
 <!-- ══ MATERIAS ══ -->
@@ -893,6 +908,23 @@
         </div>
       </div>
     </div>
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:10px">Pago de inscripción (opcional)</div>
+        <div class="fgrid">
+          <div class="fg"><label>Monto (S/)</label><input type="number" id="al-pago-monto" step="0.01" min="0" placeholder="150.00"/></div>
+          <div class="fg"><label>Fecha</label><input type="date" id="al-pago-fecha"/></div>
+          <div class="fg"><label>Método</label>
+            <select id="al-pago-metodo">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Yape">Yape</option>
+              <option value="Plin">Plin</option>
+            </select>
+          </div>
+          <div class="fg"><label>Notas</label><input type="text" id="al-pago-notas" placeholder="Observaciones..."/></div>
+        </div>
+      </div>
+    </div>
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-alumno')">Cancelar</button>
       <button class="btn btn-gold" id="btn-crear-alumno" onclick="saveAlumno()">CREAR ALUMNO</button>
@@ -946,6 +978,53 @@
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-reg-foto');stopRegFotoCam()">Cancelar</button>
       <button class="btn btn-gold" id="btn-guardar-foto" onclick="saveRegistrarFoto()">GUARDAR FOTO</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGO -->
+<div class="mo" id="md-pago">
+  <div class="md" style="max-width:520px">
+    <div class="md-hd"><div class="md-ttl">REGISTRAR PAGO</div><button class="md-x" onclick="closeMd('md-pago')"></button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-pago"></div>
+      <div class="fg full" style="margin-bottom:12px">
+        <label>Buscar alumno por DNI o apellido *</label>
+        <div style="position:relative">
+          <input type="text" id="pago-search" placeholder="Escribe DNI o apellido..." autocomplete="off"
+            oninput="pagoSuggest(this)" onfocus="pagoSuggest(this)" onblur="setTimeout(()=>document.getElementById('pago-sug').style.display='none',150)"
+            style="width:100%"/>
+          <div id="pago-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div id="pago-alumno-selected" style="display:none;padding:10px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.06em"></div>
+      <input type="hidden" id="pago-alumno-id"/>
+      <div class="fgrid">
+        <div class="fg"><label>Monto (S/) *</label><input type="number" id="pago-monto" step="0.01" min="0" placeholder="150.00"/></div>
+        <div class="fg"><label>Fecha *</label><input type="date" id="pago-fecha"/></div>
+        <div class="fg"><label>Concepto</label>
+          <select id="pago-concepto">
+            <option value="Inscripción">Inscripción</option>
+            <option value="Mensualidad">Mensualidad</option>
+            <option value="Material">Material</option>
+            <option value="Examen">Examen</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Método de pago</label>
+          <select id="pago-metodo">
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Yape">Yape</option>
+            <option value="Plin">Plin</option>
+          </select>
+        </div>
+        <div class="fg full"><label>Notas (opcional)</label><input type="text" id="pago-notas" placeholder="Observaciones..."/></div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-pago')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-guardar-pago" onclick="savePago()">GUARDAR PAGO</button>
     </div>
   </div>
 </div>
@@ -2545,16 +2624,142 @@ async function saveAlumno(){
   // 5. Guardar contraseña
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
 
+  // 6. Registrar pago de inscripción si se ingresó monto
+  const pagoMonto=parseFloat(document.getElementById('al-pago-monto').value);
+  if(pagoMonto>0){
+    const pagoFecha=document.getElementById('al-pago-fecha').value||new Date().toISOString().slice(0,10);
+    const {data:{user:me}}=await sb.auth.getUser();
+    await sb.from('pagos').insert({
+      alumno_id:alData.id,
+      monto:pagoMonto,
+      fecha:pagoFecha,
+      concepto:'Inscripción',
+      metodo_pago:document.getElementById('al-pago-metodo').value||'Efectivo',
+      notas:document.getElementById('al-pago-notas').value.trim()||null,
+      registrado_por:me?.id||null
+    });
+  }
+
   showMsg(msg,'Alumno creado correctamente','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
-  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla','al-fnac','al-direccion','al-size','al-escuela','al-tel1','al-tel2'].forEach(id=>{
+  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla','al-fnac','al-direccion','al-size','al-escuela','al-tel1','al-tel2','al-pago-monto','al-pago-notas'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('al-sexo').value='';
+  document.getElementById('al-pago-metodo').value='Efectivo';
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
+// ── INGRESOS / PAGOS ────────────────────────────────────────
+let allPagos=[];
+
+async function loadIngresos(){
+  const {data}=await sb.from('pagos')
+    .select('*,alumnos(perfil_id,perfiles(nombre,apellido,dni))')
+    .order('fecha',{ascending:false});
+  allPagos=data||[];
+  renderIngresos(allPagos);
+}
+
+function renderIngresos(data){
+  const el=document.getElementById('d-ingresos');
+  if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin pagos registrados</div></div>`;return;}
+  const total=data.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+  el.innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 20px;border-radius:4px;min-width:160px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Total filtrado</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold)">S/ ${total.toFixed(2)}</div>
+      </div>
+      <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 20px;border-radius:4px;min-width:160px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Registros</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--white)">${data.length}</div>
+      </div>
+    </div>
+    <table><thead><tr><th>Alumno</th><th>DNI</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Fecha</th><th>Notas</th></tr></thead>
+    <tbody>${data.map(p=>{
+      const pf=p.alumnos?.perfiles;
+      return`<tr>
+        <td>${pf?.apellido||''} ${pf?.nombre||''}</td>
+        <td>${pf?.dni||'--'}</td>
+        <td><span class="badge br">${p.concepto||'--'}</span></td>
+        <td>${p.metodo_pago||'--'}</td>
+        <td style="color:var(--gold);font-weight:700">S/ ${parseFloat(p.monto).toFixed(2)}</td>
+        <td>${p.fecha||'--'}</td>
+        <td style="color:var(--muted);font-size:11px">${p.notas||''}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function filtrarPagos(q){
+  if(!q.trim()){renderIngresos(allPagos);return;}
+  const s=q.toLowerCase();
+  renderIngresos(allPagos.filter(p=>{
+    const pf=p.alumnos?.perfiles;
+    return (pf?.apellido||'').toLowerCase().includes(s)||(pf?.dni||'').toLowerCase().includes(s);
+  }));
+}
+
+// Buscador dentro del modal de nuevo pago
+function pagoSuggest(inp){
+  const q=(inp.value||'').trim().toLowerCase();
+  const sug=document.getElementById('pago-sug');
+  if(!q){sug.style.display='none';return;}
+  const matches=allAlumnos.filter(a=>{
+    return (a.perfiles?.apellido||'').toLowerCase().startsWith(q)||(a.perfiles?.dni||'').toLowerCase().startsWith(q);
+  }).slice(0,8);
+  if(!matches.length){sug.style.display='none';return;}
+  sug.innerHTML=matches.map(a=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em"
+    onmousedown="pagoSelect('${a.id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}','${a.perfiles?.dni||''}')">
+    ${a.perfiles?.apellido} ${a.perfiles?.nombre} <span style="color:var(--muted);font-size:11px">DNI ${a.perfiles?.dni||''}</span>
+  </div>`).join('');
+  sug.style.display='block';
+}
+
+function pagoSelect(alumnoId,nombre,dni){
+  document.getElementById('pago-alumno-id').value=alumnoId;
+  document.getElementById('pago-search').value='';
+  document.getElementById('pago-sug').style.display='none';
+  const sel=document.getElementById('pago-alumno-selected');
+  sel.style.display='block';
+  sel.textContent=`${nombre}  —  DNI ${dni}`;
+}
+
+async function savePago(){
+  const alumnoId=document.getElementById('pago-alumno-id').value;
+  const monto=parseFloat(document.getElementById('pago-monto').value);
+  const fecha=document.getElementById('pago-fecha').value;
+  const msg=document.getElementById('msg-pago');
+  if(!alumnoId)return showMsg(msg,'Selecciona un alumno','err');
+  if(!monto||monto<=0)return showMsg(msg,'Ingresa un monto válido','err');
+  if(!fecha)return showMsg(msg,'Selecciona una fecha','err');
+  const btn=document.getElementById('btn-guardar-pago');
+  btn.disabled=true; btn.textContent='GUARDANDO...';
+  const {data:{user:me}}=await sb.auth.getUser();
+  const {error}=await sb.from('pagos').insert({
+    alumno_id:alumnoId,
+    monto,
+    fecha,
+    concepto:document.getElementById('pago-concepto').value,
+    metodo_pago:document.getElementById('pago-metodo').value,
+    notas:document.getElementById('pago-notas').value.trim()||null,
+    registrado_por:me?.id||null
+  });
+  if(error){showMsg(msg,error.message,'err');btn.disabled=false;btn.textContent='GUARDAR PAGO';return;}
+  showMsg(msg,'Pago registrado correctamente','ok');
+  await loadIngresos();
+  btn.disabled=false; btn.textContent='GUARDAR PAGO';
+  ['pago-monto','pago-notas','pago-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pago-alumno-id').value='';
+  document.getElementById('pago-alumno-selected').style.display='none';
+  document.getElementById('pago-concepto').value='Inscripción';
+  document.getElementById('pago-metodo').value='Efectivo';
+  setTimeout(()=>closeMd('md-pago'),1400);
+}
+// ────────────────────────────────────────────────────────────
+
 // ── REGISTRAR FOTO ──────────────────────────────────────────
 let rfPhotoBlob=null, rfFotoFile=null, rfStream=null;
 
@@ -3552,6 +3757,17 @@ let _mdStack=[];
 function openMd(id){
   document.getElementById(id).classList.add('show');
   _mdStack.push(id);
+  // Inicializar fecha de hoy en modales con campo fecha
+  if(id==='md-pago'){
+    const hoy=new Date().toISOString().slice(0,10);
+    const fp=document.getElementById('pago-fecha');
+    if(fp&&!fp.value)fp.value=hoy;
+    document.getElementById('pago-alumno-id').value='';
+    document.getElementById('pago-alumno-selected').style.display='none';
+    document.getElementById('pago-search').value='';
+    document.getElementById('msg-pago').className='msg';
+    document.getElementById('msg-pago').textContent='';
+  }
   // Bloquear pull-to-refresh y scroll del body
   document.body.style.overflow='hidden';
   // Registrar estado en historial para capturar botón Back de Android
@@ -3592,7 +3808,8 @@ function showPanel(id,btn){
   if(id==='padres')     loadPadres();
   if(id==='usuarios')   loadAdmins();
   if(id==='contrasenas')loadContrasenas();
-  if(id==='profesores')loadProfesores();
+  if(id==='profesores') loadProfesores();
+  if(id==='ingresos')   loadIngresos();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
