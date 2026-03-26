@@ -410,6 +410,7 @@
     <div class="ph-left"><div class="eye">Gestión de cadetes</div><div class="ttl">GESTIÓN ALUMNOS</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-gold" onclick="openMd('md-alumno')">+ Nuevo Alumno</button>
+      <button class="btn btn-outline" onclick="openRegistrarFoto('','','')">Registrar Foto</button>
     </div>
   </div>
   <div class="dni-wrap" style="margin-bottom:12px">
@@ -845,22 +846,28 @@
 
 <!-- MODAL ALUMNO -->
 <div class="mo" id="md-alumno">
-  <div class="md" style="max-width:600px">
+  <div class="md" style="max-width:640px">
     <div class="md-hd"><div class="md-ttl">NUEVO ALUMNO</div><button class="md-x" onclick="closeMd('md-alumno')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-alumno"></div>
       <div class="fgrid">
-        <div class="fg"><label>Nombre</label><input type="text" id="al-nombre" placeholder="Juan"/></div>
-        <div class="fg"><label>Apellido</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
-        <div class="fg"><label>DNI</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
+        <div class="fg"><label>Nombre *</label><input type="text" id="al-nombre" placeholder="Juan"/></div>
+        <div class="fg"><label>Apellido *</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
+        <div class="fg"><label>DNI *</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
+        <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="al-fnac"/></div>
         <div class="fg"><label>Sexo</label><select id="al-sexo"><option value="">--</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
         <div class="fg"><label>Peso (kg)</label><input type="number" id="al-peso" step="0.1" min="30" max="200" placeholder="65.5"/></div>
         <div class="fg"><label>Talla (cm)</label><input type="number" id="al-talla" step="0.1" min="100" max="220" placeholder="170"/></div>
-        <div class="fg full"><label>Email (acceso al sistema)</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
-        <div class="fg full"><label>Contraseña inicial</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
+        <div class="fg"><label>Size uniforme</label><input type="text" id="al-size" placeholder="M / L / XL / 38"/></div>
+        <div class="fg full"><label>Dirección</label><input type="text" id="al-direccion" placeholder="Av. Principal 123"/></div>
+        <div class="fg full"><label>Escuela</label><input type="text" id="al-escuela" placeholder="Nombre de la escuela a postular"/></div>
+        <div class="fg"><label>Celular 1</label><input type="tel" id="al-tel1" placeholder="987654321"/></div>
+        <div class="fg"><label>Celular 2</label><input type="tel" id="al-tel2" placeholder="987654322"/></div>
+        <div class="fg full"><label>Email (acceso al sistema) *</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
+        <div class="fg full"><label>Contraseña inicial *</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
       </div>
       <div class="fg" style="margin-top:8px">
-        <label> Foto Facial (para reconocimiento)</label>
+        <label>Foto facial (opcional — se puede registrar después)</label>
         <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="cam-wrap" style="max-width:220px;min-height:160px;display:flex;align-items:center;justify-content:center">
@@ -869,8 +876,8 @@
               <span id="reg-placeholder" style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRegCam()"> Cámara</button>
-              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="reg-snap-btn" onclick="snapPhoto()" disabled> Capturar</button>
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRegCam()">Cámara</button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="reg-snap-btn" onclick="snapPhoto()" disabled>Capturar</button>
             </div>
           </div>
           <div class="fg" style="flex:1;min-width:140px">
@@ -888,6 +895,56 @@
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-alumno')">Cancelar</button>
       <button class="btn btn-gold" id="btn-crear-alumno" onclick="saveAlumno()">CREAR ALUMNO</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR FOTO -->
+<div class="mo" id="md-reg-foto">
+  <div class="md" style="max-width:540px">
+    <div class="md-hd"><div class="md-ttl">REGISTRAR FOTO DE ALUMNO</div><button class="md-x" onclick="closeMd('md-reg-foto');stopRegFotoCam()"></button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-reg-foto"></div>
+      <div class="fg full" style="margin-bottom:12px">
+        <label>Buscar alumno por DNI o apellido</label>
+        <div style="position:relative">
+          <input type="text" id="rf-search" placeholder="Escribe DNI o apellido..." autocomplete="off"
+            oninput="rfSuggest(this)" onfocus="rfSuggest(this)" onblur="setTimeout(()=>document.getElementById('rf-sug').style.display='none',150)"
+            style="width:100%"/>
+          <div id="rf-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy3);border:1px solid var(--border);z-index:10;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div id="rf-selected" style="display:none;padding:10px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.06em"></div>
+      <input type="hidden" id="rf-alumno-id"/>
+      <input type="hidden" id="rf-perfil-id"/>
+      <div class="fg" style="margin-top:4px">
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="cam-wrap" style="max-width:220px;min-height:160px;display:flex;align-items:center;justify-content:center">
+              <video id="rf-video" autoplay muted playsinline style="width:100%;display:none"></video>
+              <canvas id="rf-canvas" style="display:none;width:100%"></canvas>
+              <span id="rf-placeholder" style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase">Sin foto</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-outline" style="flex:1;font-size:11px;padding:7px" onclick="startRfCam()">Cámara</button>
+              <button class="btn btn-gold" style="flex:1;font-size:11px;padding:7px" id="rf-snap-btn" onclick="snapRfPhoto()" disabled>Capturar</button>
+            </div>
+          </div>
+          <div class="fg" style="flex:1;min-width:140px">
+            <label>O subir imagen</label>
+            <div class="file-drop" style="padding:16px">
+              <input type="file" accept="image/*" onchange="setRfFotoFile(this)"/>
+              <div class="fd-icon"></div>
+              <div class="fd-txt">Subir foto</div>
+              <div class="fd-name" id="rf-foto-name"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-reg-foto');stopRegFotoCam()">Cancelar</button>
+      <button class="btn btn-gold" id="btn-guardar-foto" onclick="saveRegistrarFoto()">GUARDAR FOTO</button>
     </div>
   </div>
 </div>
@@ -2247,6 +2304,7 @@ function renderAlumnos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
+      ${!a.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">+ Foto</button>`:''}
       <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAlumno('${a.id}')">Inhabilitar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
     </td>
@@ -2264,6 +2322,7 @@ function renderAlumnosInactivos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
+      ${!a.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">+ Foto</button>`:''}
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
     </td>
@@ -2427,18 +2486,25 @@ async function deleteAula(id){
   await loadAulas();
 }
 async function saveAlumno(){
-  const nombre  = document.getElementById('al-nombre').value.trim();
-  const apellido= document.getElementById('al-apellido').value.trim();
-  const dni     = document.getElementById('al-dni').value.trim();
-  const email   = document.getElementById('al-email').value.trim();
-  const pass    = document.getElementById('al-pass').value;
-  const msg     = document.getElementById('msg-alumno');
+  const nombre   = document.getElementById('al-nombre').value.trim();
+  const apellido = document.getElementById('al-apellido').value.trim();
+  const dni      = document.getElementById('al-dni').value.trim();
+  const email    = document.getElementById('al-email').value.trim();
+  const pass     = document.getElementById('al-pass').value;
+  const msg      = document.getElementById('msg-alumno');
 
   if(!nombre||!apellido||!dni||!email||!pass)
-    return showMsg(msg,'Completa todos los campos obligatorios','err');
+    return showMsg(msg,'Completa los campos obligatorios (*)','err');
 
   const btn=document.getElementById('btn-crear-alumno');
   btn.disabled=true; btn.textContent='CREANDO...';
+
+  const telefono  = document.getElementById('al-tel1').value.trim()||null;
+  const telefono2 = document.getElementById('al-tel2').value.trim()||null;
+  const fnac      = document.getElementById('al-fnac').value||null;
+  const direccion = document.getElementById('al-direccion').value.trim()||null;
+  const talla_uni = document.getElementById('al-size').value.trim()||null;
+  const escuela   = document.getElementById('al-escuela').value.trim()||null;
 
   // 1. Crear usuario en Auth
   const {data,error}=await sb.auth.signUp({email,password:pass});
@@ -2447,11 +2513,20 @@ async function saveAlumno(){
   const uid=data.user.id;
 
   // 2. Insertar perfil
-  const {error:pfErr}=await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email});
+  const {error:pfErr}=await sb.from('perfiles').insert({id:uid,nombre,apellido,dni,rol:'alumno',email_ref:email,telefono,telefono2});
   if(pfErr){showMsg(msg,'Error en perfil: '+pfErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
-  // 3. Insertar alumno (sin foto por ahora)
-  const {data:alData,error:alErr}=await sb.from('alumnos').insert({perfil_id:uid,activo:true,sexo:document.getElementById('al-sexo').value||null,peso:parseFloat(document.getElementById('al-peso').value)||null,talla:parseFloat(document.getElementById('al-talla').value)||null}).select('id').single();
+  // 3. Insertar alumno
+  const {data:alData,error:alErr}=await sb.from('alumnos').insert({
+    perfil_id:uid,activo:true,
+    sexo:document.getElementById('al-sexo').value||null,
+    peso:parseFloat(document.getElementById('al-peso').value)||null,
+    talla:parseFloat(document.getElementById('al-talla').value)||null,
+    fecha_nacimiento:fnac,
+    direccion,
+    talla_uniforme:talla_uni,
+    escuela
+  }).select('id').single();
   if(alErr){showMsg(msg,'Error en alumno: '+alErr.message,'err');btn.disabled=false;btn.textContent='CREAR ALUMNO';return}
 
   // 4. Subir foto si existe (opcional)
@@ -2469,17 +2544,129 @@ async function saveAlumno(){
   // 5. Guardar contraseña
   await sb.from('gestion_contrasenas').insert({perfil_id:uid,contrasena_actual:pass});
 
-  showMsg(msg,'Alumno creado correctamente ','ok');
+  showMsg(msg,'Alumno creado correctamente','ok');
   await loadAlumnos(); populateSelects();
   btn.disabled=false; btn.textContent='CREAR ALUMNO';
   stopRegCam(); capturedPhotoBlob=null; fotoFile=null;
-  // Reset form
-  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla'].forEach(id=>{
+  ['al-nombre','al-apellido','al-dni','al-email','al-pass','al-peso','al-talla','al-fnac','al-direccion','al-size','al-escuela','al-tel1','al-tel2'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('al-sexo').value='';
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
+// ── REGISTRAR FOTO ──────────────────────────────────────────
+let rfPhotoBlob=null, rfFotoFile=null, rfStream=null;
+
+function openRegistrarFoto(alumnoId,perfilId,nombre){
+  rfPhotoBlob=null; rfFotoFile=null;
+  document.getElementById('rf-alumno-id').value=alumnoId||'';
+  document.getElementById('rf-perfil-id').value=perfilId||'';
+  document.getElementById('rf-search').value='';
+  document.getElementById('rf-sug').style.display='none';
+  const sel=document.getElementById('rf-selected');
+  if(alumnoId){
+    sel.style.display='block';
+    sel.textContent=nombre;
+  } else {
+    sel.style.display='none';
+  }
+  document.getElementById('rf-canvas').style.display='none';
+  document.getElementById('rf-video').style.display='none';
+  document.getElementById('rf-placeholder').style.display='';
+  document.getElementById('rf-snap-btn').disabled=true;
+  document.getElementById('rf-foto-name').textContent='';
+  document.getElementById('msg-reg-foto').className='msg';
+  document.getElementById('msg-reg-foto').textContent='';
+  openMd('md-reg-foto');
+}
+
+function rfSuggest(inp){
+  const q=(inp.value||'').trim().toLowerCase();
+  const sug=document.getElementById('rf-sug');
+  if(!q){sug.style.display='none';return;}
+  const matches=allAlumnos.filter(a=>{
+    const ap=(a.perfiles?.apellido||'').toLowerCase();
+    const dni=(a.perfiles?.dni||'').toLowerCase();
+    return ap.startsWith(q)||dni.startsWith(q);
+  }).slice(0,8);
+  if(!matches.length){sug.style.display='none';return;}
+  sug.innerHTML=matches.map(a=>`<div style="padding:8px 12px;cursor:pointer;font-size:13px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em" onmousedown="rfSelect('${a.id}','${a.perfil_id}','${(a.perfiles?.nombre||'')} ${(a.perfiles?.apellido||'')}','${a.perfiles?.dni||''}')">
+    ${a.perfiles?.apellido} ${a.perfiles?.nombre} <span style="color:var(--muted);font-size:11px">DNI ${a.perfiles?.dni||''}</span>
+  </div>`).join('');
+  sug.style.display='block';
+}
+
+function rfSelect(alumnoId,perfilId,nombre,dni){
+  document.getElementById('rf-alumno-id').value=alumnoId;
+  document.getElementById('rf-perfil-id').value=perfilId;
+  document.getElementById('rf-search').value='';
+  document.getElementById('rf-sug').style.display='none';
+  const sel=document.getElementById('rf-selected');
+  sel.style.display='block';
+  sel.textContent=`${nombre}  —  DNI ${dni}`;
+}
+
+async function startRfCam(){
+  if(rfStream){rfStream.getTracks().forEach(t=>t.stop());}
+  const video=document.getElementById('rf-video');
+  const ph=document.getElementById('rf-placeholder');
+  const canvas=document.getElementById('rf-canvas');
+  try{
+    rfStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    video.srcObject=rfStream;
+    video.style.display='block';
+    canvas.style.display='none';
+    ph.style.display='none';
+    document.getElementById('rf-snap-btn').disabled=false;
+  }catch(e){await myAlert('No se pudo acceder a la cámara: '+e.message);}
+}
+
+function snapRfPhoto(){
+  const video=document.getElementById('rf-video');
+  const canvas=document.getElementById('rf-canvas');
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  canvas.style.display='block';
+  video.style.display='none';
+  stopRegFotoCam();
+  canvas.toBlob(b=>{rfPhotoBlob=b;},'image/jpeg',0.9);
+}
+
+function stopRegFotoCam(){
+  if(rfStream){rfStream.getTracks().forEach(t=>t.stop());rfStream=null;}
+}
+
+function setRfFotoFile(inp){
+  rfFotoFile=inp.files[0]||null;
+  document.getElementById('rf-foto-name').textContent=rfFotoFile?rfFotoFile.name:'';
+  rfPhotoBlob=null;
+}
+
+async function saveRegistrarFoto(){
+  const alumnoId=document.getElementById('rf-alumno-id').value;
+  const perfilId=document.getElementById('rf-perfil-id').value;
+  const msg=document.getElementById('msg-reg-foto');
+  if(!alumnoId)return showMsg(msg,'Selecciona un alumno primero','err');
+  const blob=rfPhotoBlob||rfFotoFile;
+  if(!blob)return showMsg(msg,'Capturá o subí una foto primero','err');
+  const btn=document.getElementById('btn-guardar-foto');
+  btn.disabled=true; btn.textContent='GUARDANDO...';
+  const ext=rfPhotoBlob?'jpg':(rfFotoFile?.name.split('.').pop()||'jpg');
+  const path=`${perfilId}.${ext}`;
+  const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,blob,{upsert:true,contentType:rfPhotoBlob?'image/jpeg':rfFotoFile?.type});
+  if(upErr){showMsg(msg,'Error al subir: '+upErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
+  const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+  const {error:updErr}=await sb.from('alumnos').update({foto_url:fotoUrl,foto_descriptor:null}).eq('id',alumnoId);
+  if(updErr){showMsg(msg,'Error al guardar: '+updErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
+  showMsg(msg,'Foto registrada correctamente','ok');
+  await loadAlumnos();
+  btn.disabled=false; btn.textContent='GUARDAR FOTO';
+  stopRegFotoCam(); rfPhotoBlob=null; rfFotoFile=null;
+  setTimeout(()=>{closeMd('md-reg-foto');},1500);
+}
+// ────────────────────────────────────────────────────────────
+
 async function inhabilitarAlumno(id){
   if(!await myConfirm('¿Inhabilitar a este alumno?'))return;
   await sb.from('alumnos').update({activo:false}).eq('id',id);
