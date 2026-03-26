@@ -554,7 +554,7 @@ async function loadDashboard(){
   const t=data?.filter(a=>a.estado==='tardanza').length||0;
   const au=data?.filter(a=>a.estado==='ausente').length||0;
   const tot=(p+t+au)||1;
-  document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
+  document.getElementById('s-asist').textContent=`${Math.round((p+t)/tot*100)}%`;
 
   // Clases hoy
   const semana=weekStart();
