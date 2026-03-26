@@ -2881,8 +2881,7 @@ async function saveRegistrarFoto(){
   const {error:updErr}=await sb.from(tabla).update({foto_url:fotoUrl,foto_descriptor:descriptor}).eq('id',alumnoId);
   if(updErr){showMsg(msg,'Error al guardar: '+updErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
   showMsg(msg,descriptor?'Foto y reconocimiento facial registrados':'Foto registrada (no se detectó cara)','ok');
-  if(tipo==='alumno') construirFaceMatcher();
-  if(tipo==='profesor') await loadProfesores(); else await loadAlumnos();
+  if(tipo==='profesor') await loadProfesores(); else { await loadAlumnos(); construirFaceMatcher(); }
   btn.disabled=false; btn.textContent='GUARDAR FOTO';
   stopRegFotoCam(); rfPhotoBlob=null; rfFotoFile=null;
   setTimeout(()=>{closeMd('md-reg-foto');},1500);
