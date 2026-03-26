@@ -2379,7 +2379,7 @@ function renderAlumnos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
-      ${!a.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">+ Foto</button>`:''}
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAlumno('${a.id}')">Inhabilitar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
     </td>
@@ -2397,7 +2397,7 @@ function renderAlumnosInactivos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
-      ${!a.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">+ Foto</button>`:''}
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
     </td>
@@ -3497,7 +3497,7 @@ function _profesorRow(p,deshabilitado=false){
   const acciones=deshabilitado
     ? `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarProfesor('${p.id}')">Reactivar</button>
        <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`
-    : `${!p.foto_url?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${p.id}','${p.perfil_id}','${p.perfiles?.nombre||''} ${p.perfiles?.apellido||''}','profesor')">+ Foto</button>`:''}
+    : `<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${p.id}','${p.perfil_id}','${p.perfiles?.nombre||''} ${p.perfiles?.apellido||''}','profesor')">${p.foto_url?'Foto':'+ Foto'}</button>
        <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarProfesor('${p.id}')">Inhabilitar</button>
        <button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarUsuario('${p.perfil_id}','${p.id}','${p.perfiles?.nombre||''}','${p.perfiles?.apellido||''}','profesor')">Eliminar</button>`;
   return`<tr>
