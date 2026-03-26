@@ -2572,15 +2572,27 @@ async function signUpSeguro(email, pass, dni, msg, btnEl, btnLabel){
         btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
       }
       // Huérfano en Auth sin perfil (ej: intento previo falló a mitad).
-      // Hacemos signIn para recuperar el UID y completamos el registro.
-      showMsg(msg,'Completando registro previo incompleto...','ok');
-      const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password:pass});
-      if(callerSession) await sb.auth.setSession({access_token:callerSession.access_token,refresh_token:callerSession.refresh_token});
-      if(signInErr||!signInData?.user?.id){
-        showMsg(msg,'Email ya registrado sin perfil. Eliminá el usuario huérfano desde Supabase Auth o usá otro email.','err');
+      // Llamamos al Edge Function para eliminarlo y reintentamos signUp.
+      showMsg(msg,'Limpiando registro incompleto anterior...','ok');
+      const {data:{session:adminSess}}=await sb.auth.getSession();
+      const delRes=await fetch(`${SB_URL}/functions/v1/delete-user`,{
+        method:'POST',
+        headers:{'Authorization':`Bearer ${adminSess?.access_token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({orphan_email:email})
+      });
+      const delJson=await delRes.json();
+      if(!delRes.ok){
+        showMsg(msg,'No se pudo limpiar el registro anterior: '+(delJson.error||'error desconocido')+'. Eliminá el usuario desde Supabase Auth manualmente.','err');
         btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
       }
-      return signInData.user.id;
+      // Reintentar signUp ahora que el huérfano fue eliminado
+      const {data:data2,error:error2}=await sb.auth.signUp({email,password:pass});
+      if(callerSession) await sb.auth.setSession({access_token:callerSession.access_token,refresh_token:callerSession.refresh_token});
+      if(error2||!data2?.user?.id){
+        showMsg(msg,'Error al crear usuario tras limpiar huérfano: '+(error2?.message||'sin UID'),'err');
+        btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
+      }
+      return data2.user.id;
     } else {
       showMsg(msg,error.message,'err');
     }

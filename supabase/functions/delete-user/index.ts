@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
   // ── FIN VERIFICACIÓN ────────────────────────────────────────
 
   try {
-    const { perfil_id, alumno_id, profesor_id } = await req.json()
+    const body = await req.json()
+    const { perfil_id, alumno_id, profesor_id, orphan_email } = body
     const errors: string[] = []
 
     // Usar service role solo para la eliminación en cascada
@@ -60,6 +61,28 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
+
+    // ── HUÉRFANO POR EMAIL (usuario Auth sin perfil) ──
+    if (orphan_email) {
+      const { data: { users }, error: listErr } = await sb.auth.admin.listUsers()
+      if (listErr) {
+        return new Response(JSON.stringify({ error: 'No se pudo buscar el usuario: ' + listErr.message }), { status: 500, headers: corsHeaders })
+      }
+      const orphan = users.find((u: any) => u.email === orphan_email)
+      if (!orphan) {
+        return new Response(JSON.stringify({ ok: true, msg: 'No se encontró el huérfano' }), { headers: corsHeaders })
+      }
+      // Verificar que realmente no tiene perfil (seguridad extra)
+      const { data: perfilCheck } = await sb.from('perfiles').select('id').eq('id', orphan.id).maybeSingle()
+      if (perfilCheck) {
+        return new Response(JSON.stringify({ error: 'El usuario tiene perfil, no es huérfano' }), { status: 400, headers: corsHeaders })
+      }
+      const { error: authErr } = await sb.auth.admin.deleteUser(orphan.id)
+      if (authErr) {
+        return new Response(JSON.stringify({ error: 'Error al eliminar: ' + authErr.message }), { status: 500, headers: corsHeaders })
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders })
+    }
 
     // ── ALUMNO ──
     if (alumno_id) {
