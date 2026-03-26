@@ -23,3 +23,7 @@ JOIN information_schema.key_column_usage kcu
 WHERE tc.table_name IN ('alumnos','profesores','gestion_contrasenas')
   AND tc.constraint_type IN ('UNIQUE','PRIMARY KEY')
 ORDER BY tc.table_name, kcu.column_name;
+
+-- Constraint para upsert de asistencias_profesores
+ALTER TABLE asistencias_profesores
+  ADD CONSTRAINT asistencias_profesores_profesor_fecha_key UNIQUE (profesor_id, fecha);
