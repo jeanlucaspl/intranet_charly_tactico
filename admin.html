@@ -862,28 +862,36 @@
 
 <!-- MODAL ALUMNO -->
 <div class="mo" id="md-alumno">
-  <div class="md" style="max-width:640px">
+  <div class="md" style="max-width:560px">
     <div class="md-hd"><div class="md-ttl">NUEVO ALUMNO</div><button class="md-x" onclick="closeMd('md-alumno')"></button></div>
+    <div class="aula-tabs" style="margin:0 0 0 0;border-bottom:1px solid var(--border)">
+      <div class="aula-tab active" id="altab-datos" onclick="alTab('datos')" style="margin-left:0">Datos</div>
+      <div class="aula-tab" id="altab-foto" onclick="alTab('foto')">Foto</div>
+    </div>
     <div class="md-bd">
       <div class="msg" id="msg-alumno"></div>
-      <div class="fgrid">
-        <div class="fg"><label>Nombre *</label><input type="text" id="al-nombre" placeholder="Juan"/></div>
-        <div class="fg"><label>Apellido *</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
-        <div class="fg"><label>DNI *</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
-        <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="al-fnac"/></div>
-        <div class="fg"><label>Sexo</label><select id="al-sexo"><option value="">--</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
-        <div class="fg"><label>Peso (kg)</label><input type="number" id="al-peso" step="0.1" min="30" max="200" placeholder="65.5"/></div>
-        <div class="fg"><label>Talla (cm)</label><input type="number" id="al-talla" step="0.1" min="100" max="220" placeholder="170"/></div>
-        <div class="fg"><label>Size uniforme</label><input type="text" id="al-size" placeholder="M / L / XL / 38"/></div>
-        <div class="fg full"><label>Dirección</label><input type="text" id="al-direccion" placeholder="Av. Principal 123"/></div>
-        <div class="fg full"><label>Escuela</label><input type="text" id="al-escuela" placeholder="Nombre de la escuela a postular"/></div>
-        <div class="fg"><label>Celular 1</label><input type="tel" id="al-tel1" placeholder="987654321"/></div>
-        <div class="fg"><label>Celular 2</label><input type="tel" id="al-tel2" placeholder="987654322"/></div>
-        <div class="fg full"><label>Email (acceso al sistema) *</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
-        <div class="fg full"><label>Contraseña inicial *</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
+      <!-- PESTAÑA DATOS -->
+      <div id="al-tab-datos">
+        <div class="fgrid">
+          <div class="fg"><label>Nombre *</label><input type="text" id="al-nombre" placeholder="Juan"/></div>
+          <div class="fg"><label>Apellido *</label><input type="text" id="al-apellido" placeholder="Pérez"/></div>
+          <div class="fg"><label>DNI *</label><input type="text" id="al-dni" placeholder="12345678" maxlength="8"/></div>
+          <div class="fg"><label>Fecha de nacimiento</label><input type="date" id="al-fnac"/></div>
+          <div class="fg"><label>Sexo</label><select id="al-sexo"><option value="">--</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+          <div class="fg"><label>Peso (kg)</label><input type="number" id="al-peso" step="0.1" min="30" max="200" placeholder="65.5"/></div>
+          <div class="fg"><label>Talla (cm)</label><input type="number" id="al-talla" step="0.1" min="100" max="220" placeholder="170"/></div>
+          <div class="fg"><label>Size uniforme</label><input type="text" id="al-size" placeholder="M / L / XL / 38"/></div>
+          <div class="fg full"><label>Dirección</label><input type="text" id="al-direccion" placeholder="Av. Principal 123"/></div>
+          <div class="fg full"><label>Escuela</label><input type="text" id="al-escuela" placeholder="Nombre de la escuela a postular"/></div>
+          <div class="fg"><label>Celular 1</label><input type="tel" id="al-tel1" placeholder="987654321"/></div>
+          <div class="fg"><label>Celular 2</label><input type="tel" id="al-tel2" placeholder="987654322"/></div>
+          <div class="fg full"><label>Email *</label><input type="email" id="al-email" placeholder="alumno@correo.com"/></div>
+          <div class="fg full"><label>Contraseña inicial *</label><input type="text" id="al-pass" placeholder="Mínimo 6 caracteres"/></div>
+        </div>
       </div>
-      <div class="fg" style="margin-top:8px">
-        <label>Foto facial (opcional — se puede registrar después)</label>
+      <!-- PESTAÑA FOTO -->
+      <div id="al-tab-foto" style="display:none">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Opcional — se puede registrar después desde la lista de alumnos.</p>
         <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="cam-wrap" style="max-width:220px;min-height:160px;display:flex;align-items:center;justify-content:center">
@@ -907,7 +915,6 @@
           </div>
         </div>
       </div>
-    </div>
     </div>
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-alumno')">Cancelar</button>
@@ -2616,6 +2623,7 @@ async function saveAlumno(){
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('al-sexo').value='';
+  alTab('datos');
   setTimeout(()=>closeMd('md-alumno'),1600);
 }
 // ── INGRESOS / PAGOS ────────────────────────────────────────
@@ -3781,6 +3789,13 @@ function showPanel(id,btn){
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
 function toggleSection(id){document.getElementById(id).classList.toggle('collapsed')}
+function alTab(t){
+  document.getElementById('al-tab-datos').style.display=t==='datos'?'':'none';
+  document.getElementById('al-tab-foto').style.display=t==='foto'?'':'none';
+  document.getElementById('altab-datos').classList.toggle('active',t==='datos');
+  document.getElementById('altab-foto').classList.toggle('active',t==='foto');
+  if(t!=='foto'){stopRegCam();}
+}
 async function handleAndroidBack(){
   // Si hay un modal abierto, intercepta el back exclusivamente para él
   if(_mdStack.length>0){
