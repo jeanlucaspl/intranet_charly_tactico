@@ -1186,7 +1186,9 @@ async function openPractica(urlOrPath,btnEl){
     const path=urlOrPath.startsWith('http')?_pracPath(urlOrPath):urlOrPath;
     const {data,error}=await sb.storage.from('practicas').createSignedUrl(path,3600);
     if(error||!data?.signedUrl){await myAlert('No se pudo descargar: '+(error?.message||'sin URL'));return;}
-    if(window.AndroidNative&&AndroidNative.openUrl){
+    if(window.AndroidNative&&typeof AndroidNative.downloadFile==='function'){
+      AndroidNative.downloadFile(data.signedUrl, path.split('/').pop()||'practica.pdf');
+    }else if(window.AndroidNative&&AndroidNative.openUrl){
       AndroidNative.openUrl(data.signedUrl);
     }else{
       const resp=await fetch(data.signedUrl);
@@ -1237,7 +1239,9 @@ async function openSolucion(pathOrUrl,btnEl){
     if(!path){await myAlert('Este archivo no tiene path guardado. El alumno debe volver a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
     if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
-    if(window.AndroidNative&&AndroidNative.openUrl){
+    if(window.AndroidNative&&typeof AndroidNative.downloadFile==='function'){
+      AndroidNative.downloadFile(data.signedUrl, path.split('/').pop()||'solucion');
+    }else if(window.AndroidNative&&AndroidNative.openUrl){
       AndroidNative.openUrl(data.signedUrl);
     }else{
       const resp=await fetch(data.signedUrl);
