@@ -2569,9 +2569,18 @@ async function signUpSeguro(email, pass, dni, msg, btnEl, btnLabel){
       const {data:perfilExistente}=await sb.from('perfiles').select('id').eq('email_ref',email).maybeSingle();
       if(perfilExistente){
         showMsg(msg,'Este email ya tiene un registro completo. Verificá la lista.','err');
-      } else {
-        showMsg(msg,'Este email ya existe en Auth sin perfil completo. Usá otro email o eliminá el usuario huérfano desde Supabase.','err');
+        btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
       }
+      // Huérfano en Auth sin perfil (ej: intento previo falló a mitad).
+      // Hacemos signIn para recuperar el UID y completamos el registro.
+      showMsg(msg,'Completando registro previo incompleto...','ok');
+      const {data:signInData,error:signInErr}=await sb.auth.signInWithPassword({email,password:pass});
+      if(callerSession) await sb.auth.setSession({access_token:callerSession.access_token,refresh_token:callerSession.refresh_token});
+      if(signInErr||!signInData?.user?.id){
+        showMsg(msg,'Email ya registrado sin perfil. Eliminá el usuario huérfano desde Supabase Auth o usá otro email.','err');
+        btnEl.disabled=false; btnEl.textContent=btnLabel; return null;
+      }
+      return signInData.user.id;
     } else {
       showMsg(msg,error.message,'err');
     }
