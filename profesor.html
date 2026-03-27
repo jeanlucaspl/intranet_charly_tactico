@@ -589,7 +589,7 @@ async function loadFaceApi(){
   try{
     const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
     await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
@@ -772,7 +772,7 @@ async function scanFrame(){
 
   try{
     const det=await faceapi
-      .detectSingleFace(video,new faceapi.SsdMobilenetv1Options({minConfidence:0.3}))
+      .detectSingleFace(video,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.3}))
       .withFaceLandmarks()
       .withFaceDescriptor();
 
