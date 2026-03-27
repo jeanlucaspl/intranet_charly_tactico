@@ -1532,7 +1532,7 @@ async function cargarModelosFacial(){
   try{
     const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
     await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
@@ -3328,7 +3328,7 @@ async function scanFrameFacial(){
   ctx.clearRect(0,0,c.width,c.height);
   try{
     const det=await faceapi
-      .detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+      .detectSingleFace(v,new faceapi.SsdMobilenetv1Options({minConfidence:0.5}))
       .withFaceLandmarks().withFaceDescriptor();
     if(!det){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
     const resized=faceapi.resizeResults(det,{width:v.videoWidth,height:v.videoHeight});
@@ -3467,7 +3467,7 @@ async function computarDescriptor(blob){
     const img=new Image();
     await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
     const det=await faceapi
-      .detectSingleFace(img,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+      .detectSingleFace(img,new faceapi.SsdMobilenetv1Options({minConfidence:0.5}))
       .withFaceLandmarks().withFaceDescriptor();
     URL.revokeObjectURL(url);
     if(!det) return null;
