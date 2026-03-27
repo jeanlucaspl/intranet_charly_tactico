@@ -1625,104 +1625,75 @@ function showDashTab(tab){
 async function loadDashboardDueno(){
   document.getElementById('d-dueno-dash').style.display='block';
   const today=todayISO();
-  const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  const diaHoy=dias[new Date().getDay()];
-  const semana=weekStart();
-
-  // Queries paralelas
-  const [{data:sesiones},{data:asist},{data:horario}]=await Promise.all([
-    sb.from('sesiones_asistencia').select('*,aulas(nombre),materias(nombre)').eq('fecha',today).eq('cerrada',false),
-    sb.from('asistencias').select('estado,materia_id,aula_id,materias(nombre),aulas(nombre)').eq('fecha',today),
-    sb.from('horario_semanal').select('aula_id,materia_id,hora_inicio,hora_fin').eq('semana_inicio',semana).eq('dia',diaHoy),
+  // Queries paralelas — todas las sesiones del día (abiertas y cerradas) + asistencias
+  const [{data:todasSesiones},{data:asist}]=await Promise.all([
+    sb.from('sesiones_asistencia').select('*,aulas(nombre),materias(nombre)').eq('fecha',today).order('hora_apertura'),
+    sb.from('asistencias').select('estado,materia_id,aula_id').eq('fecha',today),
   ]);
 
-  // Helper: obtener bloque horario para una aula+materia del día
-  const getBloque=(aulaId,materiaId)=>(horario||[]).find(h=>h.aula_id===aulaId&&h.materia_id===materiaId);
+  // Helper: contar estados de asistencia para una sesión (por aula+materia)
+  const contarAsist=s=>{
+    const registros=(asist||[]).filter(a=>a.aula_id===s.aula_id&&a.materia_id===s.materia_id);
+    return{
+      p:registros.filter(a=>a.estado==='presente').length,
+      t:registros.filter(a=>a.estado==='tardanza').length,
+      au:registros.filter(a=>a.estado==='ausente').length,
+    };
+  };
+  // Franja real de la sesión: hora_apertura – hora_cierre (o "en curso")
+  const franjaSesion=s=>`${s.hora_apertura?.slice(0,5)||'--'} – ${s.hora_cierre?.slice(0,5)||'en curso'}`;
 
-  // TAB CADETES — sesiones activas
-  // Regla: solo mostrar si tiene materia (= hay bloque de clase) Y hay al menos 1 presente o tardanza
+  // TAB CADETES — sesiones activas (solo abiertas con al menos 1 presente o tardanza)
   const sesEl=document.getElementById('d-dash-sesiones');
-  const sesConAlumnos=(sesiones||[]).filter(s=>{
-    if(!s.materia_id)return false;
-    return (asist||[]).some(a=>a.aula_id===s.aula_id&&a.materia_id===s.materia_id&&(a.estado==='presente'||a.estado==='tardanza'));
-  }).map(s=>{
-    const bloque=getBloque(s.aula_id,s.materia_id);
-    return{...s,hora_inicio:bloque?.hora_inicio,hora_fin:bloque?.hora_fin};
+  const sesAbiertas=(todasSesiones||[]).filter(s=>{
+    if(s.cerrada||!s.materia_id)return false;
+    const{p,t}=contarAsist(s);return p+t>0;
   });
-  sesEl.innerHTML=sesConAlumnos.length?`<div style="display:flex;flex-wrap:wrap;gap:10px">${sesConAlumnos.map(s=>`
+  sesEl.innerHTML=sesAbiertas.length?`<div style="display:flex;flex-wrap:wrap;gap:10px">${sesAbiertas.map(s=>`
     <div style="background:rgba(0,180,80,.08);border:1.5px solid var(--green);border-radius:6px;padding:10px 16px;display:flex;align-items:center;gap:12px;min-width:200px">
       <div style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0"></div>
       <div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green);line-height:1">${s.aulas?.nombre||'--'}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${s.materias?.nombre||'Sin materia'} · ${s.hora_inicio?.slice(0,5)||s.hora_apertura?.slice(0,5)||'--'} – ${s.hora_fin?.slice(0,5)||'--'}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${s.materias?.nombre||'Sin materia'} · ${franjaSesion(s)}</div>
       </div>
     </div>`).join('')}</div>`:'';
 
-  // TAB CADETES — asistencia por aula → materia
-  // Tardanza = asistencia. Solo mostrar aulas con al menos 1 presente o tardanza.
+  // TAB CADETES — asistencia por sesión (abiertas y cerradas con al menos 1 presente o tardanza)
+  // Cada sesión es un bloque independiente con su propia franja horaria real
   const asistEl=document.getElementById('d-dash-asist');
-  if(!asist?.length){
-    asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin registros de asistencia hoy</div></div>`;
-  } else {
-    const byAula={};
-    asist.forEach(a=>{
-      const aulaKey=a.aula_id||'sin-aula';
-      if(!byAula[aulaKey])byAula[aulaKey]={nombre:a.aulas?.nombre||'Sin aula',mats:{}};
-      const matKey=a.materia_id||'sin-mat';
-      if(!byAula[aulaKey].mats[matKey]){
-        const bloque=getBloque(a.aula_id,a.materia_id);
-        byAula[aulaKey].mats[matKey]={nombre:a.materias?.nombre||'Sin materia',horaInicio:bloque?.hora_inicio,horaFin:bloque?.hora_fin,p:0,t:0,au:0};
-      }
-      if(a.estado==='presente')byAula[aulaKey].mats[matKey].p++;
-      else if(a.estado==='tardanza')byAula[aulaKey].mats[matKey].t++;
-      else byAula[aulaKey].mats[matKey].au++;
-    });
-    // Filtrar solo aulas con al menos 1 presente o tardanza
-    const aulasConAsist=Object.values(byAula).filter(aula=>Object.values(aula.mats).some(m=>m.p+m.t>0));
-    if(!aulasConAsist.length){
-      asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin alumnos presentes o con tardanza hoy</div></div>`;
-    }else{
-      asistEl.innerHTML=aulasConAsist.map(aula=>{
-        const todosLosMats=Object.values(aula.mats);
-        const totalP=todosLosMats.reduce((s,m)=>s+m.p,0);
-        const totalT=todosLosMats.reduce((s,m)=>s+m.t,0);
-        const totalAu=todosLosMats.reduce((s,m)=>s+m.au,0);
-        const total=totalP+totalT+totalAu;
-        const pct=total?Math.round((totalP+totalT)/total*100):0; // tardanza = asistencia
-        // Solo mostrar filas de materias con al menos 1 presente o tardanza
-        const matsVisibles=todosLosMats.filter(m=>m.p+m.t>0);
-        return`<div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:20px;overflow:hidden">
-          <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border)">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold);letter-spacing:.05em;line-height:1">${aula.nombre}</div>
-            <div style="display:flex;gap:20px;align-items:center">
-              <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${totalP}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
-              <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${totalT}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
-              <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--red);line-height:1">${totalAu}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Ausentes</div></div>
-              <div style="text-align:center;border-left:1px solid var(--border);padding-left:20px"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)'};line-height:1">${pct}%</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Asistencia</div></div>
+  const sesConAsist=(todasSesiones||[]).filter(s=>{
+    if(!s.materia_id)return false;
+    const{p,t}=contarAsist(s);return p+t>0;
+  });
+  if(!sesConAsist.length){
+    asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin alumnos presentes o con tardanza hoy</div></div>`;
+  }else{
+    asistEl.innerHTML=sesConAsist.map(s=>{
+      const{p,t,au}=contarAsist(s);
+      const total=p+t+au;
+      const pct=total?Math.round((p+t)/total*100):0; // tardanza = asistencia
+      const colorPct=pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+      const estadoBadge=s.cerrada
+        ?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;border:1px solid var(--border);padding:2px 8px;border-radius:3px">Cerrada</span>`
+        :`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;border:1px solid var(--green);padding:2px 8px;border-radius:3px">En curso</span>`;
+      return`<div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:16px;overflow:hidden">
+        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;line-height:1">${s.aulas?.nombre||'--'} · ${s.materias?.nombre||'Sin materia'}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${franjaSesion(s)}</span>
+              ${estadoBadge}
             </div>
           </div>
-          <div style="padding:10px 18px">
-            ${matsVisibles.map(m=>{
-              const tot=m.p+m.t+m.au;
-              const pp=tot?Math.round((m.p+m.t)/tot*100):0;
-              const franja=m.horaInicio?`${m.horaInicio.slice(0,5)} – ${m.horaFin?.slice(0,5)||'--'}`:'';
-              return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
-                <div>
-                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--white)">${m.nombre}</div>
-                  ${franja?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">${franja}</div>`:''}
-                </div>
-                <div style="display:flex;gap:14px;align-items:center">
-                  <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--green)">${m.p}</span>
-                  <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--yellow)">${m.t}</span>
-                  <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--red)">${m.au}</span>
-                  <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);min-width:36px;text-align:right">${pp}%</span>
-                </div>
-              </div>`;
-            }).join('')}
+          <div style="display:flex;gap:20px;align-items:center">
+            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${p}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
+            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${t}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
+            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--red);line-height:1">${au}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Ausentes</div></div>
+            <div style="text-align:center;border-left:1px solid var(--border);padding-left:20px"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${colorPct};line-height:1">${pct}%</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Asistencia</div></div>
           </div>
-        </div>`;
-      }).join('');
-    }
+        </div>
+      </div>`;
+    }).join('');
   }
 
   // TAB PADRES — mensajes no leídos
