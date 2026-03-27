@@ -469,7 +469,7 @@ let uid=null, profesorId=null, profesorData=null;
 let camStream=null, gpsCoords=null, camFacingMode='environment';
 let faceApiLoaded=false, myDescriptor=null;
 let scanLoop=null, matchStreak=0;
-const MATCH_NEEDED=3, UMBRAL=0.45, SCAN_MS=600;
+const MATCH_NEEDED=3, UMBRAL=0.55, SCAN_MS=600;
 let academiaConfig=null;
 let deviceOk=null,deviceWarnTimer=null,deviceWarnSec=600;
 const fmtCd=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
