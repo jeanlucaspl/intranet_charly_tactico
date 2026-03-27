@@ -1530,6 +1530,8 @@ async function loadAlumnos(){
 async function cargarModelosFacial(){
   if(typeof faceapi==='undefined')return;
   try{
+    // Asegurar que el backend de TF.js (WebGL o CPU) esté listo
+    if(faceapi.tf) await faceapi.tf.ready();
     const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -1537,6 +1539,11 @@ async function cargarModelosFacial(){
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
     faceApiLoaded=true;
+    // Warmup: fuerza a TF.js a inicializar el backend (GPU/WASM) antes de abrir la cámara
+    try{
+      const wc=document.createElement('canvas');wc.width=416;wc.height=416;
+      await faceapi.detectSingleFace(wc,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.2}));
+    }catch(_){}
     construirFaceMatcher();
   }catch(e){console.warn('face-api modelos no cargaron:',e);}
 }
