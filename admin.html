@@ -1656,48 +1656,25 @@ async function loadDashboardDueno(){
     ?`${g.sesion.hora_apertura?.slice(0,5)||'--'} – ${g.sesion.hora_cierre?.slice(0,5)||'en curso'}`
     :`${g.horaMin?.slice(0,5)||'--'} – ${g.horaMax?.slice(0,5)||'--'}`;
 
-  // TAB CADETES — sesiones activas (solo abiertas con al menos 1 presente o tardanza)
-  const sesEl=document.getElementById('d-dash-sesiones');
-  const sesAbiertas=(todasSesiones||[]).filter(s=>
-    !s.cerrada&&grupos.some(g=>g.aulaId===s.aula_id&&g.materiaId===s.materia_id)
-  );
-  sesEl.innerHTML=sesAbiertas.length?`<div style="display:flex;flex-wrap:wrap;gap:10px">${sesAbiertas.map(s=>`
-    <div style="background:rgba(0,180,80,.08);border:1.5px solid var(--green);border-radius:6px;padding:10px 16px;display:flex;align-items:center;gap:12px;min-width:200px">
-      <div style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0"></div>
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green);line-height:1">${s.aulas?.nombre||'--'}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${s.materias?.nombre||'Sin materia'} · desde ${s.hora_apertura?.slice(0,5)||'--'}</div>
-      </div>
-    </div>`).join('')}</div>`:'';
-
   // TAB CADETES — asistencia por grupo aula+materia
+  document.getElementById('d-dash-sesiones').innerHTML='';
   const asistEl=document.getElementById('d-dash-asist');
   if(!grupos.length){
     asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin alumnos presentes o con tardanza hoy</div></div>`;
   }else{
-    asistEl.innerHTML=grupos.map(g=>{
-      const enCurso=g.sesion&&!g.sesion.cerrada;
-      const estadoBadge=g.sesion
-        ?(enCurso
-          ?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;border:1px solid var(--green);padding:2px 8px;border-radius:3px">En curso</span>`
-          :`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;border:1px solid var(--border);padding:2px 8px;border-radius:3px">Cerrada</span>`)
-        :'';
-      return`<div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:16px;overflow:hidden">
+    asistEl.innerHTML=grupos.map(g=>`
+      <div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:16px;overflow:hidden">
         <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;line-height:1">${g.aulaNombre} · ${g.matNombre}</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${franjaGrupo(g)}</span>
-              ${estadoBadge}
-            </div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);margin-top:4px">${franjaGrupo(g)}</div>
           </div>
           <div style="display:flex;gap:20px;align-items:center">
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${g.p}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${g.t}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
           </div>
         </div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
   }
 
   // TAB PADRES — mensajes no leídos
@@ -3309,6 +3286,15 @@ function stopCam(){
   facialStream=null;document.getElementById('f-video').srcObject=null;
   const c=document.getElementById('f-canvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
   setCamSt('Cámara detenida','cs-idle');document.getElementById('verify-card').style.display='none';
+  // Cerrar la sesión automáticamente al detener la cámara
+  if(sesionActual){
+    sb.from('sesiones_asistencia').update({hora_cierre:nowTime(),cerrada:true}).eq('id',sesionActual.id).then(()=>{});
+    sesionActual=null;
+    document.getElementById('btn-abrir-sesion').style.display='';
+    document.getElementById('btn-cerrar-sesion').style.display='none';
+    document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
+    document.getElementById('f-sesion-estado').style.color='var(--muted)';
+  }
 }
 async function flipCam(){
   facingMode=facingMode==='environment'?'user':'environment';
