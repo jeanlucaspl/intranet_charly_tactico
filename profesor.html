@@ -19,7 +19,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <!-- face-api.js para reconocimiento facial en el navegador -->
-  <!-- @vladmandic/human para reconocimiento facial ArcFace (512-dim) -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
@@ -467,9 +467,9 @@ window.addEventListener('pageshow',(e)=>{if(e.persisted)sb.auth.getSession().the
 
 let uid=null, profesorId=null, profesorData=null;
 let camStream=null, gpsCoords=null, camFacingMode='environment';
-let faceApiLoaded=false, myDescriptor=null, humanInstance=null;
+let faceApiLoaded=false, myDescriptor=null;
 let scanLoop=null, matchStreak=0;
-const MATCH_NEEDED=3, UMBRAL=0.5, SCAN_MS=600;
+const MATCH_NEEDED=3, UMBRAL=0.55, SCAN_MS=600;
 let academiaConfig=null;
 let deviceOk=null,deviceWarnTimer=null,deviceWarnSec=600;
 const fmtCd=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
@@ -587,30 +587,22 @@ async function checkYaMarcado(){
 async function loadFaceApi(){
   const loadingEl=document.getElementById('facial-loading');
   try{
-    const {default:Human}=await import('https://cdn.jsdelivr.net/npm/@vladmandic/human@3/dist/human.esm.js');
-    humanInstance=new Human({
-      modelBasePath:'https://cdn.jsdelivr.net/npm/@vladmandic/human@3/models/',
-      backend:'webgl',cacheSensitivity:0,
-      filter:{enabled:false},
-      face:{enabled:true,
-        detector:{enabled:true,maxDetected:1,minConfidence:0.4,rotation:false},
-        mesh:{enabled:true},description:{enabled:true},
-        emotion:{enabled:false},iris:{enabled:false},gear:{enabled:false},antispoof:{enabled:false},liveness:{enabled:false}},
-      body:{enabled:false},hand:{enabled:false},object:{enabled:false},
-      gesture:{enabled:false},segmentation:{enabled:false}
-    });
-    await humanInstance.load();
-    await humanInstance.warmup();
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
     faceApiLoaded=true;
     loadingEl.textContent=' Reconocimiento facial listo';
     loadingEl.style.color='var(--green)';
-    if(profesorData?.foto_descriptor&&Array.isArray(profesorData.foto_descriptor)&&profesorData.foto_descriptor.length>256){
-      myDescriptor=profesorData.foto_descriptor;
+    if(profesorData?.foto_descriptor&&Array.isArray(profesorData.foto_descriptor)&&profesorData.foto_descriptor.length>0){
+      myDescriptor=new Float32Array(profesorData.foto_descriptor);
     }
   }catch(e){
     loadingEl.textContent=' Facial no disponible — usa GPS';
     loadingEl.style.color='var(--yellow)';
-    console.warn('human error:',e);
+    console.warn('face-api error:',e);
   }
 }
 
@@ -779,27 +771,30 @@ async function scanFrame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   try{
-    ctx.drawImage(video,0,0,canvas.width,canvas.height);
-    const result=await humanInstance.detect(canvas);
-    if(!result.face||!result.face.length){
-      matchStreak=0;setCamStatus(' Buscando rostro...','cs-scan');return;
+    const det=await faceapi
+      .detectSingleFace(video,new faceapi.SsdMobilenetv1Options({minConfidence:0.3}))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if(!det){
+      matchStreak=0;
+      setCamStatus(' Buscando rostro...','cs-scan');
+      return;
     }
-    if(!result.face[0].embedding){
-      matchStreak=0;setCamStatus(' Rostro detectado, calculando...','cs-scan');return;
-    }
-    const face=result.face[0];
-    const[bx,by,bw,bh]=face.box;
-    const similarity=myDescriptor?humanInstance.similarity(face.embedding,myDescriptor):0;
-    const matched=similarity>=UMBRAL;
+
+    const resized=faceapi.resizeResults(det,displaySize);
+    const box=resized.detection.box;
+    const distancia=myDescriptor?faceapi.euclideanDistance(det.descriptor,myDescriptor):1;
+    const matched=distancia<UMBRAL;
 
     ctx.strokeStyle=matched?'#3ddc84':'#e8c96a';
     ctx.lineWidth=3;
-    ctx.strokeRect(bx,by,bw,bh);
+    ctx.strokeRect(box.x,box.y,box.width,box.height);
     ctx.fillStyle=matched?'rgba(61,220,132,0.15)':'rgba(232,201,106,0.1)';
-    ctx.fillRect(bx,by,bw,bh);
+    ctx.fillRect(box.x,box.y,box.width,box.height);
     ctx.fillStyle=matched?'#3ddc84':'#e8c96a';
     ctx.font='bold 14px Barlow Condensed, sans-serif';
-    ctx.fillText(matched?` ${Math.round(similarity*100)}% coincidencia`:'Verificando...',bx+4,by>20?by-6:by+bh+16);
+    ctx.fillText(matched?` ${Math.round((1-distancia)*100)}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
 
     if(matched){
       matchStreak++;

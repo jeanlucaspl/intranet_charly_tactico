@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <!-- @vladmandic/human para reconocimiento facial ArcFace (512-dim) -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -1366,9 +1366,8 @@ let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, prac
 let esDueno = false, uid = null;
 let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment', regFacingMode='environment';
-let faceApiLoaded=false, facialScanLoop=null, facialMatchStreak=0, facialFaceMatcher=false;
-let humanInstance=null, labeledEmbeddings=[];
-const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.5, FACIAL_SCAN_MS=600;
+let faceApiLoaded=false, facialScanLoop=null, facialMatchStreak=0, facialFaceMatcher=null;
+const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.55, FACIAL_SCAN_MS=600;
 
 // ── UBICACIÓN ACADEMIA ──
 let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'Jr. Túpac Amaru 187, Tarapoto 22201'};
@@ -1529,40 +1528,27 @@ async function loadAlumnos(){
   construirFaceMatcher();
 }
 async function cargarModelosFacial(){
+  if(typeof faceapi==='undefined')return;
   try{
-    const {default:Human}=await import('https://cdn.jsdelivr.net/npm/@vladmandic/human@3/dist/human.esm.js');
-    humanInstance=new Human({
-      modelBasePath:'https://cdn.jsdelivr.net/npm/@vladmandic/human@3/models/',
-      backend:'webgl',cacheSensitivity:0,
-      filter:{enabled:false},
-      face:{enabled:true,
-        detector:{enabled:true,maxDetected:1,minConfidence:0.4,rotation:false},
-        mesh:{enabled:true},description:{enabled:true},
-        emotion:{enabled:false},iris:{enabled:false},gear:{enabled:false},antispoof:{enabled:false},liveness:{enabled:false}},
-      body:{enabled:false},hand:{enabled:false},object:{enabled:false},
-      gesture:{enabled:false},segmentation:{enabled:false}
-    });
-    await humanInstance.load();
-    await humanInstance.warmup();
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
     faceApiLoaded=true;
     construirFaceMatcher();
-  }catch(e){console.warn('human error:',e);}
+  }catch(e){console.warn('face-api modelos no cargaron:',e);}
 }
 function construirFaceMatcher(){
   if(!faceApiLoaded||!allAlumnos.length)return;
-  labeledEmbeddings=allAlumnos
-    .filter(a=>Array.isArray(a.foto_descriptor)&&a.foto_descriptor.length>256)
-    .map(a=>({id:a.id,embedding:a.foto_descriptor}));
-  facialFaceMatcher=labeledEmbeddings.length>0;
-}
-function findBestMatchHuman(embedding){
-  if(!labeledEmbeddings.length)return{label:'unknown',similarity:0};
-  let bestId='unknown',bestSim=0;
-  for(const le of labeledEmbeddings){
-    const sim=humanInstance.similarity(embedding,le.embedding);
-    if(sim>bestSim){bestSim=sim;bestId=le.id;}
-  }
-  return{label:bestSim>=FACIAL_UMBRAL?bestId:'unknown',similarity:bestSim};
+  const labeled=allAlumnos
+    .filter(a=>Array.isArray(a.foto_descriptor)&&a.foto_descriptor.length>0)
+    .map(a=>new faceapi.LabeledFaceDescriptors(
+      a.id,
+      [new Float32Array(a.foto_descriptor)]
+    ));
+  facialFaceMatcher=labeled.length?new faceapi.FaceMatcher(labeled,FACIAL_UMBRAL):null;
 }
 async function loadMaterias(){
   const {data,error} = await sb.from('materias').select('*,materia_profesor(profesor_id,profesores(perfiles(nombre,apellido)))').order('nombre');
@@ -3342,24 +3328,23 @@ async function scanFrameFacial(){
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
   try{
-    // Capturar frame actual del video en el canvas antes de detectar
-    ctx.drawImage(v,0,0,c.width,c.height);
-    const result=await humanInstance.detect(c);
-    if(!result.face||!result.face.length){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
-    if(!result.face[0].embedding){facialMatchStreak=0;setCamSt(' Rostro detectado, calculando...','cs-scan');return;}
-    const face=result.face[0];
-    const[bx,by,bw,bh]=face.box;
-    const match=findBestMatchHuman(face.embedding);
+    const det=await faceapi
+      .detectSingleFace(v,new faceapi.SsdMobilenetv1Options({minConfidence:0.3}))
+      .withFaceLandmarks().withFaceDescriptor();
+    if(!det){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
+    const resized=faceapi.resizeResults(det,{width:v.videoWidth,height:v.videoHeight});
+    const box=resized.detection.box;
+    const match=facialFaceMatcher.findBestMatch(det.descriptor);
     const matched=match.label!=='unknown';
     ctx.strokeStyle=matched?'#4caf7d':'#e8c96a';
     ctx.lineWidth=3;
-    ctx.strokeRect(bx,by,bw,bh);
+    ctx.strokeRect(box.x,box.y,box.width,box.height);
     ctx.fillStyle=matched?'rgba(76,175,125,0.15)':'rgba(232,201,106,0.1)';
-    ctx.fillRect(bx,by,bw,bh);
+    ctx.fillRect(box.x,box.y,box.width,box.height);
     ctx.fillStyle=matched?'#4caf7d':'#e8c96a';
     ctx.font='bold 14px Barlow Condensed, sans-serif';
-    const pct=matched?Math.round(match.similarity*100):null;
-    ctx.fillText(matched?` ${pct}% coincidencia`:'Verificando...',bx+4,by>20?by-6:by+bh+16);
+    const pct=matched?Math.round((1-match.distance)*100):null;
+    ctx.fillText(matched?` ${pct}% coincidencia`:'Verificando...',box.x+4,box.y>20?box.y-6:box.y+box.height+16);
     if(matched){
       facialMatchStreak++;
       setCamSt(` Reconociendo... (${facialMatchStreak}/${FACIAL_MATCH_NEEDED})`,'cs-ok');
@@ -3477,15 +3462,17 @@ async function flipRegCam(){
 // Calcula el descriptor facial de un blob de imagen usando face-api.
 // Devuelve Array de 128 floats, o null si no hay cara / face-api no cargó.
 async function computarDescriptor(blob){
-  if(!faceApiLoaded||!humanInstance)return null;
+  if(!faceApiLoaded||typeof faceapi==='undefined')return null;
   try{
     const url=URL.createObjectURL(blob);
     const img=new Image();
     await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
-    const result=await humanInstance.detect(img);
+    const det=await faceapi
+      .detectSingleFace(img,new faceapi.SsdMobilenetv1Options({minConfidence:0.3}))
+      .withFaceLandmarks().withFaceDescriptor();
     URL.revokeObjectURL(url);
-    if(!result.face||!result.face.length||!result.face[0].embedding)return null;
-    return Array.from(result.face[0].embedding);
+    if(!det)return null;
+    return Array.from(det.descriptor);
   }catch(e){console.warn('Error computarDescriptor:',e);return null;}
 }
 
