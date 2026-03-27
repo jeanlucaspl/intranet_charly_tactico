@@ -1669,15 +1669,12 @@ async function loadDashboardDueno(){
     asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin alumnos presentes o con tardanza hoy</div></div>`;
   }else{
     asistEl.innerHTML=sesConAsist.map(s=>{
-      const{p,t,au}=contarAsist(s);
-      const total=p+t+au;
-      const pct=total?Math.round((p+t)/total*100):0; // tardanza = asistencia
-      const colorPct=pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+      const{p,t}=contarAsist(s);
       const estadoBadge=s.cerrada
         ?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;border:1px solid var(--border);padding:2px 8px;border-radius:3px">Cerrada</span>`
         :`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;border:1px solid var(--green);padding:2px 8px;border-radius:3px">En curso</span>`;
       return`<div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:16px;overflow:hidden">
-        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border)">
+        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <div>
             <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;line-height:1">${s.aulas?.nombre||'--'} · ${s.materias?.nombre||'Sin materia'}</div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
@@ -1688,8 +1685,6 @@ async function loadDashboardDueno(){
           <div style="display:flex;gap:20px;align-items:center">
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${p}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${t}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
-            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--red);line-height:1">${au}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Ausentes</div></div>
-            <div style="text-align:center;border-left:1px solid var(--border);padding-left:20px"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:${colorPct};line-height:1">${pct}%</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Asistencia</div></div>
           </div>
         </div>
       </div>`;
