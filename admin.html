@@ -1367,7 +1367,7 @@ let esDueno = false, uid = null;
 let allProfesoresTexto = [];
 let fotoFile=null, regStream=null, capturedPhotoBlob=null, verifyAlumno=null, facialStream=null, facingMode='environment', regFacingMode='environment';
 let faceApiLoaded=false, facialScanLoop=null, facialMatchStreak=0, facialFaceMatcher=null;
-const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.55, FACIAL_SCAN_MS=600;
+const FACIAL_MATCH_NEEDED=3, FACIAL_UMBRAL=0.55, FACIAL_SCAN_MS=600, FACIAL_DESCRIPTOR_DIM=128;
 
 // ── UBICACIÓN ACADEMIA ──
 let academiaLoc={latitud:-6.4856,longitud:-76.3606,radio_metros:200,direccion:'Jr. Túpac Amaru 187, Tarapoto 22201'};
@@ -1550,12 +1550,33 @@ async function cargarModelosFacial(){
 function construirFaceMatcher(){
   if(!faceApiLoaded||!allAlumnos.length)return;
   const labeled=allAlumnos
-    .filter(a=>Array.isArray(a.foto_descriptor)&&a.foto_descriptor.length>0)
+    .filter(a=>Array.isArray(a.foto_descriptor)&&a.foto_descriptor.length===FACIAL_DESCRIPTOR_DIM)
     .map(a=>new faceapi.LabeledFaceDescriptors(
       a.id,
       [new Float32Array(a.foto_descriptor)]
     ));
   facialFaceMatcher=labeled.length?new faceapi.FaceMatcher(labeled,FACIAL_UMBRAL):null;
+  // Re-calcular en background descriptores obsoletos (ej: 512-dim de ArcFace)
+  const obsoletos=allAlumnos.filter(a=>
+    a.foto_url&&Array.isArray(a.foto_descriptor)&&a.foto_descriptor.length!==FACIAL_DESCRIPTOR_DIM
+  );
+  if(obsoletos.length) recalcularDescriptoresObsoletos(obsoletos);
+}
+async function recalcularDescriptoresObsoletos(lista){
+  console.log(`Recalculando ${lista.length} descriptores obsoletos...`);
+  for(const alumno of lista){
+    try{
+      const res=await fetch(alumno.foto_url);
+      const blob=await res.blob();
+      const descriptor=await computarDescriptor(blob);
+      if(descriptor){
+        await sb.from('alumnos').update({foto_descriptor:descriptor}).eq('id',alumno.id);
+        alumno.foto_descriptor=descriptor;
+        console.log(`Descriptor actualizado: ${alumno.id}`);
+      }
+    }catch(e){console.warn('recalcular descriptor error:',alumno.id,e);}
+  }
+  construirFaceMatcher();
 }
 async function loadMaterias(){
   const {data,error} = await sb.from('materias').select('*,materia_profesor(profesor_id,profesores(perfiles(nombre,apellido)))').order('nombre');
