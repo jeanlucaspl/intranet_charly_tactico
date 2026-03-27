@@ -1543,6 +1543,7 @@ async function cargarModelosFacial(){
       gesture:{enabled:false},segmentation:{enabled:false}
     });
     await humanInstance.load();
+    await humanInstance.warmup();
     faceApiLoaded=true;
     construirFaceMatcher();
   }catch(e){console.warn('human error:',e);}
@@ -3326,7 +3327,7 @@ function iniciarFacialScan(){
   }
   setCamSt(' Escaneando rostros en tiempo real...','cs-scan');
   facialScanLoop=true;
-  (async()=>{while(facialScanLoop){await scanFrameFacial();}})();
+  (async()=>{while(facialScanLoop){await scanFrameFacial();if(facialScanLoop)await new Promise(r=>setTimeout(r,200));}})();
 }
 function detenerFacialScan(){
   facialScanLoop=false;
@@ -3341,8 +3342,11 @@ async function scanFrameFacial(){
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,c.width,c.height);
   try{
-    const result=await humanInstance.detect(v);
-    if(!result.face||!result.face.length||!result.face[0].embedding){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
+    // Capturar frame actual del video en el canvas antes de detectar
+    ctx.drawImage(v,0,0,c.width,c.height);
+    const result=await humanInstance.detect(c);
+    if(!result.face||!result.face.length){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
+    if(!result.face[0].embedding){facialMatchStreak=0;setCamSt(' Rostro detectado, calculando...','cs-scan');return;}
     const face=result.face[0];
     const[bx,by,bw,bh]=face.box;
     const match=findBestMatchHuman(face.embedding);

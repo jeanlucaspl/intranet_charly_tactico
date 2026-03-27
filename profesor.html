@@ -600,6 +600,7 @@ async function loadFaceApi(){
       gesture:{enabled:false},segmentation:{enabled:false}
     });
     await humanInstance.load();
+    await humanInstance.warmup();
     faceApiLoaded=true;
     loadingEl.textContent=' Reconocimiento facial listo';
     loadingEl.style.color='var(--green)';
@@ -757,7 +758,7 @@ function iniciarScanLoop(){
     return;
   }
   scanLoop=true;
-  (async()=>{while(scanLoop){await scanFrame();}})();
+  (async()=>{while(scanLoop){await scanFrame();if(scanLoop)await new Promise(r=>setTimeout(r,200));}})();
 }
 function detenerScanLoop(){
   scanLoop=false;
@@ -778,11 +779,13 @@ async function scanFrame(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   try{
-    const result=await humanInstance.detect(video);
-    if(!result.face||!result.face.length||!result.face[0].embedding){
-      matchStreak=0;
-      setCamStatus(' Buscando rostro...','cs-scan');
-      return;
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const result=await humanInstance.detect(canvas);
+    if(!result.face||!result.face.length){
+      matchStreak=0;setCamStatus(' Buscando rostro...','cs-scan');return;
+    }
+    if(!result.face[0].embedding){
+      matchStreak=0;setCamStatus(' Rostro detectado, calculando...','cs-scan');return;
     }
     const face=result.face[0];
     const[bx,by,bw,bh]=face.box;
