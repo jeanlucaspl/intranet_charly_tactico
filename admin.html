@@ -649,9 +649,9 @@
       <div class="msg" id="n-msg"></div>
       <div class="fg"><label>Tipo</label>
         <div class="ntypes">
-          <button class="ntype ai" onclick="setNType('info',this)">ℹ Info</button>
-          <button class="ntype" onclick="setNType('alerta',this)"> Alerta</button>
-          <button class="ntype" onclick="setNType('urgente',this)"> Urgente</button>
+          <button class="ntype ai" onclick="setNType('info',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Info</button>
+          <button class="ntype" onclick="setNType('alerta',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alerta</button>
+          <button class="ntype" onclick="setNType('urgente',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Urgente</button>
         </div>
       </div>
       <div class="fg"><label>Grupo Destinatario</label>
@@ -3538,7 +3538,7 @@ function showNotifTab(tab){
 
 // ── NOTIF TYPE ──
 let nTypeCur='info';
-function setNType(tipo,btn){nTypeCur=tipo;document.querySelectorAll('.ntype').forEach(b=>b.className='ntype');btn.classList.add(`a${tipo[0]}`+tipo.slice(1))}
+function setNType(tipo,btn){nTypeCur=tipo;document.querySelectorAll('.ntype').forEach(b=>b.className='ntype');btn.classList.add({info:'ai',alerta:'aa',urgente:'au'}[tipo]||'ai');}
 
 // ── NOTIF DEST ──
 let nSelectedIds=new Set(), nDestPerfiles=[];
