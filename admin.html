@@ -3309,9 +3309,9 @@ async function startCam(){
   try{
     facialStream=await navigator.mediaDevices.getUserMedia({video:{facingMode}});
     const v=document.getElementById('f-video');v.srcObject=facialStream;
-    await new Promise(r=>{v.onloadedmetadata=r;});
+    if(v.readyState<1) await new Promise(r=>v.addEventListener('loadedmetadata',r,{once:true}));
     await v.play();
-    await new Promise(r=>{v.addEventListener('playing',r,{once:true});});
+    if(v.paused) await new Promise(r=>v.addEventListener('playing',r,{once:true}));
     const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight;
     iniciarFacialScan();
   }catch(e){setCamSt(' Error: '+e.message,'cs-fail')}
