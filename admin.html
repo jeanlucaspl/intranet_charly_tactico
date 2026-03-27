@@ -1625,66 +1625,75 @@ function showDashTab(tab){
 async function loadDashboardDueno(){
   document.getElementById('d-dueno-dash').style.display='block';
   const today=todayISO();
-  // Queries paralelas — todas las sesiones del día (abiertas y cerradas) + asistencias
+  // Queries paralelas — sesiones del día + asistencias (solo presente/tardanza)
   const [{data:todasSesiones},{data:asist}]=await Promise.all([
     sb.from('sesiones_asistencia').select('*,aulas(nombre),materias(nombre)').eq('fecha',today).order('hora_apertura'),
-    sb.from('asistencias').select('estado,materia_id,aula_id').eq('fecha',today),
+    sb.from('asistencias').select('estado,materia_id,aula_id,hora_ingreso,aulas(nombre),materias(nombre)')
+      .eq('fecha',today).in('estado',['presente','tardanza']),
   ]);
 
-  // Helper: contar estados de asistencia para una sesión (por aula+materia)
-  const contarAsist=s=>{
-    const registros=(asist||[]).filter(a=>a.aula_id===s.aula_id&&a.materia_id===s.materia_id);
-    return{
-      p:registros.filter(a=>a.estado==='presente').length,
-      t:registros.filter(a=>a.estado==='tardanza').length,
-      au:registros.filter(a=>a.estado==='ausente').length,
+  // Agrupar asistencias directamente por aula+materia
+  // La sesión se usa solo para obtener la franja horaria real
+  const byKey={};
+  (asist||[]).forEach(a=>{
+    const key=`${a.aula_id||'x'}__${a.materia_id||'x'}`;
+    if(!byKey[key])byKey[key]={
+      aulaId:a.aula_id,materiaId:a.materia_id,
+      aulaNombre:a.aulas?.nombre||'Sin aula',matNombre:a.materias?.nombre||'Sin materia',
+      p:0,t:0,horaMin:a.hora_ingreso,horaMax:a.hora_ingreso
     };
-  };
-  // Franja real de la sesión: hora_apertura – hora_cierre (o "en curso")
-  const franjaSesion=s=>`${s.hora_apertura?.slice(0,5)||'--'} – ${s.hora_cierre?.slice(0,5)||'en curso'}`;
+    if(a.estado==='presente')byKey[key].p++;else byKey[key].t++;
+    if(a.hora_ingreso<byKey[key].horaMin)byKey[key].horaMin=a.hora_ingreso;
+    if(a.hora_ingreso>byKey[key].horaMax)byKey[key].horaMax=a.hora_ingreso;
+  });
+  const grupos=Object.values(byKey);
+
+  // Para cada grupo, buscar la sesión correspondiente para la franja horaria
+  grupos.forEach(g=>{
+    g.sesion=(todasSesiones||[]).find(s=>s.aula_id===g.aulaId&&s.materia_id===g.materiaId)||null;
+  });
+  const franjaGrupo=g=>g.sesion
+    ?`${g.sesion.hora_apertura?.slice(0,5)||'--'} – ${g.sesion.hora_cierre?.slice(0,5)||'en curso'}`
+    :`${g.horaMin?.slice(0,5)||'--'} – ${g.horaMax?.slice(0,5)||'--'}`;
 
   // TAB CADETES — sesiones activas (solo abiertas con al menos 1 presente o tardanza)
   const sesEl=document.getElementById('d-dash-sesiones');
-  const sesAbiertas=(todasSesiones||[]).filter(s=>{
-    if(s.cerrada||!s.materia_id)return false;
-    const{p,t}=contarAsist(s);return p+t>0;
-  });
+  const sesAbiertas=(todasSesiones||[]).filter(s=>
+    !s.cerrada&&grupos.some(g=>g.aulaId===s.aula_id&&g.materiaId===s.materia_id)
+  );
   sesEl.innerHTML=sesAbiertas.length?`<div style="display:flex;flex-wrap:wrap;gap:10px">${sesAbiertas.map(s=>`
     <div style="background:rgba(0,180,80,.08);border:1.5px solid var(--green);border-radius:6px;padding:10px 16px;display:flex;align-items:center;gap:12px;min-width:200px">
       <div style="width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0"></div>
       <div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green);line-height:1">${s.aulas?.nombre||'--'}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${s.materias?.nombre||'Sin materia'} · ${franjaSesion(s)}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${s.materias?.nombre||'Sin materia'} · desde ${s.hora_apertura?.slice(0,5)||'--'}</div>
       </div>
     </div>`).join('')}</div>`:'';
 
-  // TAB CADETES — asistencia por sesión (abiertas y cerradas con al menos 1 presente o tardanza)
-  // Cada sesión es un bloque independiente con su propia franja horaria real
+  // TAB CADETES — asistencia por grupo aula+materia
   const asistEl=document.getElementById('d-dash-asist');
-  const sesConAsist=(todasSesiones||[]).filter(s=>{
-    if(!s.materia_id)return false;
-    const{p,t}=contarAsist(s);return p+t>0;
-  });
-  if(!sesConAsist.length){
+  if(!grupos.length){
     asistEl.innerHTML=`<div class="empty" style="padding:20px"><div class="et">Sin alumnos presentes o con tardanza hoy</div></div>`;
   }else{
-    asistEl.innerHTML=sesConAsist.map(s=>{
-      const{p,t}=contarAsist(s);
-      const estadoBadge=s.cerrada
-        ?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;border:1px solid var(--border);padding:2px 8px;border-radius:3px">Cerrada</span>`
-        :`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;border:1px solid var(--green);padding:2px 8px;border-radius:3px">En curso</span>`;
+    asistEl.innerHTML=grupos.map(g=>{
+      const enCurso=g.sesion&&!g.sesion.cerrada;
+      const estadoBadge=g.sesion
+        ?(enCurso
+          ?`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;border:1px solid var(--green);padding:2px 8px;border-radius:3px">En curso</span>`
+          :`<span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;border:1px solid var(--border);padding:2px 8px;border-radius:3px">Cerrada</span>`)
+        :'';
       return`<div style="background:var(--navy2);border:1px solid var(--border);border-top:3px solid var(--gold);border-radius:6px;margin-bottom:16px;overflow:hidden">
         <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;line-height:1">${s.aulas?.nombre||'--'} · ${s.materias?.nombre||'Sin materia'}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);letter-spacing:.05em;line-height:1">${g.aulaNombre} · ${g.matNombre}</div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${franjaSesion(s)}</span>
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${franjaGrupo(g)}</span>
               ${estadoBadge}
             </div>
           </div>
           <div style="display:flex;gap:20px;align-items:center">
-            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${p}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
-            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${t}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
+            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--green);line-height:1">${g.p}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Presentes</div></div>
+            <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);line-height:1">${g.t}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
           </div>
         </div>
       </div>`;
