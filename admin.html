@@ -3325,10 +3325,11 @@ function iniciarFacialScan(){
     return;
   }
   setCamSt(' Escaneando rostros en tiempo real...','cs-scan');
-  facialScanLoop=setInterval(scanFrameFacial,FACIAL_SCAN_MS);
+  facialScanLoop=true;
+  (async()=>{while(facialScanLoop){await scanFrameFacial();}})();
 }
 function detenerFacialScan(){
-  if(facialScanLoop){clearInterval(facialScanLoop);facialScanLoop=null;}
+  facialScanLoop=false;
   facialMatchStreak=0;
 }
 async function scanFrameFacial(){

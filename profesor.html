@@ -756,10 +756,11 @@ function iniciarScanLoop(){
     setCamStatus(' No tenés foto registrada. Contactá al administrador.','cs-fail');
     return;
   }
-  scanLoop=setInterval(scanFrame, SCAN_MS);
+  scanLoop=true;
+  (async()=>{while(scanLoop){await scanFrame();}})();
 }
 function detenerScanLoop(){
-  if(scanLoop){clearInterval(scanLoop);scanLoop=null;}
+  scanLoop=false;
   matchStreak=0;
 }
 
