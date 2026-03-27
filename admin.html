@@ -3279,9 +3279,12 @@ async function startCam(){
   }
   document.getElementById('f-status-top').textContent=` Ubicación OK (${geo.dist}m de la academia)`;
   try{
-    facialStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode}});
-    const v=document.getElementById('f-video');v.srcObject=facialStream;await v.play();
-    v.addEventListener('loadedmetadata',()=>{const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight});
+    facialStream=await navigator.mediaDevices.getUserMedia({video:{facingMode}});
+    const v=document.getElementById('f-video');v.srcObject=facialStream;
+    await new Promise(r=>{v.onloadedmetadata=r;});
+    await v.play();
+    await new Promise(r=>{v.addEventListener('playing',r,{once:true});});
+    const c=document.getElementById('f-canvas');c.width=v.videoWidth;c.height=v.videoHeight;
     iniciarFacialScan();
   }catch(e){setCamSt(' Error: '+e.message,'cs-fail')}
 }
@@ -3326,11 +3329,12 @@ async function scanFrameFacial(){
   if(!v.videoWidth)return;
   c.width=v.videoWidth;c.height=v.videoHeight;
   const ctx=c.getContext('2d');
-  ctx.clearRect(0,0,c.width,c.height);
+  ctx.drawImage(v,0,0,c.width,c.height);
   try{
     const det=await faceapi
-      .detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.3}))
+      .detectSingleFace(c,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.2}))
       .withFaceLandmarks().withFaceDescriptor();
+    ctx.clearRect(0,0,c.width,c.height);
     if(!det){facialMatchStreak=0;setCamSt(' Buscando rostro...','cs-scan');return;}
     const resized=faceapi.resizeResults(det,{width:v.videoWidth,height:v.videoHeight});
     const box=resized.detection.box;
