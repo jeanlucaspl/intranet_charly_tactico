@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -2651,7 +2651,9 @@ async function saveAlumno(){
     if(!upErr&&upData){
       const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
       const descriptor=await computarDescriptor(fotoBlob);
-      await sb.from('alumnos').update({foto_url:fotoUrl,foto_descriptor:descriptor}).eq('id',alumnoId);
+      const alPayload={foto_url:fotoUrl};
+      if(descriptor) alPayload.foto_descriptor=descriptor;
+      await sb.from('alumnos').update(alPayload).eq('id',alumnoId);
       if(descriptor) construirFaceMatcher();
     }
   }
@@ -2919,7 +2921,9 @@ async function saveRegistrarFoto(){
   const tabla=tipo==='profesor'?'profesores':'alumnos';
   btn.textContent='ANALIZANDO CARA...';
   const descriptor=await computarDescriptor(blob);
-  const {error:updErr}=await sb.from(tabla).update({foto_url:fotoUrl,foto_descriptor:descriptor}).eq('id',alumnoId);
+  const updatePayload={foto_url:fotoUrl};
+  if(descriptor) updatePayload.foto_descriptor=descriptor;
+  const {error:updErr}=await sb.from(tabla).update(updatePayload).eq('id',alumnoId);
   if(updErr){showMsg(msg,'Error al guardar: '+updErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
   showMsg(msg,descriptor?'Foto y reconocimiento facial registrados':'Foto registrada (no se detectó cara)','ok');
   if(tipo==='profesor') await loadProfesores(); else { await loadAlumnos(); construirFaceMatcher(); }
