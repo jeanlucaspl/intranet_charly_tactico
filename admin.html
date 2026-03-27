@@ -2649,7 +2649,7 @@ async function saveAlumno(){
     const path=`${uid}.${ext}`;
     const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,fotoBlob,{upsert:true,contentType:capturedPhotoBlob?'image/jpeg':fotoFile?.type});
     if(!upErr&&upData){
-      const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+      const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path+'?t='+Date.now();
       const descriptor=await computarDescriptor(fotoBlob);
       const alPayload={foto_url:fotoUrl};
       if(descriptor) alPayload.foto_descriptor=descriptor;
@@ -2917,7 +2917,7 @@ async function saveRegistrarFoto(){
   const tipo=document.getElementById('rf-tipo').value;
   const {data:upData,error:upErr}=await sb.storage.from('fotos-alumnos').upload(path,blob,{upsert:true,contentType:rfPhotoBlob?'image/jpeg':rfFotoFile?.type});
   if(upErr){showMsg(msg,'Error al subir: '+upErr.message,'err');btn.disabled=false;btn.textContent='GUARDAR FOTO';return;}
-  const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+  const fotoUrl=STORAGE+'fotos-alumnos/'+upData.path+'?t='+Date.now();
   const tabla=tipo==='profesor'?'profesores':'alumnos';
   btn.textContent='ANALIZANDO CARA...';
   const descriptor=await computarDescriptor(blob);
@@ -3692,7 +3692,7 @@ async function saveProfesor(){
     const ext=prPhotoBlob?'jpg':(prFotoFile?.name.split('.').pop()||'jpg');
     const{data:upData}=await sb.storage.from('fotos-alumnos').upload(`prof_${uid}.${ext}`,blob,{upsert:true,contentType:prPhotoBlob?'image/jpeg':prFotoFile?.type});
     if(upData){
-      fotoUrl=STORAGE+'fotos-alumnos/'+upData.path;
+      fotoUrl=STORAGE+'fotos-alumnos/'+upData.path+'?t='+Date.now();
       fotoDescriptor=await computarDescriptor(blob);
     }
   }
