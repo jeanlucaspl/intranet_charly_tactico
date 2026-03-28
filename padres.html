@@ -371,7 +371,7 @@ async function loadHijo(){
   ]);
   if(!al)return;
   const hijo=hijoArr?.[0];
-  const foto=al.foto_url?`<img src="${al.foto_url}" alt="foto">`:'';
+  const foto=al.foto_url?`<img src="${al.foto_url}" alt="foto">`:'🪖';
   document.getElementById('d-hijo-card').innerHTML=`<div class="hijo-card">
     <div class="hijo-av">${foto}</div>
     <div>
