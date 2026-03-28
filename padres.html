@@ -365,14 +365,18 @@ async function saveFcmToken(){
 
 async function loadHijo(){
   if(!alumnoId)return;
-  const {data}=await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni)').eq('id',alumnoId).single();
-  if(!data)return;
-  const foto=data.foto_url?`<img src="${data.foto_url}" alt="foto">`:'';
+  const [{data:al},{data:hijoArr}]=await Promise.all([
+    sb.from('alumnos').select('*').eq('id',alumnoId).single(),
+    sb.rpc('get_hijo_info_para_padre'),
+  ]);
+  if(!al)return;
+  const hijo=hijoArr?.[0];
+  const foto=al.foto_url?`<img src="${al.foto_url}" alt="foto">`:'';
   document.getElementById('d-hijo-card').innerHTML=`<div class="hijo-card">
     <div class="hijo-av">${foto}</div>
     <div>
-      <div class="hijo-nombre">${data.perfiles?.nombre} ${data.perfiles?.apellido}</div>
-      <div class="hijo-info">Código: ${data.codigo} · DNI: ${data.perfiles?.dni||'--'} · Turno ${data.turno||'--'}</div>
+      <div class="hijo-nombre">${hijo?.nombre||'--'} ${hijo?.apellido||''}</div>
+      <div class="hijo-info">DNI: ${hijo?.dni||'--'} · Escuela: ${al.escuela||'--'}</div>
     </div>
   </div>`;
 }
