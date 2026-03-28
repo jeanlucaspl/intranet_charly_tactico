@@ -3781,6 +3781,7 @@ function dniSuggest(input,sugId,tipo){
       });
     }
   }
+  box.style.display='';
   box.classList.toggle('show',fuente.length>0);
 }
 function selectDniSug(sugId,dni,nombre){
@@ -3827,6 +3828,7 @@ function panelSuggest(input,sugId,tipo){
     fuente=(allContrasenaData||[]).filter(c=>`${c.perfiles?.apellido||''} ${c.perfiles?.nombre||''}`.toLowerCase().includes(q)||(c.perfiles?.dni||'').startsWith(q)).slice(0,8);
     box.innerHTML=fuente.map(c=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-pass2','contrasenas','${c.perfiles?.dni}')"><span class="dni-sug-dni">${c.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${c.perfiles?.nombre} ${c.perfiles?.apellido} <span style="color:var(--muted);font-size:10px">${c.perfiles?.rol||''}</span></span></div>`).join('');
   }
+  box.style.display='';
   box.classList.toggle('show',fuente.length>0);
 }
 function selectPanelSug(sugId,tipo,dni){
