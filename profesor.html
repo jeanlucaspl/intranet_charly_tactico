@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Charly Táctico"/>
+  <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});</script>
   <style>html{background:#0b1120}</style>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -450,7 +451,26 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 const STORAGE=SB_URL+'/storage/v1/object/public/';
 async function sendFcmToUsers(perfil_ids,title,body){
   if(!perfil_ids?.length)return;
-  fetch(`${SB_URL}/functions/v1/send-fcm`,{method:'POST',headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({user_ids:perfil_ids,title,body})}).catch(()=>{});
+  const opts={method:'POST',headers:{'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({user_ids:perfil_ids,title,body})};
+  fetch(`${SB_URL}/functions/v1/send-fcm`,opts).catch(()=>{});
+  fetch(`${SB_URL}/functions/v1/send-webpush`,opts).catch(()=>{});
+}
+// ── WEB PUSH (PWA) ──
+const VAPID_PUB='BD9EE6L0NCXTJA3l7iWgOPfMfATv8c2cOyV2llYD_YzzillIDXZAUfKwr1Hkm9VtGssxl9qojSIxJEayMNCxnC4';
+function _b64ToUint8(b){const p='='.repeat((4-b.length%4)%4);const s=(b+p).replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(s).split('').map(c=>c.charCodeAt(0)));}
+async function initPushSubscription(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!uid)return;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted')return;
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:_b64ToUint8(VAPID_PUB)});
+    }
+    const {endpoint,keys:{p256dh,auth}}=sub.toJSON();
+    await sb.from('push_subscriptions').upsert({user_id:uid,endpoint,p256dh,auth,updated_at:new Date().toISOString()},{onConflict:'endpoint'});
+  }catch(e){console.warn('Push init:',e);}
 }
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`;}
 
@@ -534,6 +554,7 @@ async function init(){
   checkYaMarcado();
   checkDeviceStatusProfesor();
   saveFcmToken();
+  initPushSubscription();
   sb.channel('prof-notifs').on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifs()).subscribe();
   setInterval(loadNotifs,10000);
 }

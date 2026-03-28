@@ -2,7 +2,7 @@
   "name": "Charly Táctico · Intranet",
   "short_name": "Charly Táctico",
   "description": "Intranet Academia Pre-Cadetes Charly Táctico",
-  "start_url": "./dashboard.html",
+  "start_url": "./login.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
