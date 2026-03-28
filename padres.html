@@ -505,6 +505,7 @@ async function loadNotifs(){
   }).join('');
 }
 async function deleteNotif(id){
+  if(!confirm('¿Eliminar esta notificación?'))return;
   await sb.from('notificaciones_ocultas').upsert({user_id:uid,notificacion_id:id},{onConflict:'user_id,notificacion_id'});
   loadNotifs();
 }
@@ -539,6 +540,7 @@ async function loadContactoHist(){
   }).join('');
 }
 async function deleteMensaje(id){
+  if(!confirm('¿Eliminar este mensaje?'))return;
   await sb.from('contacto_mensajes').delete().eq('id',id);
   loadContactoHist();
 }
