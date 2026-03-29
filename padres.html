@@ -268,8 +268,13 @@
 <!-- NOTAS -->
 <div class="panel" id="panel-notas">
   <div class="ph"><div class="eye">Rendimiento académico</div><div class="ttl">NOTAS DE MI HIJO/A</div></div>
+  <div class="aula-tabs" id="notas-sector-tabs-p">
+    <div class="aula-tab active" onclick="showNotasSectorPadre('aptitud_fisica')">Aptitud Física</div>
+    <div class="aula-tab" onclick="showNotasSectorPadre('aptitud_academica')">Apt. Académica</div>
+    <div class="aula-tab" onclick="showNotasSectorPadre('entrevista_personal')">Entrevista Personal</div>
+  </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Calificaciones por Materia</span></div>
+    <div class="th"><span class="th-ttl" id="notas-sector-titulo-p">Aptitud Física</span></div>
     <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -480,32 +485,54 @@ async function loadUbicacion(){
   showLeafletMap(ultimo.latitud,ultimo.longitud,`Última asistencia: ${fecha}`);
 }
 
+let allNotasPadre=[],notasSectorPadre='aptitud_fisica';
+const SECTOR_LABELS_P={'aptitud_fisica':'Aptitud Física','aptitud_academica':'Apt. Académica y Conocimientos','entrevista_personal':'Entrevista Personal'};
 async function loadNotas(){
   if(!alumnoId)return;
-  const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
-  if(data?.length){const proms=data.filter(n=>n.nota_1!=null).map(n=>n.nota_1);document.getElementById('s-prom').textContent=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--'}
-  if(!data?.length){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;return}
+  const {data}=await sb.from('notas').select('*,materias(nombre,sector)').eq('alumno_id',alumnoId);
+  allNotasPadre=data||[];
+  if(allNotasPadre.length){
+    const proms=allNotasPadre.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
+    document.getElementById('s-prom').textContent=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--';
+  }
+  renderNotasPadre();
+}
+function showNotasSectorPadre(sector){
+  notasSectorPadre=sector;
+  document.querySelectorAll('#notas-sector-tabs-p .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
+  });
+  document.getElementById('notas-sector-titulo-p').textContent=SECTOR_LABELS_P[sector];
+  renderNotasPadre();
+}
+function renderNotasPadre(){
+  const filtered=allNotasPadre.filter(n=>(n.materias?.sector||'aptitud_academica')===notasSectorPadre);
+  if(!filtered.length){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas en este sector</div></div>`;return;}
   const byMat={};
-  data.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
-  document.getElementById('d-notas').innerHTML=Object.entries(byMat).map(([key,mat],i)=>`
-    <div style="border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden">
+  filtered.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
+  document.getElementById('d-notas').innerHTML=Object.entries(byMat).map(([key,mat])=>{
+    const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
+    const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;
+    const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';
+    return`<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden">
       <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.nta').textContent=this.nextElementSibling.style.display==='none'?'▶':'▼'"
         style="padding:12px 14px;background:var(--navy2);display:flex;justify-content:space-between;align-items:center;cursor:pointer">
         <strong style="font-family:'Barlow Condensed',sans-serif;font-size:16px">${mat.nombre}</strong>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:11px;color:var(--muted)">${mat.notas.length} nota${mat.notas.length!==1?'s':''}</span>
-          ${(()=>{const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';return prom?`<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${c}">${prom}</span>`:'';})()}
+          ${prom?`<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${c}">${prom}</span>`:''}
           <span class="nta" style="color:var(--gold);font-size:12px">▶</span>
         </div>
       </div>
       <div style="display:none">
-        <table style="margin:0;border-radius:0"><thead><tr><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
-        ${mat.notas.map(n=>{const nota=n.nota_1??'--';const c=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
-          return`<tr><td>${n.periodo||'--'}</td><td class="${c}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
+        <table style="margin:0;border-radius:0"><thead><tr><th>Evaluación</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
+        ${mat.notas.map(n=>{const nota=n.nota_1??'--';const cc=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
+          return`<tr><td>${n.periodo||'--'}</td><td class="${cc}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
         }).join('')}
         </tbody></table>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 let _notifIds=null,_toastTimer=null;

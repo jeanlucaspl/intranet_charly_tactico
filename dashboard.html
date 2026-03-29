@@ -261,8 +261,13 @@
 <!-- NOTAS -->
 <div class="panel" id="panel-notas">
   <div class="ph"><div class="eye">Rendimiento académico</div><div class="ttl">MIS NOTAS</div></div>
+  <div class="aula-tabs" id="notas-sector-tabs">
+    <div class="aula-tab active" onclick="showNotasSectorAlumno('aptitud_fisica')">Aptitud Física</div>
+    <div class="aula-tab" onclick="showNotasSectorAlumno('aptitud_academica')">Apt. Académica</div>
+    <div class="aula-tab" onclick="showNotasSectorAlumno('entrevista_personal')">Entrevista Personal</div>
+  </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Calificaciones por Materia</span></div>
+    <div class="th"><span class="th-ttl" id="notas-sector-titulo">Aptitud Física</span></div>
     <div id="d-notas"><div class="empty"><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -383,21 +388,31 @@ async function checkPendingSolicitud(){
   if(data?.[0])mostrarDialogoUbicacion(data[0].id);
 }
 
+let allNotasAlumno=[];
+let notasSectorAlumno='aptitud_fisica';
+const SECTOR_LABELS_AL={'aptitud_fisica':'Aptitud Física','aptitud_academica':'Apt. Académica y Conocimientos','entrevista_personal':'Entrevista Personal'};
 async function loadNotas(){
   if(!alumnoId){document.getElementById('d-notas').innerHTML=`<div class="empty"><div class="et">Sin datos de alumno</div></div>`;document.getElementById('d-notas-res').innerHTML=document.getElementById('d-notas').innerHTML;return;}
-  const {data}=await sb.from('notas').select('*,materias(nombre)').eq('alumno_id',alumnoId);
-  document.getElementById('s-mat').textContent=data?.length||0;
-  if(data?.length){
-    const proms=data.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
-    const gen=proms.length?(proms.reduce((a,b)=>a+b,0)/proms.length).toFixed(1):'--';
-    document.getElementById('s-prom').textContent=gen;
-  }
-  document.getElementById('d-notas').innerHTML=renderNotasTable(data||[]);
-  document.getElementById('d-notas-res').innerHTML=renderNotasResumen(data||[]);
+  const {data}=await sb.from('notas').select('*,materias(nombre,sector)').eq('alumno_id',alumnoId);
+  allNotasAlumno=data||[];
+  document.getElementById('s-mat').textContent=allNotasAlumno.length||0;
+  renderNotasAlumno();
+  document.getElementById('d-notas-res').innerHTML=renderNotasResumen(allNotasAlumno);
 }
-
+function showNotasSectorAlumno(sector){
+  notasSectorAlumno=sector;
+  document.querySelectorAll('#notas-sector-tabs .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
+  });
+  document.getElementById('notas-sector-titulo').textContent=SECTOR_LABELS_AL[sector];
+  renderNotasAlumno();
+}
+function renderNotasAlumno(){
+  const filtered=allNotasAlumno.filter(n=>(n.materias?.sector||'aptitud_academica')===notasSectorAlumno);
+  document.getElementById('d-notas').innerHTML=renderNotasTable(filtered);
+}
 function renderNotasTable(data){
-  if(!data.length)return`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
+  if(!data.length)return`<div class="empty"><div class="et">Sin notas en este sector</div></div>`;
   const byMat={};
   data.forEach(n=>{
     const key=n.materia_id||'sin';
@@ -419,7 +434,7 @@ function renderNotasTable(data){
         </div>
       </div>
       <div style="display:none">
-        <table style="margin:0;border-radius:0"><thead><tr><th>Título</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
+        <table style="margin:0;border-radius:0"><thead><tr><th>Evaluación</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>
         ${mat.notas.map(n=>{const nota=n.nota_1??'--';const cc=typeof nota==='number'?(nota>=14?'nota-a':nota>=11?'nota-m':'nota-b'):'';
           return`<tr><td>${n.periodo||'--'}</td><td class="${cc}"><strong>${nota}</strong></td><td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td></tr>`;
         }).join('')}
@@ -430,15 +445,15 @@ function renderNotasTable(data){
 }
 function renderNotasResumen(data){
   if(!data.length)return`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
-  const byMat={};
-  data.forEach(n=>{const key=n.materia_id||'sin';if(!byMat[key])byMat[key]={nombre:n.materias?.nombre||'Sin materia',notas:[]};byMat[key].notas.push(n);});
-  return`<div style="display:flex;flex-direction:column;gap:6px">${Object.values(byMat).map(mat=>{
-    const ns=mat.notas.filter(n=>n.nota_1!=null).map(n=>n.nota_1);
-    const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):'--';
-    const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':'var(--red)';
-    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--navy2);border:1px solid var(--border);border-radius:4px">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px">${mat.nombre}</span>
-      <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${c}">${prom}</span>
+  const sectores=['aptitud_fisica','aptitud_academica','entrevista_personal'];
+  const labels={'aptitud_fisica':'Aptitud Física','aptitud_academica':'Apt. Académica','entrevista_personal':'Entrevista Personal'};
+  return`<div style="display:flex;flex-direction:column;gap:8px">${sectores.map(s=>{
+    const ns=data.filter(n=>(n.materias?.sector||'aptitud_academica')===s&&n.nota_1!=null).map(n=>n.nota_1);
+    const prom=ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;
+    const c=prom>=14?'var(--green)':prom>=11?'var(--yellow)':prom?'var(--red)':'var(--muted)';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--navy2);border:1px solid var(--border);border-radius:4px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px">${labels[s]}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${c}">${prom||'--'}</span>
     </div>`;
   }).join('')}</div>`;
 }
