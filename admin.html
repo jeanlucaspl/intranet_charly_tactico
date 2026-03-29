@@ -1096,6 +1096,35 @@
   </div>
 </div>
 
+<!-- MODAL NUEVA PRUEBA (sin materia) -->
+<div class="mo" id="md-nueva-prueba">
+  <div class="md" style="max-width:440px">
+    <div class="md-hd"><div class="md-ttl">NUEVA PRUEBA FÍSICA</div><button class="md-x" onclick="closeMd('md-nueva-prueba')"></button></div>
+    <div class="md-bd">
+      <div class="msg" id="msg-nueva-prueba"></div>
+      <div class="fgrid">
+        <div class="fg full"><label>Nombre</label><input type="text" id="np-nombre" placeholder="100 metros, Barras, Natación 25m..."/></div>
+        <div class="fg"><label>Género</label>
+          <select id="np-genero">
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+          </select>
+        </div>
+        <div class="fg"><label>Tipo de medición</label>
+          <select id="np-tipo">
+            <option value="tiempo">Tiempo</option>
+            <option value="repeticiones">Repeticiones</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-nueva-prueba')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveNuevaPrueba()">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TABLA DE CONVERSIÓN -->
 <div class="mo" id="md-conversion">
   <div class="md" style="max-width:580px">
@@ -2550,6 +2579,14 @@ function showSectorTab(sector){
     t.classList.toggle('active',s[Array.from(t.parentNode.children).indexOf(t)]===sector);
   });
   document.getElementById('mat-sector-titulo').textContent=SECTOR_LABELS[sector];
+  const btnNueva=document.getElementById('btn-nueva-materia');
+  if(sector==='aptitud_fisica'){
+    btnNueva.textContent='+ Nueva Prueba';
+    btnNueva.onclick=openNuevaPrueba;
+  } else {
+    btnNueva.textContent='+ Nueva Materia';
+    btnNueva.onclick=openNuevaMateria;
+  }
   renderMaterias();
 }
 function openNuevaMateria(){
@@ -2561,15 +2598,55 @@ function openNuevaMateria(){
   openMd('md-materia');
 }
 function renderMaterias(){
+  if(materiaSectorTab==='aptitud_fisica'){renderPruebasTab();return;}
   const filtered=allMaterias.filter(m=>(m.sector||'aptitud_academica')===materiaSectorTab);
   const el=document.getElementById('d-materias');
   if(!filtered.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin materias en este sector</div></div>`;return;}
-  const esFisica=materiaSectorTab==='aptitud_fisica';
+  const esFisica=false;
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Profesores</th><th>Acciones</th></tr></thead><tbody>${filtered.map(m=>{
     const profs=(m.materia_profesor||[]).map(mp=>`${mp.profesores?.perfiles?.nombre||''} ${mp.profesores?.perfiles?.apellido||''}`.trim()).filter(Boolean).join(', ')||'<span style="color:var(--muted)">Sin asignar</span>';
     const btns=esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">Asignar Prof.</button>${esFisica?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openPruebas('${m.id}','${m.nombre.replace(/'/g,"\\'")}')">Pruebas</button>`:''}<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--';
     return`<tr><td><strong>${m.nombre}</strong></td><td>${m.codigo||'--'}</td><td style="font-size:11px">${profs}</td><td style="display:flex;gap:4px;flex-wrap:wrap">${btns}</td></tr>`;
   }).join('')}</tbody></table>`;
+}
+async function renderPruebasTab(){
+  const el=document.getElementById('d-materias');
+  el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div>`;
+  const {data}=await sb.from('pruebas_fisicas').select('*').is('materia_id',null).order('nombre');
+  if(!data?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin pruebas directas configuradas</div></div>`;return;}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Género</th><th>Tipo</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`
+    <tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td style="text-transform:capitalize">${p.genero}</td>
+      <td style="text-transform:capitalize">${p.tipo}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px;border-color:var(--gold);color:var(--gold)" onclick="openConversion('${p.id}','${p.nombre.replace(/'/g,"\\'")}','${p.tipo}')">Tabla</button>
+        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="deletePruebaSola('${p.id}')">Eliminar</button>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+}
+function openNuevaPrueba(){
+  document.getElementById('np-nombre').value='';
+  document.getElementById('np-genero').value='masculino';
+  document.getElementById('np-tipo').value='tiempo';
+  document.getElementById('msg-nueva-prueba').className='msg';
+  openMd('md-nueva-prueba');
+}
+async function saveNuevaPrueba(){
+  const nombre=document.getElementById('np-nombre').value.trim();
+  const genero=document.getElementById('np-genero').value;
+  const tipo=document.getElementById('np-tipo').value;
+  const msg=document.getElementById('msg-nueva-prueba');
+  if(!nombre)return showMsg(msg,'Ingresa el nombre de la prueba','err');
+  const {error}=await sb.from('pruebas_fisicas').insert({materia_id:null,nombre,genero,tipo});
+  if(error)return showMsg(msg,error.message,'err');
+  closeMd('md-nueva-prueba');
+  renderPruebasTab();
+}
+async function deletePruebaSola(id){
+  if(!await myConfirm('¿Eliminar esta prueba y todos sus resultados?'))return;
+  await sb.from('pruebas_fisicas').delete().eq('id',id);
+  renderPruebasTab();
 }
 function showNotasSector(sector){
   notasSectorTab=sector;
@@ -2583,6 +2660,25 @@ function renderNotas(){
   const matTabsEl=document.getElementById('notas-mat-tabs');
   const perTabsEl=document.getElementById('notas-per-tabs');
   const el=document.getElementById('d-notas');
+  if(notasSectorTab==='aptitud_fisica'){
+    matTabsEl.innerHTML='';perTabsEl.innerHTML='';
+    el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div>`;
+    sb.from('resultados_fisicos').select('*,pruebas_fisicas(nombre,tipo,materia_id),alumnos(perfiles(nombre,apellido,dni))').order('creado_en',{ascending:false}).then(({data:rfAll})=>{const rf=(rfAll||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
+      if(!rf?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin resultados físicos registrados</div></div>`;return;}
+      el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Prueba</th><th>Marca</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${rf.map(r=>{
+        const c=(r.nota||0)>=11?'bg':'br';
+        const marca=r.valor!=null?(r.pruebas_fisicas?.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
+        return`<tr>
+          <td>${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}</td>
+          <td style="font-size:11px;color:var(--muted)">${r.alumnos?.perfiles?.dni||'--'}</td>
+          <td>${r.pruebas_fisicas?.nombre||'--'}</td>
+          <td>${marca}</td>
+          <td><span class="badge ${c}">${r.nota??'--'}</span></td>
+          <td style="font-size:11px;color:var(--muted)">${r.creado_en?new Date(r.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+        </tr>`;}).join('')}</tbody></table>`;
+    });
+    return;
+  }
   // Filtrar notas por sector activo
   const sectorMatIds=new Set(allMaterias.filter(m=>(m.sector||'aptitud_academica')===notasSectorTab).map(m=>m.id));
   const notasFiltradas=allNotas.filter(n=>sectorMatIds.has(n.materia_id));
@@ -2638,9 +2734,18 @@ function nNotaSelect(id,nombre,dni,sexo){
   const generoLabel=sexo==='M'?'Masculino':sexo==='F'?'Femenino':'';
   info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';
   info.textContent=` ${nombre} · DNI: ${dni}${generoLabel?' · '+generoLabel:''}`;
-  // Si estamos en aptitud física y hay materia seleccionada, recargar pruebas
+  // Si estamos en aptitud física, recargar pruebas filtrando por género del alumno
   if(document.getElementById('n-modal-sector').value==='aptitud_fisica'){
-    onNotaMateriaChange();
+    const genero=sexo==='M'?'masculino':sexo==='F'?'femenino':null;
+    sb.from('pruebas_fisicas').select('*').is('materia_id',null).order('nombre').then(({data:pruebas})=>{
+      if(!pruebas?.length)return;
+      const filtradas=genero?pruebas.filter(p=>p.genero===genero):pruebas;
+      document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>'+(filtradas.length?filtradas:pruebas).map(p=>`<option value="${p.id}" data-tipo="${p.tipo}">${p.nombre}</option>`).join('');
+      document.getElementById('n-prueba-info').textContent=genero?`Pruebas de ${genero}`:'';
+      document.getElementById('n-campo-prueba').style.display='';
+      document.getElementById('n-campo-marca').style.display='none';
+      document.getElementById('n-campo-nota-calc').style.display='none';
+    });
   }
 }
 async function adminEliminarNota(id){
@@ -3373,34 +3478,30 @@ function openCargarNota(){
   const esFisica=sector==='aptitud_fisica';
   document.getElementById('n-campo-periodo').style.display=esFisica?'none':'';
   document.getElementById('n-campo-nota').style.display=esFisica?'none':'';
+  document.getElementById('n-materia').closest('.fg').style.display=esFisica?'none':'';
   document.getElementById('n-campo-prueba').style.display='none';
   document.getElementById('n-campo-marca').style.display='none';
   document.getElementById('n-campo-nota-calc').style.display='none';
   document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>';
-  openMd('md-nota');
+  if(esFisica){
+    openMd('md-nota');
+    sb.from('pruebas_fisicas').select('*').is('materia_id',null).order('nombre').then(({data:pruebas})=>{
+      if(!pruebas?.length){document.getElementById('n-prueba').innerHTML='<option value="">Sin pruebas configuradas</option>';document.getElementById('n-campo-prueba').style.display='';return;}
+      const sexoRaw=document.getElementById('n-alumno-sexo').value;
+      const genero=sexoRaw==='M'?'masculino':sexoRaw==='F'?'femenino':null;
+      const filtradas=genero?pruebas.filter(p=>p.genero===genero):pruebas;
+      document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>'+(filtradas.length?filtradas:pruebas).map(p=>`<option value="${p.id}" data-tipo="${p.tipo}">${p.nombre}</option>`).join('');
+      document.getElementById('n-prueba-info').textContent=genero?`Pruebas de ${genero}`:'';
+      document.getElementById('n-campo-prueba').style.display='';
+    });
+  } else {
+    openMd('md-nota');
+  }
 }
 async function onNotaMateriaChange(){
   const sector=document.getElementById('n-modal-sector').value;
-  if(sector!=='aptitud_fisica')return;
-  const materiaId=document.getElementById('n-materia').value;
-  const sexoRaw=document.getElementById('n-alumno-sexo').value; // 'M' o 'F'
-  const genero=sexoRaw==='M'?'masculino':sexoRaw==='F'?'femenino':null;
-  const pruebaEl=document.getElementById('n-campo-prueba');
-  const marcaEl=document.getElementById('n-campo-marca');
-  const calcEl=document.getElementById('n-campo-nota-calc');
-  if(!materiaId){pruebaEl.style.display='none';marcaEl.style.display='none';calcEl.style.display='none';return;}
-  let query=sb.from('pruebas_fisicas').select('*').eq('materia_id',materiaId).order('nombre');
-  if(genero) query=query.eq('genero',genero);
-  const {data:pruebas}=await query;
-  if(!pruebas?.length){
-    document.getElementById('n-prueba').innerHTML='<option value="">Sin pruebas configuradas</option>';
-    document.getElementById('n-prueba-info').textContent=genero?'':'Selecciona un alumno para filtrar por género';
-    pruebaEl.style.display='';marcaEl.style.display='none';calcEl.style.display='none';
-    return;
-  }
-  document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>'+pruebas.map(p=>`<option value="${p.id}" data-tipo="${p.tipo}">${p.nombre}</option>`).join('');
-  document.getElementById('n-prueba-info').textContent=genero?`Pruebas de ${genero}`:'';
-  pruebaEl.style.display='';marcaEl.style.display='none';calcEl.style.display='none';
+  if(sector==='aptitud_fisica')return;
+  // Para sectores no físicos no hay lógica especial
 }
 function onNotaPruebaChange(){
   const sel=document.getElementById('n-prueba');
@@ -3451,25 +3552,34 @@ async function onNotaMarcaChange(){
 }
 async function saveNota(){
   const alumnoId=document.getElementById('n-alumno').value;
-  const materiaId=document.getElementById('n-materia').value;
   const msg=document.getElementById('msg-nota');
   const sector=document.getElementById('n-modal-sector').value;
   const esFisica=sector==='aptitud_fisica';
-  if(!alumnoId||!materiaId)return showMsg(msg,'Selecciona alumno y materia','err');
-  let n1,periodo;
+  if(!alumnoId)return showMsg(msg,'Selecciona un alumno','err');
   if(esFisica){
     const pruebaId=document.getElementById('n-prueba').value;
     const pruebaOpt=document.getElementById('n-prueba').selectedOptions[0];
     if(!pruebaId)return showMsg(msg,'Selecciona una prueba','err');
     const notaFisica=document.getElementById('n-nota-fisica').value;
     if(!notaFisica)return showMsg(msg,'Ingresa la marca para calcular la nota','err');
-    n1=parseFloat(notaFisica);
-    periodo=pruebaOpt.textContent; // nombre de la prueba como periodo
-  } else {
-    periodo=document.getElementById('n-periodo').value.trim();
-    n1=parseFloat(document.getElementById('n-n1').value)||null;
-    if(!periodo)return showMsg(msg,'Ingresa el campo / período','err');
+    const marcaRaw=document.getElementById('n-marca').value.trim();
+    const tipo=pruebaOpt?.dataset?.tipo;
+    const valor=tipo==='tiempo'?parseTiempo(marcaRaw):parseFloat(marcaRaw);
+    const sesion=await sb.auth.getSession();
+    const userId=sesion.data.session?.user?.id;
+    const {error}=await sb.from('resultados_fisicos').insert({alumno_id:alumnoId,prueba_id:pruebaId,fecha:new Date().toISOString().split('T')[0],valor:isNaN(valor)?null:valor,nota:parseFloat(notaFisica),registrado_por:userId||null});
+    if(error)return showMsg(msg,error.message,'err');
+    showMsg(msg,'Resultado guardado ','ok');
+    await loadNotas();
+    setTimeout(()=>closeMd('md-nota'),1200);
+    return;
   }
+  const materiaId=document.getElementById('n-materia').value;
+  if(!materiaId)return showMsg(msg,'Selecciona alumno y materia','err');
+  let n1,periodo;
+  periodo=document.getElementById('n-periodo').value.trim();
+  n1=parseFloat(document.getElementById('n-n1').value)||null;
+  if(!periodo)return showMsg(msg,'Ingresa el campo / período','err');
   const n2=parseFloat(document.getElementById('n-n2').value)||null;
   const n3=parseFloat(document.getElementById('n-n3').value)||null;
   const ns=[n1,n2,n3].filter(n=>n!==null);
