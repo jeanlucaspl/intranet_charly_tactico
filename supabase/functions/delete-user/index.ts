@@ -119,6 +119,7 @@ Deno.serve(async (req) => {
       }
 
       const steps = [
+        del(sb, 'sesiones_asistencia',   'creado_por',      perfil_id),
         del(sb, 'solicitudes_ubicacion', 'padre_id',        perfil_id),
         del(sb, 'padres_alumnos',        'padre_id',        perfil_id),
         del(sb, 'contacto_mensajes',     'padre_id',        perfil_id),

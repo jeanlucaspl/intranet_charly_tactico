@@ -448,10 +448,17 @@
 <div class="panel" id="panel-materias">
   <div class="ph">
     <div class="ph-left"><div class="eye">Plan de estudios</div><div class="ttl">MATERIAS</div></div>
-    <button class="btn btn-gold" id="btn-nueva-materia" onclick="openMd('md-materia')" style="display:none">+ Nueva Materia</button>
+  </div>
+  <div class="aula-tabs" id="sector-tabs">
+    <div class="aula-tab active" onclick="showSectorTab('aptitud_fisica')">Aptitud Física</div>
+    <div class="aula-tab" onclick="showSectorTab('aptitud_academica')">Apt. Académica y Conocimientos</div>
+    <div class="aula-tab" onclick="showSectorTab('entrevista_personal')">Entrevista Personal</div>
   </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Materias Registradas</span></div>
+    <div class="th" style="display:flex;justify-content:space-between;align-items:center">
+      <span class="th-ttl" id="mat-sector-titulo">Aptitud Física</span>
+      <button class="btn btn-gold" id="btn-nueva-materia" onclick="openNuevaMateria()" style="display:none;font-size:11px;padding:6px 14px">+ Nueva Materia</button>
+    </div>
     <div id="d-materias"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -1033,6 +1040,8 @@
     <div class="md-hd"><div class="md-ttl">NUEVA MATERIA</div><button class="md-x" onclick="closeMd('md-materia')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-materia"></div>
+      <input type="hidden" id="m-sector"/>
+      <div style="font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px" id="m-sector-label"></div>
       <div class="fgrid">
         <div class="fg full"><label>Nombre</label><input type="text" id="m-nombre" placeholder="Razonamiento Verbal"/></div>
         <div class="fg full"><label>Código (opcional)</label><input type="text" id="m-codigo" placeholder="RV-01"/></div>
@@ -1041,6 +1050,69 @@
     <div class="md-ft">
       <button class="btn btn-outline" onclick="closeMd('md-materia')">Cancelar</button>
       <button class="btn btn-gold" onclick="saveMateria()">CREAR MATERIA</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRUEBAS FÍSICAS -->
+<div class="mo" id="md-pruebas">
+  <div class="md" style="max-width:600px">
+    <div class="md-hd"><div class="md-ttl">PRUEBAS FÍSICAS</div><button class="md-x" onclick="closeMd('md-pruebas')"></button></div>
+    <div class="md-bd">
+      <input type="hidden" id="pf-materia-id"/>
+      <div style="font-size:13px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;margin-bottom:14px" id="pf-materia-nombre"></div>
+      <div class="msg" id="msg-pruebas"></div>
+      <div id="d-pruebas-lista" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">AGREGAR PRUEBA</div>
+        <div class="fgrid">
+          <div class="fg full"><label>Nombre</label><input type="text" id="pf-nombre" placeholder="100 metros, Barras, Natación 25m..."/></div>
+          <div class="fg"><label>Género</label>
+            <select id="pf-genero">
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+            </select>
+          </div>
+          <div class="fg"><label>Tipo de medición</label>
+            <select id="pf-tipo">
+              <option value="tiempo">Tiempo</option>
+              <option value="repeticiones">Repeticiones</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="savePrueba()" style="margin-top:8px;font-size:11px;padding:6px 14px">+ Agregar Prueba</button>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-pruebas')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TABLA DE CONVERSIÓN -->
+<div class="mo" id="md-conversion">
+  <div class="md" style="max-width:580px">
+    <div class="md-hd"><div class="md-ttl">TABLA DE CONVERSIÓN</div><button class="md-x" onclick="closeMd('md-conversion')"></button></div>
+    <div class="md-bd">
+      <input type="hidden" id="cv-prueba-id"/>
+      <input type="hidden" id="cv-tipo"/>
+      <div style="font-size:13px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;margin-bottom:4px" id="cv-prueba-nombre"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px" id="cv-formato-ayuda"></div>
+      <div class="msg" id="msg-conversion"></div>
+      <div id="d-conversion-lista" style="margin-bottom:16px;max-height:300px;overflow-y:auto"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;color:var(--muted);margin-bottom:10px">AGREGAR FILA</div>
+        <div class="fgrid">
+          <div class="fg"><label id="cv-lbl-min">Desde</label><input type="text" id="cv-min" placeholder="3:29"/></div>
+          <div class="fg"><label id="cv-lbl-max">Hasta</label><input type="text" id="cv-max" placeholder="3:31"/></div>
+          <div class="fg"><label>Nota (0–20)</label><input type="number" id="cv-nota" min="0" max="20" step="0.5"/></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px" id="cv-formato-hint"></div>
+        <button class="btn btn-gold" onclick="saveConversionRow()" style="margin-top:10px;font-size:11px;padding:6px 14px">+ Agregar fila</button>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-conversion')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2288,9 +2360,30 @@ async function deleteHorario(){
   await loadHorario();
 }
 async function deleteMateria(id){
-  if(!await myConfirm('¿Eliminar esta materia? Esta acción no se puede deshacer.'))return;
+  if(!await myConfirm('¿Eliminar esta materia? Se borrarán también sus asistencias, notas, horarios y prácticas asociadas. Esta acción no se puede deshacer.'))return;
+  // 1. Obtener IDs de prácticas para borrar sus soluciones primero
+  const {data:pracs,error:eP}=await sb.from('practicas').select('id').eq('materia_id',id);
+  if(eP){await myAlert('Error al limpiar practicas: '+eP.message);return;}
+  if(pracs?.length){
+    const pracIds=pracs.map(p=>p.id);
+    const {error:eS}=await sb.from('soluciones').delete().in('practica_id',pracIds);
+    if(eS){await myAlert('Error al limpiar soluciones: '+eS.message);return;}
+  }
+  // 2. Borrar tablas que referencian materia_id
+  const cascadeTables=[
+    {t:'practicas',       c:'materia_id'},
+    {t:'horario_semanal', c:'materia_id'},
+    {t:'asistencias',     c:'materia_id'},
+    {t:'notas',           c:'materia_id'},
+    {t:'alumno_materia',  c:'materia_id'},
+    {t:'materia_profesor',c:'materia_id'},
+  ];
+  for(const {t,c} of cascadeTables){
+    const {error:e}=await sb.from(t).delete().eq(c,id);
+    if(e){await myAlert(`Error al limpiar ${t}: ${e.message}`);return;}
+  }
   const {error}=await sb.from('materias').delete().eq('id',id);
-  if(error)return await myAlert('No se puede eliminar: '+error.message);
+  if(error)return await myAlert('No se pudo eliminar: '+error.message);
   await loadMaterias(); populateSelects();
 }
 function _solPath(pathOrUrl){
@@ -2419,16 +2512,35 @@ function renderAulas(){
     <td>${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 10px" onclick="deleteAula('${a.id}')">Dar de baja</button>`:'--'}</td>
   </tr>`).join('')}</tbody></table>`;
 }
+let materiaSectorTab='aptitud_fisica';
+const SECTOR_LABELS={'aptitud_fisica':'Aptitud Física','aptitud_academica':'Apt. Académica y Conocimientos','entrevista_personal':'Entrevista Personal'};
+function showSectorTab(sector){
+  materiaSectorTab=sector;
+  document.querySelectorAll('#sector-tabs .aula-tab').forEach(t=>{
+    const s=['aptitud_fisica','aptitud_academica','entrevista_personal'];
+    t.classList.toggle('active',s[Array.from(t.parentNode.children).indexOf(t)]===sector);
+  });
+  document.getElementById('mat-sector-titulo').textContent=SECTOR_LABELS[sector];
+  renderMaterias();
+}
+function openNuevaMateria(){
+  document.getElementById('m-sector').value=materiaSectorTab;
+  document.getElementById('m-sector-label').textContent='Sector: '+SECTOR_LABELS[materiaSectorTab];
+  document.getElementById('m-nombre').value='';
+  document.getElementById('m-codigo').value='';
+  document.getElementById('msg-materia').className='msg';
+  openMd('md-materia');
+}
 function renderMaterias(){
-  if(!allMaterias.length){document.getElementById('d-materias').innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin materias registradas</div></div>`;return}
-  document.getElementById('d-materias').innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Profesores</th><th>Acciones</th></tr></thead><tbody>${allMaterias.map(m=>{
+  const filtered=allMaterias.filter(m=>(m.sector||'aptitud_academica')===materiaSectorTab);
+  const el=document.getElementById('d-materias');
+  if(!filtered.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin materias en este sector</div></div>`;return;}
+  const esFisica=materiaSectorTab==='aptitud_fisica';
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Código</th><th>Profesores</th><th>Acciones</th></tr></thead><tbody>${filtered.map(m=>{
     const profs=(m.materia_profesor||[]).map(mp=>`${mp.profesores?.perfiles?.nombre||''} ${mp.profesores?.perfiles?.apellido||''}`.trim()).filter(Boolean).join(', ')||'<span style="color:var(--muted)">Sin asignar</span>';
-    return`<tr>
-    <td><strong>${m.nombre}</strong></td>
-    <td>${m.codigo||'--'}</td>
-    <td style="font-size:11px">${profs}</td>
-    <td style="display:flex;gap:4px;flex-wrap:wrap">${esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">‍ Asignar</button><button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--'}</td>
-  </tr>`;}).join('')}</tbody></table>`;
+    const btns=esDueno?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="openMatProf('${m.id}')">Asignar Prof.</button>${esFisica?`<button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openPruebas('${m.id}','${m.nombre.replace(/'/g,"\\'")}')">Pruebas</button>`:''}<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="deleteMateria('${m.id}')">Eliminar</button>`:'--';
+    return`<tr><td><strong>${m.nombre}</strong></td><td>${m.codigo||'--'}</td><td style="font-size:11px">${profs}</td><td style="display:flex;gap:4px;flex-wrap:wrap">${btns}</td></tr>`;
+  }).join('')}</tbody></table>`;
 }
 function renderNotas(){
   const matTabsEl=document.getElementById('notas-mat-tabs');
@@ -2995,15 +3107,128 @@ async function eliminarUsuario(perfilId,extraId,tipo){
 async function saveMateria(){
   const nombre=document.getElementById('m-nombre').value.trim();
   const codigo=document.getElementById('m-codigo').value.trim();
+  const sector=document.getElementById('m-sector').value||'aptitud_academica';
   const msg=document.getElementById('msg-materia');
   if(!nombre)return showMsg(msg,'Ingresa el nombre de la materia','err');
-  const {error}=await sb.from('materias').insert({nombre,codigo:codigo||null,creditos:3});
+  const {error}=await sb.from('materias').insert({nombre,codigo:codigo||null,creditos:3,sector});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Materia creada ','ok');
   sb.from('perfiles').select('id').in('rol',['alumno','padre','admin']).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(p=>p.id),' Nueva materia',`Se incorporó la materia "${nombre}" a la academia.`);});
   await loadMaterias(); populateSelects();
   setTimeout(()=>closeMd('md-materia'),1200);
 }
+// ── PRUEBAS FÍSICAS ────────────────────────────────────────────
+function parseTiempo(str){
+  // acepta "3:29" → 209, "17.1" → 17.1, "17" → 17
+  str=String(str).trim();
+  if(str.includes(':')){const [m,s]=str.split(':');return parseFloat(m)*60+parseFloat(s);}
+  return parseFloat(str);
+}
+function formatTiempo(seg){
+  if(seg===null||seg===undefined)return'--';
+  if(seg>=60){const m=Math.floor(seg/60);const s=(seg%60).toFixed(1).replace(/\.0$/,'');return`${m}:${String(Math.floor(seg%60)).padStart(2,'0')}"${s.includes('.')?'.'+s.split('.')[1]:''}`.replace(/"\./,'"');}
+  return seg+'"';
+}
+async function openPruebas(materiaId,nombre){
+  document.getElementById('pf-materia-id').value=materiaId;
+  document.getElementById('pf-materia-nombre').textContent=nombre;
+  document.getElementById('pf-nombre').value='';
+  document.getElementById('msg-pruebas').className='msg';
+  await renderPruebasList(materiaId);
+  openMd('md-pruebas');
+}
+async function renderPruebasList(materiaId){
+  const {data}=await sb.from('pruebas_fisicas').select('*').eq('materia_id',materiaId).order('creado_en');
+  const el=document.getElementById('d-pruebas-lista');
+  if(!data?.length){el.innerHTML=`<div style="color:var(--muted);font-size:12px">Sin pruebas configuradas.</div>`;return;}
+  el.innerHTML=`<table><thead><tr><th>Prueba</th><th>Género</th><th>Tipo</th><th>Acciones</th></tr></thead><tbody>${data.map(p=>`
+    <tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td style="text-transform:capitalize">${p.genero}</td>
+      <td style="text-transform:capitalize">${p.tipo}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px;border-color:var(--gold);color:var(--gold)" onclick="openConversion('${p.id}','${p.nombre.replace(/'/g,"\\'")}','${p.tipo}')">Tabla</button>
+        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="deletePrueba('${p.id}')">Quitar</button>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+}
+async function savePrueba(){
+  const materiaId=document.getElementById('pf-materia-id').value;
+  const nombre=document.getElementById('pf-nombre').value.trim();
+  const genero=document.getElementById('pf-genero').value;
+  const tipo=document.getElementById('pf-tipo').value;
+  const msg=document.getElementById('msg-pruebas');
+  if(!nombre)return showMsg(msg,'Ingresa el nombre de la prueba','err');
+  const {error}=await sb.from('pruebas_fisicas').insert({materia_id:materiaId,nombre,genero,tipo});
+  if(error)return showMsg(msg,error.message,'err');
+  document.getElementById('pf-nombre').value='';
+  await renderPruebasList(materiaId);
+}
+async function deletePrueba(pruebaId){
+  if(!await myConfirm('¿Eliminar esta prueba y su tabla de conversión?'))return;
+  await sb.from('pruebas_fisicas').delete().eq('id',pruebaId);
+  await renderPruebasList(document.getElementById('pf-materia-id').value);
+}
+
+// ── TABLA DE CONVERSIÓN ────────────────────────────────────────
+async function openConversion(pruebaId,nombre,tipo){
+  document.getElementById('cv-prueba-id').value=pruebaId;
+  document.getElementById('cv-tipo').value=tipo;
+  document.getElementById('cv-prueba-nombre').textContent=nombre;
+  document.getElementById('msg-conversion').className='msg';
+  document.getElementById('cv-min').value='';
+  document.getElementById('cv-max').value='';
+  document.getElementById('cv-nota').value='';
+  const esTiempo=tipo==='tiempo';
+  document.getElementById('cv-lbl-min').textContent=esTiempo?'Desde (m:ss o ss")':'Desde (reps)';
+  document.getElementById('cv-lbl-max').textContent=esTiempo?'Hasta (m:ss o ss")':'Hasta (reps)';
+  document.getElementById('cv-min').placeholder=esTiempo?'3:29':'44';
+  document.getElementById('cv-max').placeholder=esTiempo?'3:31':'44';
+  document.getElementById('cv-formato-ayuda').textContent=esTiempo?'Formato tiempo: M:SS para minutos:segundos, o SS" para solo segundos (ej: 17.1)':'Para valor exacto, escribe el mismo número en Desde y Hasta.';
+  document.getElementById('cv-formato-hint').textContent='Para valor exacto, ingresa el mismo valor en Desde y Hasta.';
+  await renderConversionList(pruebaId,tipo);
+  openMd('md-conversion');
+}
+async function renderConversionList(pruebaId,tipo){
+  const {data}=await sb.from('prueba_conversion').select('*').eq('prueba_id',pruebaId).order('nota',{ascending:false});
+  const el=document.getElementById('d-conversion-lista');
+  if(!data?.length){el.innerHTML=`<div style="color:var(--muted);font-size:12px">Sin filas cargadas aún.</div>`;return;}
+  const esTiempo=tipo==='tiempo';
+  el.innerHTML=`<table><thead><tr><th>Desde</th><th>Hasta</th><th>Nota</th><th></th></tr></thead><tbody>${data.map(r=>{
+    const min=esTiempo?formatTiempo(r.valor_min):r.valor_min;
+    const max=esTiempo?formatTiempo(r.valor_max):r.valor_max;
+    const rango=r.valor_min===r.valor_max?min:`${min} – ${max}`;
+    return`<tr><td>${min}</td><td>${max}</td><td><strong>${r.nota}</strong></td><td><button class="btn btn-red" style="font-size:10px;padding:3px 7px" onclick="deleteConversionRow('${r.id}')">✕</button></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+async function saveConversionRow(){
+  const pruebaId=document.getElementById('cv-prueba-id').value;
+  const tipo=document.getElementById('cv-tipo').value;
+  const msg=document.getElementById('msg-conversion');
+  const minRaw=document.getElementById('cv-min').value.trim();
+  const maxRaw=document.getElementById('cv-max').value.trim();
+  const nota=parseFloat(document.getElementById('cv-nota').value);
+  if(!minRaw||!maxRaw||isNaN(nota))return showMsg(msg,'Completa todos los campos','err');
+  if(nota<0||nota>20)return showMsg(msg,'La nota debe ser entre 0 y 20','err');
+  const esTiempo=tipo==='tiempo';
+  const valor_min=esTiempo?parseTiempo(minRaw):parseFloat(minRaw);
+  const valor_max=esTiempo?parseTiempo(maxRaw):parseFloat(maxRaw);
+  if(isNaN(valor_min)||isNaN(valor_max))return showMsg(msg,'Formato de valor inválido','err');
+  if(valor_max<valor_min)return showMsg(msg,'"Hasta" no puede ser menor que "Desde"','err');
+  const {error}=await sb.from('prueba_conversion').insert({prueba_id:pruebaId,valor_min,valor_max,nota});
+  if(error)return showMsg(msg,error.message,'err');
+  document.getElementById('cv-min').value='';
+  document.getElementById('cv-max').value='';
+  document.getElementById('cv-nota').value='';
+  await renderConversionList(pruebaId,tipo);
+}
+async function deleteConversionRow(rowId){
+  const pruebaId=document.getElementById('cv-prueba-id').value;
+  const tipo=document.getElementById('cv-tipo').value;
+  await sb.from('prueba_conversion').delete().eq('id',rowId);
+  await renderConversionList(pruebaId,tipo);
+}
+// ──────────────────────────────────────────────────────────────
 let mmpSelected=new Map(); // profesor_id → nombre
 function renderMmpChips(){
   const el=document.getElementById('mmp-chips');
