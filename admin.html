@@ -616,10 +616,17 @@
 <div class="panel" id="panel-notas">
   <div class="ph">
     <div class="ph-left"><div class="eye">Calificaciones</div><div class="ttl">GESTIÓN DE NOTAS</div></div>
-    <button class="btn btn-gold" onclick="openMd('md-nota')">+ Cargar Nota</button>
+  </div>
+  <div class="aula-tabs" id="notas-sector-tabs">
+    <div class="aula-tab active" onclick="showNotasSector('aptitud_fisica')">Aptitud Física</div>
+    <div class="aula-tab" onclick="showNotasSector('aptitud_academica')">Apt. Académica y Conocimientos</div>
+    <div class="aula-tab" onclick="showNotasSector('entrevista_personal')">Entrevista Personal</div>
   </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Notas Registradas</span></div>
+    <div class="th" style="display:flex;justify-content:space-between;align-items:center">
+      <span class="th-ttl">Notas Registradas</span>
+      <button class="btn btn-gold" style="font-size:11px;padding:6px 14px" onclick="openCargarNota()">+ Cargar Nota</button>
+    </div>
     <div id="notas-mat-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
     <div id="notas-per-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-bottom:1px solid var(--border);background:var(--navy)"></div>
     <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
@@ -1179,6 +1186,8 @@
     <div class="md-hd"><div class="md-ttl">CARGAR NOTA</div><button class="md-x" onclick="closeMd('md-nota')"></button></div>
     <div class="md-bd">
       <div class="msg" id="msg-nota"></div>
+      <input type="hidden" id="n-modal-sector"/>
+      <div style="font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px" id="n-sector-label"></div>
       <div class="fgrid">
         <div class="fg full">
           <label>Alumno</label>
@@ -1187,14 +1196,34 @@
               oninput="nNotaSuggest(this)" onfocus="nNotaSuggest(this)"
               onblur="setTimeout(()=>{const s=document.getElementById('n-alumno-sug');if(s)s.style.display='none'},150)"/>
             <input type="hidden" id="n-alumno"/>
+            <input type="hidden" id="n-alumno-sexo"/>
             <div id="n-alumno-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--border);border-top:none;z-index:100;max-height:200px;overflow-y:auto"></div>
           </div>
           <div id="n-alumno-info" style="display:none;margin-top:6px;padding:8px 10px;background:var(--navy);border:1px solid var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--green);letter-spacing:.05em"></div>
         </div>
-        <div class="fg full"><label>Materia</label><select id="n-materia"><option value="">-- Selecciona --</option></select></div>
-        <div class="fg full"><label>Campo / Período</label><input type="text" id="n-periodo" placeholder="Ej: Práctica 1, Examen parcial..."/></div>
-        <div class="fg full"><label>Nota (0–20)</label><input type="number" id="n-n1" min="0" max="20" step=".5" placeholder="--"/></div>
+        <div class="fg full"><label>Materia</label><select id="n-materia" onchange="onNotaMateriaChange()"><option value="">-- Selecciona --</option></select></div>
+
+        <!-- Campos para sectores normales (académica / entrevista) -->
+        <div class="fg full" id="n-campo-periodo"><label>Campo / Período</label><input type="text" id="n-periodo" placeholder="Ej: Práctica 1, Examen parcial..."/></div>
+        <div class="fg full" id="n-campo-nota"><label>Nota (0–20)</label><input type="number" id="n-n1" min="0" max="20" step=".5" placeholder="--"/></div>
         <input type="hidden" id="n-n2"/><input type="hidden" id="n-n3"/>
+
+        <!-- Campos para aptitud física -->
+        <div class="fg full" id="n-campo-prueba" style="display:none">
+          <label>Prueba</label>
+          <select id="n-prueba" onchange="onNotaPruebaChange()"><option value="">-- Selecciona prueba --</option></select>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px" id="n-prueba-info"></div>
+        </div>
+        <div class="fg full" id="n-campo-marca" style="display:none">
+          <label id="n-marca-label">Marca</label>
+          <input type="text" id="n-marca" placeholder="--" oninput="onNotaMarcaChange()"/>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px" id="n-marca-hint"></div>
+        </div>
+        <div class="fg full" id="n-campo-nota-calc" style="display:none">
+          <label>Nota calculada</label>
+          <div id="n-nota-calc" style="padding:10px 12px;background:var(--navy);border:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--gold);letter-spacing:.05em">--</div>
+          <input type="hidden" id="n-nota-fisica"/>
+        </div>
       </div>
     </div>
     <div class="md-ft">
@@ -1682,9 +1711,9 @@ async function loadAulas(){
   allAulas = data||[];
   renderAulas();
 }
-let adminNotaMatTab=null,adminNotaPerTab=null;
+let adminNotaMatTab=null,adminNotaPerTab=null,notasSectorTab='aptitud_fisica';
 async function loadNotas(){
-  const {data}=await sb.from('notas').select('*,alumnos(perfiles(nombre,apellido,dni)),materias(nombre)').order('materia_id').order('periodo').order('creado_en',{ascending:false});
+  const {data}=await sb.from('notas').select('*,alumnos(perfiles(nombre,apellido,dni)),materias(nombre,sector)').order('materia_id').order('periodo').order('creado_en',{ascending:false});
   allNotas=data||[];
   renderNotas();
 }
@@ -2542,26 +2571,33 @@ function renderMaterias(){
     return`<tr><td><strong>${m.nombre}</strong></td><td>${m.codigo||'--'}</td><td style="font-size:11px">${profs}</td><td style="display:flex;gap:4px;flex-wrap:wrap">${btns}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
+function showNotasSector(sector){
+  notasSectorTab=sector;
+  document.querySelectorAll('#notas-sector-tabs .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
+  });
+  adminNotaMatTab=null;adminNotaPerTab=null;
+  renderNotas();
+}
 function renderNotas(){
   const matTabsEl=document.getElementById('notas-mat-tabs');
   const perTabsEl=document.getElementById('notas-per-tabs');
   const el=document.getElementById('d-notas');
-  if(!allNotas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>`;return;}
+  // Filtrar notas por sector activo
+  const sectorMatIds=new Set(allMaterias.filter(m=>(m.sector||'aptitud_academica')===notasSectorTab).map(m=>m.id));
+  const notasFiltradas=allNotas.filter(n=>sectorMatIds.has(n.materia_id));
+  if(!notasFiltradas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas en este sector</div></div>`;return;}
   // Agrupar por materia
   const byMat={};
-  allNotas.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',notas:[]};byMat[k].notas.push(n);});
+  notasFiltradas.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',notas:[]};byMat[k].notas.push(n);});
   const matIds=Object.keys(byMat);
   if(!adminNotaMatTab||!byMat[adminNotaMatTab])adminNotaMatTab=matIds[0];
-  // Tabs materia
   matTabsEl.innerHTML=matIds.map(id=>`<div class="aula-tab${id===adminNotaMatTab?' active':''}" onclick="adminNotaShowMat('${id}')" style="font-size:12px;padding:6px 14px">${byMat[id].nombre}</div>`).join('');
-  // Agrupar por periodo dentro de la materia activa
   const byPer={};
   (byMat[adminNotaMatTab]?.notas||[]).forEach(n=>{const k=n.periodo||'Sin título';if(!byPer[k])byPer[k]=[];byPer[k].push(n);});
   const periodos=Object.keys(byPer);
   if(!adminNotaPerTab||!byPer[adminNotaPerTab])adminNotaPerTab=periodos[0];
-  // Tabs periodo
   perTabsEl.innerHTML=periodos.map(p=>`<div class="aula-tab${p===adminNotaPerTab?' active':''}" onclick="adminNotaShowPer('${p.replace(/'/g,"\\'")}') " style="font-size:11px;padding:5px 12px">${p}</div>`).join('');
-  // Tabla
   const rows=byPer[adminNotaPerTab]||[];
   el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Fecha</th><th></th></tr></thead><tbody>${
     rows.map(n=>{const nota=n.nota_1??'--';const c=(n.nota_1||0)>=11?'bg':'br';return`<tr>
@@ -2588,18 +2624,24 @@ function nNotaSuggest(inp){
   ).slice(0,8);
   if(!matches.length){box.style.display='none';return;}
   box.innerHTML=matches.map(a=>`<div style="padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;border-bottom:1px solid var(--border)"
-    onmousedown="nNotaSelect('${a.id}','${(a.perfiles?.apellido||'')+' '+(a.perfiles?.nombre||'')}','${a.perfiles?.dni||''}')">
+    onmousedown="nNotaSelect('${a.id}','${(a.perfiles?.apellido||'')+' '+(a.perfiles?.nombre||'')}','${a.perfiles?.dni||''}','${a.sexo||''}')">
     <span style="color:var(--gold);margin-right:8px">${a.perfiles?.dni||'--'}</span>${a.perfiles?.apellido}, ${a.perfiles?.nombre}
   </div>`).join('');
   box.style.display='block';
 }
-function nNotaSelect(id,nombre,dni){
+function nNotaSelect(id,nombre,dni,sexo){
   document.getElementById('n-alumno').value=id;
   document.getElementById('n-alumno-inp').value=nombre;
+  document.getElementById('n-alumno-sexo').value=sexo||'';
   document.getElementById('n-alumno-sug').style.display='none';
   const info=document.getElementById('n-alumno-info');
+  const generoLabel=sexo==='M'?'Masculino':sexo==='F'?'Femenino':'';
   info.style.display='block';info.style.borderColor='var(--green)';info.style.color='var(--green)';
-  info.textContent=` ${nombre} · DNI: ${dni}`;
+  info.textContent=` ${nombre} · DNI: ${dni}${generoLabel?' · '+generoLabel:''}`;
+  // Si estamos en aptitud física y hay materia seleccionada, recargar pruebas
+  if(document.getElementById('n-modal-sector').value==='aptitud_fisica'){
+    onNotaMateriaChange();
+  }
 }
 async function adminEliminarNota(id){
   if(!await myConfirm('¿Eliminar esta nota?'))return;
@@ -3309,15 +3351,127 @@ async function saveHorario(){
   await loadHorario();
   setTimeout(()=>closeMd('md-horario'),1200);
 }
+// ── MODAL NOTA — lógica de sector ──────────────────────────────
+function openCargarNota(){
+  const sector=notasSectorTab;
+  document.getElementById('n-modal-sector').value=sector;
+  document.getElementById('n-sector-label').textContent='Sector: '+SECTOR_LABELS[sector];
+  document.getElementById('n-alumno').value='';
+  document.getElementById('n-alumno-sexo').value='';
+  document.getElementById('n-alumno-inp').value='';
+  document.getElementById('n-alumno-info').style.display='none';
+  document.getElementById('n-periodo').value='';
+  document.getElementById('n-n1').value='';
+  document.getElementById('n-marca').value='';
+  document.getElementById('n-nota-fisica').value='';
+  document.getElementById('n-nota-calc').textContent='--';
+  document.getElementById('msg-nota').className='msg';
+  // Poblar materias filtradas por sector
+  const matsSector=allMaterias.filter(m=>(m.sector||'aptitud_academica')===sector);
+  document.getElementById('n-materia').innerHTML='<option value="">-- Selecciona --</option>'+matsSector.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
+  // Mostrar/ocultar campos según sector
+  const esFisica=sector==='aptitud_fisica';
+  document.getElementById('n-campo-periodo').style.display=esFisica?'none':'';
+  document.getElementById('n-campo-nota').style.display=esFisica?'none':'';
+  document.getElementById('n-campo-prueba').style.display='none';
+  document.getElementById('n-campo-marca').style.display='none';
+  document.getElementById('n-campo-nota-calc').style.display='none';
+  document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>';
+  openMd('md-nota');
+}
+async function onNotaMateriaChange(){
+  const sector=document.getElementById('n-modal-sector').value;
+  if(sector!=='aptitud_fisica')return;
+  const materiaId=document.getElementById('n-materia').value;
+  const sexoRaw=document.getElementById('n-alumno-sexo').value; // 'M' o 'F'
+  const genero=sexoRaw==='M'?'masculino':sexoRaw==='F'?'femenino':null;
+  const pruebaEl=document.getElementById('n-campo-prueba');
+  const marcaEl=document.getElementById('n-campo-marca');
+  const calcEl=document.getElementById('n-campo-nota-calc');
+  if(!materiaId){pruebaEl.style.display='none';marcaEl.style.display='none';calcEl.style.display='none';return;}
+  let query=sb.from('pruebas_fisicas').select('*').eq('materia_id',materiaId).order('nombre');
+  if(genero) query=query.eq('genero',genero);
+  const {data:pruebas}=await query;
+  if(!pruebas?.length){
+    document.getElementById('n-prueba').innerHTML='<option value="">Sin pruebas configuradas</option>';
+    document.getElementById('n-prueba-info').textContent=genero?'':'Selecciona un alumno para filtrar por género';
+    pruebaEl.style.display='';marcaEl.style.display='none';calcEl.style.display='none';
+    return;
+  }
+  document.getElementById('n-prueba').innerHTML='<option value="">-- Selecciona prueba --</option>'+pruebas.map(p=>`<option value="${p.id}" data-tipo="${p.tipo}">${p.nombre}</option>`).join('');
+  document.getElementById('n-prueba-info').textContent=genero?`Pruebas de ${genero}`:'';
+  pruebaEl.style.display='';marcaEl.style.display='none';calcEl.style.display='none';
+}
+function onNotaPruebaChange(){
+  const sel=document.getElementById('n-prueba');
+  const opt=sel.selectedOptions[0];
+  if(!opt||!opt.value){document.getElementById('n-campo-marca').style.display='none';document.getElementById('n-campo-nota-calc').style.display='none';return;}
+  const tipo=opt.dataset.tipo;
+  const marcaLabel=document.getElementById('n-marca-label');
+  const marcaHint=document.getElementById('n-marca-hint');
+  const marcaInp=document.getElementById('n-marca');
+  if(tipo==='tiempo'){
+    marcaLabel.textContent='Marca (M:SS o SS")';
+    marcaInp.placeholder='Ej: 3:29 o 17.1';
+    marcaHint.textContent='Formato: M:SS para minutos y segundos, o solo segundos con decimal (17.1)';
+  } else {
+    marcaLabel.textContent='Marca (repeticiones)';
+    marcaInp.placeholder='Ej: 16';
+    marcaHint.textContent='Número de repeticiones';
+  }
+  marcaInp.value='';
+  document.getElementById('n-nota-fisica').value='';
+  document.getElementById('n-nota-calc').textContent='--';
+  document.getElementById('n-campo-marca').style.display='';
+  document.getElementById('n-campo-nota-calc').style.display='';
+}
+async function onNotaMarcaChange(){
+  const pruebaId=document.getElementById('n-prueba').value;
+  const opt=document.getElementById('n-prueba').selectedOptions[0];
+  if(!pruebaId||!opt)return;
+  const tipo=opt.dataset.tipo;
+  const marcaRaw=document.getElementById('n-marca').value.trim();
+  if(!marcaRaw){document.getElementById('n-nota-fisica').value='';document.getElementById('n-nota-calc').textContent='--';return;}
+  const valor=tipo==='tiempo'?parseTiempo(marcaRaw):parseFloat(marcaRaw);
+  if(isNaN(valor))return;
+  const {data}=await sb.from('prueba_conversion')
+    .select('nota').eq('prueba_id',pruebaId)
+    .lte('valor_min',valor).gte('valor_max',valor)
+    .order('nota',{ascending:false}).limit(1);
+  const nota=data?.[0]?.nota;
+  const calcEl=document.getElementById('n-nota-calc');
+  const hidEl=document.getElementById('n-nota-fisica');
+  if(nota!==undefined&&nota!==null){
+    calcEl.textContent=nota;calcEl.style.color='var(--gold)';
+    hidEl.value=nota;
+  } else {
+    calcEl.textContent='Sin equivalencia';calcEl.style.color='var(--muted)';
+    hidEl.value='';
+  }
+}
 async function saveNota(){
   const alumnoId=document.getElementById('n-alumno').value;
   const materiaId=document.getElementById('n-materia').value;
-  const periodo=document.getElementById('n-periodo').value.trim();
-  const n1=parseFloat(document.getElementById('n-n1').value)||null;
+  const msg=document.getElementById('msg-nota');
+  const sector=document.getElementById('n-modal-sector').value;
+  const esFisica=sector==='aptitud_fisica';
+  if(!alumnoId||!materiaId)return showMsg(msg,'Selecciona alumno y materia','err');
+  let n1,periodo;
+  if(esFisica){
+    const pruebaId=document.getElementById('n-prueba').value;
+    const pruebaOpt=document.getElementById('n-prueba').selectedOptions[0];
+    if(!pruebaId)return showMsg(msg,'Selecciona una prueba','err');
+    const notaFisica=document.getElementById('n-nota-fisica').value;
+    if(!notaFisica)return showMsg(msg,'Ingresa la marca para calcular la nota','err');
+    n1=parseFloat(notaFisica);
+    periodo=pruebaOpt.textContent; // nombre de la prueba como periodo
+  } else {
+    periodo=document.getElementById('n-periodo').value.trim();
+    n1=parseFloat(document.getElementById('n-n1').value)||null;
+    if(!periodo)return showMsg(msg,'Ingresa el campo / período','err');
+  }
   const n2=parseFloat(document.getElementById('n-n2').value)||null;
   const n3=parseFloat(document.getElementById('n-n3').value)||null;
-  const msg=document.getElementById('msg-nota');
-  if(!alumnoId||!materiaId||!periodo)return showMsg(msg,'Selecciona alumno, materia y periodo','err');
   const ns=[n1,n2,n3].filter(n=>n!==null);
   const prom=ns.length?parseFloat((ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(2)):null;
   const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
