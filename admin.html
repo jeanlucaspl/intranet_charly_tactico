@@ -3512,13 +3512,13 @@ function onNotaPruebaChange(){
   const marcaHint=document.getElementById('n-marca-hint');
   const marcaInp=document.getElementById('n-marca');
   if(tipo==='tiempo'){
-    marcaLabel.textContent='Marca (M:SS o SS")';
-    marcaInp.placeholder='Ej: 3:29 o 17.1';
-    marcaHint.textContent='Formato: M:SS para minutos y segundos, o solo segundos con decimal (17.1)';
+    marcaLabel.textContent='Marca';
+    marcaInp.placeholder='Ej: 3:29 ó 17.10';
+    marcaHint.textContent='1000m: usar M:SS (ej: 3:29) · 100m y Natación: segundos con decimales (ej: 17.10, 24.50)';
   } else {
     marcaLabel.textContent='Marca (repeticiones)';
     marcaInp.placeholder='Ej: 16';
-    marcaHint.textContent='Número de repeticiones';
+    marcaHint.textContent='Número de repeticiones por minuto';
   }
   marcaInp.value='';
   document.getElementById('n-nota-fisica').value='';
@@ -3535,15 +3535,35 @@ async function onNotaMarcaChange(){
   if(!marcaRaw){document.getElementById('n-nota-fisica').value='';document.getElementById('n-nota-calc').textContent='--';return;}
   const valor=tipo==='tiempo'?parseTiempo(marcaRaw):parseFloat(marcaRaw);
   if(isNaN(valor))return;
-  const {data}=await sb.from('prueba_conversion')
+  // Buscar match en la tabla de conversión
+  const {data:match}=await sb.from('prueba_conversion')
     .select('nota').eq('prueba_id',pruebaId)
     .lte('valor_min',valor).gte('valor_max',valor)
     .order('nota',{ascending:false}).limit(1);
-  const nota=data?.[0]?.nota;
+  let nota=match?.[0]?.nota;
+  // Si no hay match, aplicar lógica de bordes
+  if(nota===undefined||nota===null){
+    const {data:rangos}=await sb.from('prueba_conversion')
+      .select('valor_min,valor_max').eq('prueba_id',pruebaId);
+    if(rangos?.length){
+      const minVal=Math.min(...rangos.map(r=>r.valor_min));
+      const maxVal=Math.max(...rangos.map(r=>r.valor_max));
+      if(tipo==='tiempo'){
+        // Menor tiempo = mejor → por debajo del mínimo es 20, por encima del máximo es 0
+        if(valor<minVal) nota=20;
+        else if(valor>maxVal) nota=0;
+      } else {
+        // Mayor repeticiones = mejor → por encima del máximo es 20, por debajo del mínimo es 0
+        if(valor>maxVal) nota=20;
+        else if(valor<minVal) nota=0;
+      }
+    }
+  }
   const calcEl=document.getElementById('n-nota-calc');
   const hidEl=document.getElementById('n-nota-fisica');
   if(nota!==undefined&&nota!==null){
-    calcEl.textContent=nota;calcEl.style.color='var(--gold)';
+    calcEl.textContent=nota;
+    calcEl.style.color=nota>=11?'var(--gold)':'var(--red)';
     hidEl.value=nota;
   } else {
     calcEl.textContent='Sin equivalencia';calcEl.style.color='var(--muted)';
