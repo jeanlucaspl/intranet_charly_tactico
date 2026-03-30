@@ -1016,27 +1016,6 @@
 </div>
 
 <!-- MODAL PAGO -->
-<!-- ══ MODAL DETALLE ALUMNO ══ -->
-<div class="mo" id="md-alumno-detalle">
-  <div class="md" style="max-width:680px">
-    <div class="md-hd">
-      <div>
-        <div class="md-ttl" id="det-nombre">ALUMNO</div>
-        <div id="det-dni" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase"></div>
-      </div>
-      <button class="md-x" onclick="closeMd('md-alumno-detalle')"></button>
-    </div>
-    <div class="aula-tabs" style="border-bottom:1px solid var(--border)">
-      <div class="aula-tab active" onclick="showDetTab('asistencia')">Asistencia</div>
-      <div class="aula-tab" onclick="showDetTab('notas')">Notas</div>
-      <div class="aula-tab" onclick="showDetTab('ingresos')">Ingresos</div>
-    </div>
-    <div class="md-bd" id="det-content" style="padding:0;min-height:260px">
-      <div class="empty"><div class="et">Cargando...</div></div>
-    </div>
-  </div>
-</div>
-
 <div class="mo" id="md-pago">
   <div class="md" style="max-width:520px">
     <div class="md-hd"><div class="md-ttl">REGISTRAR PAGO</div><button class="md-x" onclick="closeMd('md-pago')"></button></div>
@@ -2003,13 +1982,93 @@ async function cerrarSesion(){
   showFacialTab('registros');
   loadDashboard();
 }
-let repTabActual='cadetes';
+function _renderCadetesContent(){
+  const el=document.getElementById('rep-cad-content');
+  if(!el)return;
+  if(repCadetesSubTab==='general'){
+    const map=window._repCadetesMap||{};
+    const alsMap=window._repAlsMap||{};
+    const rows=Object.entries(map).map(([id,m])=>{
+      const a=alsMap[id];if(!a)return'';
+      const tot=m.p+m.t+m.au||1;
+      const p=Math.round(m.p/tot*100);
+      const c=p>=80?'bg':p>=60?'by':'br';
+      return`<tr><td>${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</td><td style="font-size:11px;color:var(--muted)">${a.perfiles?.dni||'--'}</td><td style="color:var(--green)">${m.p}</td><td style="color:var(--yellow)">${m.t}</td><td style="color:var(--red)">${m.au}</td><td><span class="badge ${c}">${p}%</span></td></tr>`;
+    }).join('');
+    el.innerHTML=rows
+      ?`<table><thead><tr><th>Cadete</th><th>DNI</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>% Asist.</th></tr></thead><tbody>${rows}</tbody></table>`
+      :`<div class="empty"><div class="et">Sin datos de asistencia</div></div>`;
+    return;
+  }
+  // Por Alumno — buscador
+  const todos=window._repTodosAlumnos||[];
+  const map=window._repCadetesMap||{};
+  let html=`<div style="padding:12px 14px">
+    <div class="dni-wrap" style="margin-bottom:12px">
+      <input id="rep-al-inp" type="text" placeholder="Buscar cadete por apellido o DNI..." autocomplete="off"
+        style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"
+        oninput="repAlSuggest(this.value)" onblur="setTimeout(()=>{const s=document.getElementById('rep-al-sug');if(s)s.style.display='none'},200)"/>
+      <div id="rep-al-sug" class="dni-sug"></div>
+    </div>`;
+  if(_repAlumnoId){
+    const m=map[_repAlumnoId];
+    if(m){
+      const tot=m.p+m.t+m.au||1;
+      const p=Math.round(m.p/tot*100);
+      const c=p>=80?'bg':p>=60?'by':'br';
+      html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="sc" style="flex:1;min-width:100px"><div class="sc-lbl">Presentes</div><div class="sc-val" style="color:var(--green)">${m.p}</div></div>
+        <div class="sc" style="flex:1;min-width:100px"><div class="sc-lbl">Tardanzas</div><div class="sc-val" style="color:var(--yellow)">${m.t}</div></div>
+        <div class="sc" style="flex:1;min-width:100px"><div class="sc-lbl">Ausentes</div><div class="sc-val" style="color:var(--red)">${m.au}</div></div>
+        <div class="sc" style="flex:1;min-width:100px"><div class="sc-lbl">% Asistencia</div><div class="sc-val"><span class="badge ${c}" style="font-size:22px">${p}%</span></div></div>
+      </div>`;
+    } else {
+      html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted)">Sin registros de asistencia para este cadete.</div>`;
+    }
+  } else {
+    html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted)">Selecciona un cadete para ver su resumen.</div>`;
+  }
+  el.innerHTML=html+'</div>';
+}
+function repAlSuggest(q){
+  const box=document.getElementById('rep-al-sug');
+  if(!box)return;
+  if(!q.trim()){box.style.display='none';return;}
+  const s=q.toLowerCase();
+  const matches=(window._repTodosAlumnos||[]).filter(a=>
+    `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase().includes(s)||
+    (a.perfiles?.dni||'').includes(s)
+  ).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(a=>`<div class="dni-sug-item" onmousedown="selectRepAlumno('${a.id}','${(a.perfiles?.apellido||'')+' '+(a.perfiles?.nombre||'')}','${a.perfiles?.dni||''}')">
+    <span class="dni-sug-dni">${a.perfiles?.dni||'--'}</span>
+    <span class="dni-sug-nom">${a.perfiles?.apellido||''}, ${a.perfiles?.nombre||''}</span>
+  </div>`).join('');
+  box.style.display='block';
+}
+let repTabActual='cadetes', repCadetesSubTab='general', _repAlumnoId=null;
 function showRepTab(tab){
   repTabActual=tab;
+  repCadetesSubTab='general';
+  _repAlumnoId=null;
   document.querySelectorAll('#rep-tabs .aula-tab').forEach((t,i)=>{
     t.classList.toggle('active',['cadetes','profesores','padres'][i]===tab);
   });
   loadReportes();
+}
+function showCadetesSubTab(sub){
+  repCadetesSubTab=sub;
+  if(sub==='general')_repAlumnoId=null;
+  document.querySelectorAll('#rep-cad-subtabs .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['general','por_alumno'][i]===sub);
+  });
+  _renderCadetesContent();
+}
+function selectRepAlumno(id,nombre,dni){
+  _repAlumnoId=id;
+  document.getElementById('rep-al-inp').value=`${nombre} — ${dni}`;
+  document.getElementById('rep-al-sug').style.display='none';
+  _renderCadetesContent();
 }
 async function loadReportes(){
   const el=document.getElementById('d-reporte');
@@ -2017,27 +2076,35 @@ async function loadReportes(){
   el.innerHTML=`<div class="empty"><div class="et">Cargando...</div></div>`;
 
   if(repTabActual==='cadetes'){
-    tit.textContent='Asistencia por Cadete';
+    tit.textContent='Cadetes';
+    // Cargar todos los datos de asistencia de una vez
     const {data}=await sb.from('asistencias').select('alumno_id,estado');
-    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return;}
     const map={};
-    data.forEach(a=>{
+    (data||[]).forEach(a=>{
       if(!map[a.alumno_id])map[a.alumno_id]={p:0,t:0,au:0};
       if(a.estado==='presente')map[a.alumno_id].p++;
       else if(a.estado==='tardanza')map[a.alumno_id].t++;
       else map[a.alumno_id].au++;
     });
+    // Guardar para uso en sub-tabs
+    window._repCadetesMap=map;
     const ids=Object.keys(map);
-    const {data:als}=await sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').in('id',ids);
-    el.innerHTML=`<table><thead><tr><th>Cadete</th><th>DNI</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>% Asist.</th></tr></thead><tbody>${
-      (als||[]).map(a=>{
-        const m=map[a.id];if(!m)return'';
-        const tot=m.p+m.t+m.au||1;
-        const p=Math.round(m.p/tot*100);
-        const c=p>=80?'bg':p>=60?'by':'br';
-        return`<tr><td>${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</td><td style="font-size:11px;color:var(--muted)">${a.perfiles?.dni||'--'}</td><td style="color:var(--green)">${m.p}</td><td style="color:var(--yellow)">${m.t}</td><td style="color:var(--red)">${m.au}</td><td><span class="badge ${c}">${p}%</span></td></tr>`;
-      }).join('')
-    }</tbody></table>`;
+    const {data:als}=ids.length
+      ? await sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').in('id',ids)
+      : {data:[]};
+    // Todos los alumnos para el selector
+    const {data:todosAls}=await sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').eq('activo',true).order('perfiles(apellido)');
+    window._repTodosAlumnos=todosAls||[];
+    window._repAlsMap={};
+    (als||[]).forEach(a=>{window._repAlsMap[a.id]=a;});
+
+    el.innerHTML=`
+      <div class="aula-tabs" id="rep-cad-subtabs" style="border-bottom:1px solid var(--border)">
+        <div class="aula-tab active" onclick="showCadetesSubTab('general')">General</div>
+        <div class="aula-tab" onclick="showCadetesSubTab('por_alumno')">Por Alumno</div>
+      </div>
+      <div id="rep-cad-content"></div>`;
+    _renderCadetesContent();
     return;
   }
 
@@ -2663,7 +2730,6 @@ function renderAlumnos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-gold" style="font-size:10px;padding:5px 8px" onclick="openAlumnoDetalle('${a.id}','${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}','${a.perfiles?.dni||''}')">Ver</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAlumno('${a.id}')">Inhabilitar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
@@ -2682,7 +2748,6 @@ function renderAlumnosInactivos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
-      <button class="btn btn-gold" style="font-size:10px;padding:5px 8px" onclick="openAlumnoDetalle('${a.id}','${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}','${a.perfiles?.dni||''}')">Ver</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
@@ -3180,107 +3245,6 @@ function renderIngresos(data){
   }).join('');
 
   el.innerHTML=rows;
-}
-
-// ── DETALLE ALUMNO (modal con 3 pestañas) ──
-let _detAlumnoId=null, _detTab='asistencia';
-function openAlumnoDetalle(alumnoId,nombre,dni){
-  _detAlumnoId=alumnoId;
-  _detTab='asistencia';
-  document.getElementById('det-nombre').textContent=nombre.toUpperCase();
-  document.getElementById('det-dni').textContent=dni?`DNI: ${dni}`:'';
-  document.querySelectorAll('#md-alumno-detalle .aula-tab').forEach((t,i)=>{
-    t.classList.toggle('active',i===0);
-  });
-  openMd('md-alumno-detalle');
-  loadDetTab();
-}
-function showDetTab(tab){
-  _detTab=tab;
-  document.querySelectorAll('#md-alumno-detalle .aula-tab').forEach((t,i)=>{
-    t.classList.toggle('active',['asistencia','notas','ingresos'][i]===tab);
-  });
-  loadDetTab();
-}
-async function loadDetTab(){
-  const el=document.getElementById('det-content');
-  el.innerHTML=`<div class="empty"><div class="et">Cargando...</div></div>`;
-  if(!_detAlumnoId)return;
-
-  if(_detTab==='asistencia'){
-    const {data}=await sb.from('asistencias')
-      .select('fecha,hora_ingreso,estado,verificado_facial,materias(nombre)')
-      .eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false});
-    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin registros de asistencia</div></div>`;return;}
-    el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th></tr></thead><tbody>${
-      data.map(a=>{
-        const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
-        const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
-        return`<tr><td>${fecha}</td><td>${a.materias?.nombre||'--'}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td></tr>`;
-      }).join('')
-    }</tbody></table></div>`;
-    return;
-  }
-
-  if(_detTab==='notas'){
-    const [{data:notas},{data:rf}]=await Promise.all([
-      sb.from('notas').select('nota_1,periodo,creado_en,materias(nombre,sector)').eq('alumno_id',_detAlumnoId).order('creado_en',{ascending:false}),
-      sb.from('resultados_fisicos').select('nota,valor,fecha,pruebas_fisicas(nombre,tipo)').eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false})
-    ]);
-    const sectorLabel={aptitud_fisica:'Aptitud Física',aptitud_academica:'Apt. Académica y Conocimientos',entrevista_personal:'Entrevista Personal'};
-    let html='<div style="padding:12px 14px">';
-    // Física
-    const rfFisica=(rf||[]);
-    if(rfFisica.length){
-      html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:8px 0 6px">Aptitud Física</div>`;
-      html+=`<table class="nota-inner-table"><thead><tr><th>Prueba</th><th>Fecha</th><th>Marca</th><th>Nota</th></tr></thead><tbody>${
-        rfFisica.map(r=>{
-          const marca=r.valor!=null?(r.pruebas_fisicas?.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
-          const c=(r.nota||0)>=11?'bg':'br';
-          return`<tr><td>${r.pruebas_fisicas?.nombre||'--'}</td><td>${r.fecha||'--'}</td><td>${marca}</td><td><span class="badge ${c}">${r.nota??'--'}</span></td></tr>`;
-        }).join('')
-      }</tbody></table>`;
-    }
-    // Académica y Entrevista
-    const byMat={};
-    (notas||[]).forEach(n=>{
-      const k=n.materias?.nombre||'--';
-      if(!byMat[k])byMat[k]=[];
-      byMat[k].push(n);
-    });
-    Object.entries(byMat).forEach(([mat,ns])=>{
-      const sector=ns[0]?.materias?.sector;
-      html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:10px 0 6px">${mat}</div>`;
-      html+=`<table class="nota-inner-table"><thead><tr><th>Período</th><th>Fecha</th><th>Nota</th></tr></thead><tbody>${
-        ns.map(n=>{
-          const c=(n.nota_1||0)>=11?'bg':'br';
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--';
-          return`<tr><td>${n.periodo||'--'}</td><td>${fecha}</td><td><span class="badge ${c}">${n.nota_1??'--'}</span></td></tr>`;
-        }).join('')
-      }</tbody></table>`;
-    });
-    if(!rfFisica.length&&!Object.keys(byMat).length)html+=`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
-    el.innerHTML=html+'</div>';
-    return;
-  }
-
-  if(_detTab==='ingresos'){
-    const {data}=await sb.from('pagos').select('fecha,concepto,monto,metodo_pago,notas').eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false});
-    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin pagos registrados</div></div>`;return;}
-    const total=data.reduce((s,p)=>s+parseFloat(p.monto||0),0);
-    el.innerHTML=`<div style="padding:10px 14px 4px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase">${data.length} pago(s)</span>
-      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold)">Total: S/ ${total.toFixed(2)}</span>
-    </div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th>Monto</th></tr></thead><tbody>${
-      data.map(p=>`<tr>
-        <td>${p.fecha||'--'}</td>
-        <td>${p.concepto||'--'}${p.notas?`<div style="font-size:10px;color:var(--muted)">${p.notas}</div>`:''}</td>
-        <td style="font-size:11px;color:var(--muted)">${p.metodo_pago||'--'}</td>
-        <td style="color:var(--gold);font-weight:700">S/ ${parseFloat(p.monto||0).toFixed(2)}</td>
-      </tr>`).join('')
-    }</tbody></table></div>`;
-  }
 }
 
 function togglePagosAlumno(aid){
