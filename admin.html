@@ -1016,6 +1016,27 @@
 </div>
 
 <!-- MODAL PAGO -->
+<!-- ══ MODAL DETALLE ALUMNO ══ -->
+<div class="mo" id="md-alumno-detalle">
+  <div class="md" style="max-width:680px">
+    <div class="md-hd">
+      <div>
+        <div class="md-ttl" id="det-nombre">ALUMNO</div>
+        <div id="det-dni" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase"></div>
+      </div>
+      <button class="md-x" onclick="closeMd('md-alumno-detalle')"></button>
+    </div>
+    <div class="aula-tabs" style="border-bottom:1px solid var(--border)">
+      <div class="aula-tab active" onclick="showDetTab('asistencia')">Asistencia</div>
+      <div class="aula-tab" onclick="showDetTab('notas')">Notas</div>
+      <div class="aula-tab" onclick="showDetTab('ingresos')">Ingresos</div>
+    </div>
+    <div class="md-bd" id="det-content" style="padding:0;min-height:260px">
+      <div class="empty"><div class="et">Cargando...</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="md-pago">
   <div class="md" style="max-width:520px">
     <div class="md-hd"><div class="md-ttl">REGISTRAR PAGO</div><button class="md-x" onclick="closeMd('md-pago')"></button></div>
@@ -2642,6 +2663,7 @@ function renderAlumnos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-gold" style="font-size:10px;padding:5px 8px" onclick="openAlumnoDetalle('${a.id}','${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}','${a.perfiles?.dni||''}')">Ver</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="inhabilitarAlumno('${a.id}')">Inhabilitar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px;background:rgba(180,20,20,.8)" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
@@ -2660,6 +2682,7 @@ function renderAlumnosInactivos(data){
     <td>${a.peso?a.peso+' kg':'--'}</td>
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-gold" style="font-size:10px;padding:5px 8px" onclick="openAlumnoDetalle('${a.id}','${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}','${a.perfiles?.dni||''}')">Ver</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
@@ -3157,6 +3180,107 @@ function renderIngresos(data){
   }).join('');
 
   el.innerHTML=rows;
+}
+
+// ── DETALLE ALUMNO (modal con 3 pestañas) ──
+let _detAlumnoId=null, _detTab='asistencia';
+function openAlumnoDetalle(alumnoId,nombre,dni){
+  _detAlumnoId=alumnoId;
+  _detTab='asistencia';
+  document.getElementById('det-nombre').textContent=nombre.toUpperCase();
+  document.getElementById('det-dni').textContent=dni?`DNI: ${dni}`:'';
+  document.querySelectorAll('#md-alumno-detalle .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',i===0);
+  });
+  openMd('md-alumno-detalle');
+  loadDetTab();
+}
+function showDetTab(tab){
+  _detTab=tab;
+  document.querySelectorAll('#md-alumno-detalle .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['asistencia','notas','ingresos'][i]===tab);
+  });
+  loadDetTab();
+}
+async function loadDetTab(){
+  const el=document.getElementById('det-content');
+  el.innerHTML=`<div class="empty"><div class="et">Cargando...</div></div>`;
+  if(!_detAlumnoId)return;
+
+  if(_detTab==='asistencia'){
+    const {data}=await sb.from('asistencias')
+      .select('fecha,hora_ingreso,estado,verificado_facial,materias(nombre)')
+      .eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false});
+    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin registros de asistencia</div></div>`;return;}
+    el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th></tr></thead><tbody>${
+      data.map(a=>{
+        const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
+        const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+        return`<tr><td>${fecha}</td><td>${a.materias?.nombre||'--'}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td></tr>`;
+      }).join('')
+    }</tbody></table></div>`;
+    return;
+  }
+
+  if(_detTab==='notas'){
+    const [{data:notas},{data:rf}]=await Promise.all([
+      sb.from('notas').select('nota_1,periodo,creado_en,materias(nombre,sector)').eq('alumno_id',_detAlumnoId).order('creado_en',{ascending:false}),
+      sb.from('resultados_fisicos').select('nota,valor,fecha,pruebas_fisicas(nombre,tipo)').eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false})
+    ]);
+    const sectorLabel={aptitud_fisica:'Aptitud Física',aptitud_academica:'Apt. Académica y Conocimientos',entrevista_personal:'Entrevista Personal'};
+    let html='<div style="padding:12px 14px">';
+    // Física
+    const rfFisica=(rf||[]);
+    if(rfFisica.length){
+      html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:8px 0 6px">Aptitud Física</div>`;
+      html+=`<table class="nota-inner-table"><thead><tr><th>Prueba</th><th>Fecha</th><th>Marca</th><th>Nota</th></tr></thead><tbody>${
+        rfFisica.map(r=>{
+          const marca=r.valor!=null?(r.pruebas_fisicas?.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
+          const c=(r.nota||0)>=11?'bg':'br';
+          return`<tr><td>${r.pruebas_fisicas?.nombre||'--'}</td><td>${r.fecha||'--'}</td><td>${marca}</td><td><span class="badge ${c}">${r.nota??'--'}</span></td></tr>`;
+        }).join('')
+      }</tbody></table>`;
+    }
+    // Académica y Entrevista
+    const byMat={};
+    (notas||[]).forEach(n=>{
+      const k=n.materias?.nombre||'--';
+      if(!byMat[k])byMat[k]=[];
+      byMat[k].push(n);
+    });
+    Object.entries(byMat).forEach(([mat,ns])=>{
+      const sector=ns[0]?.materias?.sector;
+      html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);padding:10px 0 6px">${mat}</div>`;
+      html+=`<table class="nota-inner-table"><thead><tr><th>Período</th><th>Fecha</th><th>Nota</th></tr></thead><tbody>${
+        ns.map(n=>{
+          const c=(n.nota_1||0)>=11?'bg':'br';
+          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--';
+          return`<tr><td>${n.periodo||'--'}</td><td>${fecha}</td><td><span class="badge ${c}">${n.nota_1??'--'}</span></td></tr>`;
+        }).join('')
+      }</tbody></table>`;
+    });
+    if(!rfFisica.length&&!Object.keys(byMat).length)html+=`<div class="empty"><div class="et">Sin notas registradas</div></div>`;
+    el.innerHTML=html+'</div>';
+    return;
+  }
+
+  if(_detTab==='ingresos'){
+    const {data}=await sb.from('pagos').select('fecha,concepto,monto,metodo_pago,notas').eq('alumno_id',_detAlumnoId).order('fecha',{ascending:false});
+    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin pagos registrados</div></div>`;return;}
+    const total=data.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+    el.innerHTML=`<div style="padding:10px 14px 4px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase">${data.length} pago(s)</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold)">Total: S/ ${total.toFixed(2)}</span>
+    </div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th>Monto</th></tr></thead><tbody>${
+      data.map(p=>`<tr>
+        <td>${p.fecha||'--'}</td>
+        <td>${p.concepto||'--'}${p.notas?`<div style="font-size:10px;color:var(--muted)">${p.notas}</div>`:''}</td>
+        <td style="font-size:11px;color:var(--muted)">${p.metodo_pago||'--'}</td>
+        <td style="color:var(--gold);font-weight:700">S/ ${parseFloat(p.monto||0).toFixed(2)}</td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+  }
 }
 
 function togglePagosAlumno(aid){
