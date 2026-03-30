@@ -2027,27 +2027,54 @@ function _renderGenStat(){
   }
 
   if(tab==='notas'){
-    const notas=window._gNotas||[],rf=window._gRf||[];
-    const sec={aptitud_fisica:[],aptitud_academica:[],entrevista_personal:[]};
-    notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)sec[s].push(n.nota_1);});
-    rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)sec.aptitud_fisica.push(r.nota);});
+    const notas=window._gNotas||[],rf=window._gRf||[],sxMap=window._gSexoMap||{};
+    // Acumuladores: total, masculino, femenino
+    const mk=()=>({tot:[],m:[],f:[]});
+    const sec={aptitud_fisica:mk(),aptitud_academica:mk(),entrevista_personal:mk()};
+    const push=(arr,nota,aid)=>{arr.tot.push(nota);const sx=(sxMap[aid]||'').toLowerCase();if(sx==='masculino'||sx==='m')arr.m.push(nota);else if(sx==='femenino'||sx==='f')arr.f.push(nota);};
+    notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)push(sec[s],n.nota_1,n.alumno_id);});
+    rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)push(sec.aptitud_fisica,r.nota,r.alumno_id);});
     const avg=a=>a.length?+(a.reduce((x,b)=>x+b,0)/a.length).toFixed(1):null;
-    const aF=avg(sec.aptitud_fisica),aA=avg(sec.aptitud_academica),aE=avg(sec.entrevista_personal);
-    const todas=[...sec.aptitud_fisica,...sec.aptitud_academica,...sec.entrevista_personal];
-    const dist=[0,0,0,0];todas.forEach(n=>{if(n<=10)dist[0]++;else if(n<=14)dist[1]++;else if(n<=17)dist[2]++;else dist[3]++;});
     const col=v=>v==null?tc:v>=11?GREEN:RED;
+    const todas=[...sec.aptitud_fisica.tot,...sec.aptitud_academica.tot,...sec.entrevista_personal.tot];
+    const dist=[0,0,0,0];todas.forEach(n=>{if(n<=10)dist[0]++;else if(n<=14)dist[1]++;else if(n<=17)dist[2]++;else dist[3]++;});
+
+    const cardSector=(label,s)=>{
+      const aT=avg(s.tot),aM=avg(s.m),aF2=avg(s.f);
+      return`<div class="sc" style="flex:1;min-width:140px">
+        <div class="sc-lbl">${label}</div>
+        <div class="sc-val" style="color:${col(aT)}">${aT??'--'}</div>
+        <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:#7ab0e8">♂ ${aM??'--'}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:#e87ab0">♀ ${aF2??'--'}</span>
+        </div>
+        <div class="sc-sub">${s.tot.length} reg.</div>
+      </div>`;
+    };
+
     el.innerHTML=`<div style="padding:14px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Física</div><div class="sc-val" style="color:${col(aF)}">${aF??'--'}</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Académico</div><div class="sc-val" style="color:${col(aA)}">${aA??'--'}</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Entrevista</div><div class="sc-val" style="color:${col(aE)}">${aE??'--'}</div></div>
+        ${cardSector('Prom. Apt. Física',sec.aptitud_fisica)}
+        ${cardSector('Prom. Académico',sec.aptitud_academica)}
+        ${cardSector('Prom. Entrevista',sec.entrevista_personal)}
         <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total registros</div><div class="sc-val">${todas.length}</div></div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px"><canvas id="ch-n-prom" height="160"></canvas></div>
         <div style="flex:1;min-width:200px"><canvas id="ch-n-dist" height="160"></canvas></div>
       </div></div>`;
-    new Chart(document.getElementById('ch-n-prom'),{type:'bar',data:{labels:['Apt. Física','Apt. Académica','Entrevista'],datasets:[{label:'Promedio',data:[aF,aA,aE],backgroundColor:[GOLD,BLUE,GREEN],borderRadius:3}]},options:{...base,indexAxis:'y',scales:{x:{min:0,max:20,ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Promedio por sector',color:tc,font:{size:11}}}}});
+
+    const aF=avg(sec.aptitud_fisica.tot),aA=avg(sec.aptitud_academica.tot),aE=avg(sec.entrevista_personal.tot);
+    const aFm=avg(sec.aptitud_fisica.m),aAm=avg(sec.aptitud_academica.m),aEm=avg(sec.entrevista_personal.m);
+    const aFf=avg(sec.aptitud_fisica.f),aAf=avg(sec.aptitud_academica.f),aEf=avg(sec.entrevista_personal.f);
+    new Chart(document.getElementById('ch-n-prom'),{type:'bar',data:{
+      labels:['Apt. Física','Apt. Académica','Entrevista'],
+      datasets:[
+        {label:'Total',data:[aF,aA,aE],backgroundColor:GOLD,borderRadius:3},
+        {label:'Masculino',data:[aFm,aAm,aEm],backgroundColor:'#7ab0e8',borderRadius:3},
+        {label:'Femenino',data:[aFf,aAf,aEf],backgroundColor:'#e87ab0',borderRadius:3}
+      ]
+    },options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{min:0,max:20,ticks:{color:tc},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Promedio por sector y sexo',color:tc,font:{size:11}}}}});
     new Chart(document.getElementById('ch-n-dist'),{type:'bar',data:{labels:['0–10','11–14','15–17','18–20'],datasets:[{label:'Notas',data:dist,backgroundColor:[RED,YELLOW,BLUE,GREEN],borderRadius:3}]},options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,stepSize:1},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Distribución de notas',color:tc,font:{size:11}}}}});
     return;
   }
@@ -2079,14 +2106,17 @@ async function _renderCadetesContent(){
   if(!el)return;
   if(repCadetesSubTab==='general'){
     el.innerHTML=`<div class="empty"><div class="et">Cargando estadísticas...</div></div>`;
-    const [{data:asist},{data:notas},{data:rf},{data:pagos}]=await Promise.all([
+    const [{data:asist},{data:notas},{data:rf},{data:alumnos},{data:pagos}]=await Promise.all([
       sb.from('asistencias').select('alumno_id,estado,fecha'),
-      sb.from('notas').select('nota_1,materias(sector)'),
-      sb.from('resultados_fisicos').select('nota,pruebas_fisicas(materia_id)'),
+      sb.from('notas').select('nota_1,alumno_id,materias(sector)'),
+      sb.from('resultados_fisicos').select('nota,alumno_id,pruebas_fisicas(materia_id)'),
+      sb.from('alumnos').select('id,sexo'),
       sb.from('pagos').select('monto,concepto,fecha,metodo_pago')
     ]);
+    // Mapa alumno_id → sexo
+    const sexoMap={};(alumnos||[]).forEach(a=>{sexoMap[a.id]=a.sexo||'';});
     // Guardar datos para las sub-pestañas
-    window._gAsist=asist||[]; window._gNotas=notas||[]; window._gRf=rf||[]; window._gPagos=pagos||[];
+    window._gAsist=asist||[]; window._gNotas=notas||[]; window._gRf=rf||[]; window._gPagos=pagos||[]; window._gSexoMap=sexoMap;
     window._gStatTab='asistencia';
 
     el.innerHTML=`
