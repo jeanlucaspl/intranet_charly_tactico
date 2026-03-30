@@ -260,6 +260,29 @@
     }
     @media(hover:none){tbody tr:hover td{background:transparent}}
 
+    /* NOTA ACCORDION */
+    .nota-sector-wrap{padding:12px 14px 14px}
+    .nota-mat-card{background:var(--navy2);border:1px solid var(--border);margin-bottom:8px;overflow:hidden}
+    .nota-mat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s}
+    .nota-mat-hdr:hover{background:rgba(201,168,76,.06)}
+    .nota-mat-ico{font-size:13px;color:var(--gold);min-width:14px}
+    .nota-mat-nom{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;flex:1}
+    .nota-mat-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);background:rgba(255,255,255,.04);padding:2px 8px;border:1px solid var(--border)}
+    .nota-mat-bdy{border-top:1px solid var(--border);display:none}
+    .nota-alu-row{border-bottom:1px solid var(--border)}
+    .nota-alu-row:last-child{border-bottom:none}
+    .nota-alu-hdr{display:flex;align-items:center;gap:10px;padding:9px 18px 9px 28px;cursor:pointer;user-select:none;transition:background .15s}
+    .nota-alu-hdr:hover{background:rgba(255,255,255,.03)}
+    .nota-alu-nombre{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;flex:1}
+    .nota-alu-dni{font-size:10px;color:var(--muted);min-width:80px}
+    .nota-alu-cnt{font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em}
+    .nota-alu-arr{font-size:11px;color:var(--muted)}
+    .nota-alu-bdy{padding:0 28px 10px;display:none}
+    .nota-inner-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+    .nota-inner-table th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+    .nota-inner-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+    .nota-inner-table tr:last-child td{border-bottom:none}
+
     /* HORARIO PLANTILLA TABLE */
     .hor-table{width:100%;border-collapse:collapse;font-size:12px}
     .hor-table th{background:var(--gold);color:var(--navy);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;text-align:center;border:1px solid rgba(201,168,76,.4)}
@@ -627,8 +650,6 @@
       <span class="th-ttl">Notas Registradas</span>
       <button class="btn btn-gold" style="font-size:11px;padding:6px 14px" onclick="openCargarNota()">+ Cargar Nota</button>
     </div>
-    <div id="notas-mat-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
-    <div id="notas-per-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-bottom:1px solid var(--border);background:var(--navy)"></div>
     <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -1511,7 +1532,7 @@ window.addEventListener('pageshow', (e) => {
 
 
 // ── STATE ──
-let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[];
+let allAlumnos=[], allMaterias=[], allAulas=[], allNotas=[], allPracticas=[], allResultadosFisicos=[];
 let attState={}, facialLog=[], nTypeNow='info', dniList=[], notifFile=null, practicaFiles=[];
 let esDueno = false, uid = null;
 let allProfesoresTexto = [];
@@ -1740,10 +1761,14 @@ async function loadAulas(){
   allAulas = data||[];
   renderAulas();
 }
-let adminNotaMatTab=null,adminNotaPerTab=null,notasSectorTab='aptitud_fisica';
+let notasSectorTab='aptitud_fisica';
 async function loadNotas(){
-  const {data}=await sb.from('notas').select('*,alumnos(perfiles(nombre,apellido,dni)),materias(nombre,sector)').order('materia_id').order('periodo').order('creado_en',{ascending:false});
-  allNotas=data||[];
+  const [{data:nd},{data:rf}]=await Promise.all([
+    sb.from('notas').select('*,alumnos(perfiles(nombre,apellido,dni)),materias(nombre,sector)').order('materia_id').order('periodo').order('creado_en',{ascending:false}),
+    sb.from('resultados_fisicos').select('*,pruebas_fisicas(id,nombre,tipo,materia_id),alumnos(perfiles(nombre,apellido,dni))').order('creado_en',{ascending:false})
+  ]);
+  allNotas=nd||[];
+  allResultadosFisicos=(rf||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
   renderNotas();
 }
 async function loadPracticas(){
@@ -2653,63 +2678,122 @@ function showNotasSector(sector){
   document.querySelectorAll('#notas-sector-tabs .aula-tab').forEach((t,i)=>{
     t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
   });
-  adminNotaMatTab=null;adminNotaPerTab=null;
   renderNotas();
 }
 function renderNotas(){
-  const matTabsEl=document.getElementById('notas-mat-tabs');
-  const perTabsEl=document.getElementById('notas-per-tabs');
   const el=document.getElementById('d-notas');
   if(notasSectorTab==='aptitud_fisica'){
-    matTabsEl.innerHTML='';perTabsEl.innerHTML='';
-    el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div>`;
-    sb.from('resultados_fisicos').select('*,pruebas_fisicas(nombre,tipo,materia_id),alumnos(perfiles(nombre,apellido,dni))').order('creado_en',{ascending:false}).then(({data:rfAll})=>{const rf=(rfAll||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
-      if(!rf?.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin resultados físicos registrados</div></div>`;return;}
-      el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Prueba</th><th>Marca</th><th>Nota</th><th>Fecha</th></tr></thead><tbody>${rf.map(r=>{
-        const c=(r.nota||0)>=11?'bg':'br';
-        const marca=r.valor!=null?(r.pruebas_fisicas?.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
-        return`<tr>
-          <td>${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}</td>
-          <td style="font-size:11px;color:var(--muted)">${r.alumnos?.perfiles?.dni||'--'}</td>
-          <td>${r.pruebas_fisicas?.nombre||'--'}</td>
-          <td>${marca}</td>
-          <td><span class="badge ${c}">${r.nota??'--'}</span></td>
-          <td style="font-size:11px;color:var(--muted)">${r.creado_en?new Date(r.creado_en).toLocaleDateString('es-PE'):'--'}</td>
-        </tr>`;}).join('')}</tbody></table>`;
+    if(!allResultadosFisicos.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin resultados físicos registrados</div></div>`;return;}
+    // Agrupar por prueba
+    const byPrueba={};
+    allResultadosFisicos.forEach(r=>{
+      const pid=r.prueba_id;
+      if(!byPrueba[pid])byPrueba[pid]={nombre:r.pruebas_fisicas?.nombre||'--',tipo:r.pruebas_fisicas?.tipo,alumnos:{}};
+      const aid=r.alumno_id;
+      if(!byPrueba[pid].alumnos[aid])byPrueba[pid].alumnos[aid]={nombre:`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`.trim(),dni:r.alumnos?.perfiles?.dni||'--',resultados:[]};
+      byPrueba[pid].alumnos[aid].resultados.push(r);
     });
+    el.innerHTML=`<div class="nota-sector-wrap">${Object.entries(byPrueba).map(([pid,pd])=>{
+      const aluEntries=Object.entries(pd.alumnos);
+      const aluHTML=aluEntries.map(([aid,ad])=>{
+        const sorted=[...ad.resultados].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
+        const rows=sorted.map(r=>{
+          const marca=r.valor!=null?(pd.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
+          const c=(r.nota||0)>=11?'bg':'br';
+          return`<tr><td>${r.fecha||new Date(r.creado_en).toLocaleDateString('es-PE')}</td><td>${marca}</td><td><span class="badge ${c}">${r.nota??'--'}</span></td></tr>`;
+        }).join('');
+        return`<div class="nota-alu-row">
+          <div class="nota-alu-hdr" onclick="toggleNotaAlu(this)">
+            <span class="nota-alu-nombre">${ad.nombre}</span>
+            <span class="nota-alu-dni">${ad.dni}</span>
+            <span class="nota-alu-cnt">${ad.resultados.length} resultado(s)</span>
+            <span class="nota-alu-arr">▸</span>
+          </div>
+          <div class="nota-alu-bdy">
+            <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Marca</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>
+          </div>
+        </div>`;
+      }).join('');
+      return`<div class="nota-mat-card">
+        <div class="nota-mat-hdr" onclick="toggleNotaMat(this)">
+          <span class="nota-mat-ico">▸</span>
+          <span class="nota-mat-nom">${pd.nombre}</span>
+          <span class="nota-mat-badge">${aluEntries.length} alumno(s)</span>
+        </div>
+        <div class="nota-mat-bdy">${aluHTML}</div>
+      </div>`;
+    }).join('')}</div>`;
     return;
   }
-  // Filtrar notas por sector activo
+  // Sectores académicos
   const sectorMatIds=new Set(allMaterias.filter(m=>(m.sector||'aptitud_academica')===notasSectorTab).map(m=>m.id));
   const notasFiltradas=allNotas.filter(n=>sectorMatIds.has(n.materia_id));
-  if(!notasFiltradas.length){matTabsEl.innerHTML='';perTabsEl.innerHTML='';el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas en este sector</div></div>`;return;}
-  // Agrupar por materia
+  if(!notasFiltradas.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin notas en este sector</div></div>`;return;}
+  // Agrupar por materia → alumno → notas por fecha
   const byMat={};
-  notasFiltradas.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',notas:[]};byMat[k].notas.push(n);});
-  const matIds=Object.keys(byMat);
-  if(!adminNotaMatTab||!byMat[adminNotaMatTab])adminNotaMatTab=matIds[0];
-  matTabsEl.innerHTML=matIds.map(id=>`<div class="aula-tab${id===adminNotaMatTab?' active':''}" onclick="adminNotaShowMat('${id}')" style="font-size:12px;padding:6px 14px">${byMat[id].nombre}</div>`).join('');
-  const byPer={};
-  (byMat[adminNotaMatTab]?.notas||[]).forEach(n=>{const k=n.periodo||'Sin título';if(!byPer[k])byPer[k]=[];byPer[k].push(n);});
-  const periodos=Object.keys(byPer);
-  if(!adminNotaPerTab||!byPer[adminNotaPerTab])adminNotaPerTab=periodos[0];
-  perTabsEl.innerHTML=periodos.map(p=>`<div class="aula-tab${p===adminNotaPerTab?' active':''}" onclick="adminNotaShowPer('${p.replace(/'/g,"\\'")}') " style="font-size:11px;padding:5px 12px">${p}</div>`).join('');
-  const rows=byPer[adminNotaPerTab]||[];
-  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Nota</th><th>Fecha</th><th></th></tr></thead><tbody>${
-    rows.map(n=>{const nota=n.nota_1??'--';const c=(n.nota_1||0)>=11?'bg':'br';return`<tr>
-      <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
-      <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
-      <td><span class="badge ${c}">${nota}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
-      <td style="display:flex;gap:4px">
-        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="adminEditarNota('${n.alumno_id}','${(n.alumnos?.perfiles?.apellido||'')+' '+(n.alumnos?.perfiles?.nombre||'')}','${n.materia_id}','${n.periodo}',${n.nota_1??'null'})">Editar</button>
-        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="adminEliminarNota('${n.id}')">Eliminar</button>
-      </td>
-    </tr>`;}).join('')
-  }</tbody></table>`;
+  notasFiltradas.forEach(n=>{
+    const k=n.materia_id;
+    if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',alumnos:{}};
+    const aid=n.alumno_id;
+    if(!byMat[k].alumnos[aid])byMat[k].alumnos[aid]={nombre:`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim(),dni:n.alumnos?.perfiles?.dni||'--',notas:[]};
+    byMat[k].alumnos[aid].notas.push(n);
+  });
+  el.innerHTML=`<div class="nota-sector-wrap">${Object.entries(byMat).map(([mid,md])=>{
+    const aluEntries=Object.entries(md.alumnos);
+    const aluHTML=aluEntries.map(([aid,ad])=>{
+      const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
+      const rows=sorted.map(n=>{
+        const nota=n.nota_1??'--';const c=(n.nota_1||0)>=11?'bg':'br';
+        const nomEsc=ad.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const perEsc=(n.periodo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return`<tr>
+          <td>${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+          <td style="color:var(--muted)">${n.periodo||'--'}</td>
+          <td><span class="badge ${c}">${nota}</span></td>
+          <td style="display:flex;gap:4px">
+            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="adminEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'})">Editar</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="adminEliminarNota('${n.id}')">Elim.</button>
+          </td>
+        </tr>`;
+      }).join('');
+      return`<div class="nota-alu-row">
+        <div class="nota-alu-hdr" onclick="toggleNotaAlu(this)">
+          <span class="nota-alu-nombre">${ad.nombre}</span>
+          <span class="nota-alu-dni">${ad.dni}</span>
+          <span class="nota-alu-cnt">${ad.notas.length} nota(s)</span>
+          <span class="nota-alu-arr">▸</span>
+        </div>
+        <div class="nota-alu-bdy">
+          <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Período</th><th>Nota</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div class="nota-mat-card">
+      <div class="nota-mat-hdr" onclick="toggleNotaMat(this)">
+        <span class="nota-mat-ico">▸</span>
+        <span class="nota-mat-nom">${md.nombre}</span>
+        <span class="nota-mat-badge">${aluEntries.length} alumno(s)</span>
+      </div>
+      <div class="nota-mat-bdy">${aluHTML}</div>
+    </div>`;
+  }).join('')}</div>`;
 }
-function adminNotaShowMat(matId){adminNotaMatTab=matId;adminNotaPerTab=null;renderNotas();}
-function adminNotaShowPer(periodo){adminNotaPerTab=periodo;renderNotas();}
+function toggleNotaMat(hdr){
+  const card=hdr.closest('.nota-mat-card');
+  const body=card.querySelector('.nota-mat-bdy');
+  const ico=hdr.querySelector('.nota-mat-ico');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  ico.textContent=open?'▸':'▾';
+}
+function toggleNotaAlu(hdr){
+  const row=hdr.closest('.nota-alu-row');
+  const body=row.querySelector('.nota-alu-bdy');
+  const arr=hdr.querySelector('.nota-alu-arr');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  arr.textContent=open?'▸':'▾';
+}
 function nNotaSuggest(inp){
   const q=inp.value.trim().toLowerCase();
   const box=document.getElementById('n-alumno-sug');
