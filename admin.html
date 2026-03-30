@@ -1405,7 +1405,7 @@
           <label>Contraseña</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="pr-pass" placeholder="Mín. 6 caracteres" style="flex:1"/>
-            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="document.getElementById('pr-pass').value=generarPass()"></button>
+            <button class="btn btn-outline" style="padding:7px 10px;line-height:0" title="Generar contraseña" onclick="document.getElementById('pr-pass').value=generarPass()"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
           </div>
         </div>
         <div class="fg full"><label>Materia inicial (opcional)</label><select id="pr-materia"><option value="">-- Sin asignar --</option></select></div>
@@ -1459,7 +1459,7 @@
           <label>Contraseña</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="adm-pass" placeholder="Mín. 8 caracteres" style="flex:1"/>
-            <button class="btn btn-outline" style="padding:8px 12px;font-size:11px" onclick="generarPassAdmin()"></button>
+            <button class="btn btn-outline" style="padding:7px 10px;line-height:0" title="Generar contraseña" onclick="generarPassAdmin()"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
           </div>
         </div>
         <div class="fg full"><label>Rol</label>
@@ -2865,7 +2865,7 @@ function renderPracticas(){
       <div class="prac-btns">
         ${links}
         <button class="btn btn-outline" style="font-size:10px;padding:7px 12px" onclick="togglePractica('${p.id}',${p.activa!==false})">${p.activa!==false?'Ocultar':'Mostrar'}</button>
-        <button class="btn btn-red" style="font-size:10px;padding:7px 12px" onclick="deletePractica('${p.id}')"></button>
+        <button class="btn btn-red" style="font-size:10px;padding:6px 10px;line-height:0" onclick="deletePractica('${p.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
   }).join('');
