@@ -215,9 +215,8 @@
 <div class="panel active" id="panel-inicio">
   <div class="ph"><div class="eye">Bienvenido de vuelta</div><div class="ttl" id="wb-name">CADETE</div></div>
   <div class="cg">
-    <div class="sc"><div class="sc-lbl">Promedio</div><div class="sc-val" id="s-prom">--</div><div class="sc-sub">General</div></div>
-    <div class="sc"><div class="sc-lbl">Asistencia</div><div class="sc-val" id="s-asist">--%</div><div class="sc-sub">Este mes</div></div>
-    <div class="sc"><div class="sc-lbl">Materias</div><div class="sc-val" id="s-mat">--</div><div class="sc-sub">Activas</div></div>
+    <div class="sc"><div class="sc-lbl">Asistencia</div><div class="sc-val" id="s-asist">--%</div><div class="sc-sub">Total general</div></div>
+    <div class="sc"><div class="sc-lbl">Tardanza</div><div class="sc-val" id="s-tard" style="color:var(--yellow)">--%</div><div class="sc-sub">Total general</div></div>
     <div class="sc"><div class="sc-lbl">Notificaciones</div><div class="sc-val" id="s-notif" style="color:var(--red)">--</div><div class="sc-sub">Sin leer</div></div>
   </div>
   <!-- Estado del dispositivo — solo visible en app Android -->
@@ -410,7 +409,6 @@ async function loadNotas(){
   ]);
   allNotasAlumno=data||[];
   allResultadosFisicos=(rf||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
-  document.getElementById('s-mat').textContent=allNotasAlumno.length||0;
   renderNotasAlumno();
   document.getElementById('d-notas-res').innerHTML=renderNotasResumen(allNotasAlumno);
 }
@@ -528,6 +526,7 @@ async function loadAsistencias(){
   document.getElementById('a-tard').textContent=t;
   document.getElementById('a-aus').textContent=au;
   document.getElementById('s-asist').textContent=`${Math.round(p/tot*100)}%`;
+  document.getElementById('s-tard').textContent=`${Math.round(t/tot*100)}%`;
   if(!data?.length){document.getElementById('d-asist').innerHTML=`<div class="empty"><div class="et">Sin registros</div></div>`;return}
   document.getElementById('d-asist').innerHTML=`<table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th><th>Ubicación</th></tr></thead><tbody>${data.map(a=>{
     const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
@@ -579,7 +578,7 @@ async function loadNotifs(){
     const adj=n.archivo_url?(n.archivo_tipo==='imagen'||(!n.archivo_tipo&&!n.archivo_url?.toLowerCase().endsWith('.pdf'))
       ?`<img src="${n.archivo_url}" style="width:100%;max-height:320px;object-fit:contain;margin-top:8px;display:block;border:1px solid var(--border)">`
       :`<div style="margin-top:8px"><iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(n.archivo_url)}&embedded=true" style="width:100%;height:300px;border:1px solid var(--border)"></iframe><a href="${n.archivo_url}" target="_blank" style="color:var(--gold);font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:4px"> Abrir PDF</a></div>`):'';
-    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:0;float:right" title="Ocultar"></button><div class="nico">${icons[n.tipo]||''}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
+    return`<div class="nitem ${n.tipo}"><button onclick="deleteNotif('${n.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;padding:2px;float:right;line-height:0" title="Ocultar"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button><div class="nico">${icons[n.tipo]||''}</div><div style="flex:1"><div class="n-ttl">${n.titulo}${!n.leida?' <span class="badge by" style="font-size:8px">NUEVO</span>':''}</div><div class="n-msg">${n.mensaje}</div>${adj}<div class="n-time">${fecha}</div></div></div>`;
   }).join('');
 }
 async function deleteNotif(id){
