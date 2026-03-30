@@ -1983,153 +1983,120 @@ async function cerrarSesion(){
   showFacialTab('registros');
   loadDashboard();
 }
+function showGenStatTab(tab){
+  window._gStatTab=tab;
+  document.querySelectorAll('#rep-gen-tabs .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['asistencia','notas','ingresos'][i]===tab);
+  });
+  _renderGenStat();
+}
+function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
+function _renderGenStat(){
+  const el=document.getElementById('rep-gen-stat');
+  if(!el)return;
+  const GOLD='#c9a84c',GREEN='#4caf84',RED='#c94c4c',YELLOW='#c9b84c',BLUE='#4c84c9';
+  const gc='rgba(255,255,255,.08)',tc='#8a96a3';
+  const base={responsive:true,plugins:{legend:{labels:{color:tc,font:{size:11}}}}};
+  const tab=window._gStatTab||'asistencia';
+
+  if(tab==='asistencia'){
+    const asist=window._gAsist||[];
+    const tot=asist.length,pres=asist.filter(a=>a.estado==='presente').length,
+          tard=asist.filter(a=>a.estado==='tardanza').length,aus=asist.filter(a=>a.estado==='ausente').length;
+    const pm=tot?Math.round(pres/tot*100):0,tm=tot?Math.round(tard/tot*100):0,am=tot?Math.round(aus/tot*100):0;
+    const byMes={};
+    asist.forEach(a=>{const m=a.fecha?.slice(0,7)||'';if(!m)return;if(!byMes[m])byMes[m]={p:0,t:0,au:0};if(a.estado==='presente')byMes[m].p++;else if(a.estado==='tardanza')byMes[m].t++;else byMes[m].au++;});
+    const meses=Object.keys(byMes).sort();
+    el.innerHTML=`<div style="padding:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total</div><div class="sc-val">${tot}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Presentes</div><div class="sc-val" style="color:var(--green)">${pm}%</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Tardanzas</div><div class="sc-val" style="color:var(--yellow)">${tm}%</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Ausentes</div><div class="sc-val" style="color:var(--red)">${am}%</div></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:0 0 170px"><canvas id="ch-a-donut" height="170"></canvas></div>
+        <div style="flex:1;min-width:200px;overflow-x:auto"><canvas id="ch-a-mes" height="160"></canvas></div>
+      </div></div>`;
+    new Chart(document.getElementById('ch-a-donut'),{type:'doughnut',data:{labels:['Presentes','Tardanzas','Ausentes'],datasets:[{data:[pres,tard,aus],backgroundColor:[GREEN,YELLOW,RED],borderWidth:0}]},options:{...base,cutout:'65%'}});
+    new Chart(document.getElementById('ch-a-mes'),{type:'bar',data:{
+      labels:meses.map(_fmtMes),
+      datasets:[{label:'Presentes',data:meses.map(m=>byMes[m].p),backgroundColor:GREEN},{label:'Tardanzas',data:meses.map(m=>byMes[m].t),backgroundColor:YELLOW},{label:'Ausentes',data:meses.map(m=>byMes[m].au),backgroundColor:RED}]
+    },options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}}}});
+    return;
+  }
+
+  if(tab==='notas'){
+    const notas=window._gNotas||[],rf=window._gRf||[];
+    const sec={aptitud_fisica:[],aptitud_academica:[],entrevista_personal:[]};
+    notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)sec[s].push(n.nota_1);});
+    rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)sec.aptitud_fisica.push(r.nota);});
+    const avg=a=>a.length?+(a.reduce((x,b)=>x+b,0)/a.length).toFixed(1):null;
+    const aF=avg(sec.aptitud_fisica),aA=avg(sec.aptitud_academica),aE=avg(sec.entrevista_personal);
+    const todas=[...sec.aptitud_fisica,...sec.aptitud_academica,...sec.entrevista_personal];
+    const dist=[0,0,0,0];todas.forEach(n=>{if(n<=10)dist[0]++;else if(n<=14)dist[1]++;else if(n<=17)dist[2]++;else dist[3]++;});
+    const col=v=>v==null?tc:v>=11?GREEN:RED;
+    el.innerHTML=`<div style="padding:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Física</div><div class="sc-val" style="color:${col(aF)}">${aF??'--'}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Académico</div><div class="sc-val" style="color:${col(aA)}">${aA??'--'}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. Entrevista</div><div class="sc-val" style="color:${col(aE)}">${aE??'--'}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total registros</div><div class="sc-val">${todas.length}</div></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><canvas id="ch-n-prom" height="160"></canvas></div>
+        <div style="flex:1;min-width:200px"><canvas id="ch-n-dist" height="160"></canvas></div>
+      </div></div>`;
+    new Chart(document.getElementById('ch-n-prom'),{type:'bar',data:{labels:['Apt. Física','Apt. Académica','Entrevista'],datasets:[{label:'Promedio',data:[aF,aA,aE],backgroundColor:[GOLD,BLUE,GREEN],borderRadius:3}]},options:{...base,indexAxis:'y',scales:{x:{min:0,max:20,ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Promedio por sector',color:tc,font:{size:11}}}}});
+    new Chart(document.getElementById('ch-n-dist'),{type:'bar',data:{labels:['0–10','11–14','15–17','18–20'],datasets:[{label:'Notas',data:dist,backgroundColor:[RED,YELLOW,BLUE,GREEN],borderRadius:3}]},options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,stepSize:1},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Distribución de notas',color:tc,font:{size:11}}}}});
+    return;
+  }
+
+  if(tab==='ingresos'){
+    const pagos=window._gPagos||[];
+    const total=pagos.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+    const byMes={};pagos.forEach(p=>{const m=p.fecha?.slice(0,7)||'';if(!m)return;byMes[m]=(byMes[m]||0)+parseFloat(p.monto||0);});
+    const meses=Object.keys(byMes).sort();
+    const porConc={};pagos.forEach(p=>{const c=p.concepto||'Otro';porConc[c]=(porConc[c]||0)+parseFloat(p.monto||0);});
+    const cLabels=Object.keys(porConc);
+    const cColors=[GOLD,BLUE,GREEN,RED,YELLOW,'#a04cc9','#4cc9c9'];
+    el.innerHTML=`<div style="padding:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total recaudado</div><div class="sc-val" style="color:var(--gold)">S/${total.toFixed(0)}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Núm. pagos</div><div class="sc-val">${pagos.length}</div></div>
+        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. por pago</div><div class="sc-val">S/${pagos.length?Math.round(total/pagos.length):0}</div></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px;overflow-x:auto"><canvas id="ch-i-mes" height="160"></canvas></div>
+        <div style="flex:0 0 190px"><canvas id="ch-i-conc" height="180"></canvas></div>
+      </div></div>`;
+    new Chart(document.getElementById('ch-i-mes'),{type:'bar',data:{labels:meses.map(_fmtMes),datasets:[{label:'S/',data:meses.map(m=>+byMes[m].toFixed(2)),backgroundColor:GOLD,borderRadius:3}]},options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>`S/${v}`},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Ingresos por mes',color:tc,font:{size:11}}}}});
+    new Chart(document.getElementById('ch-i-conc'),{type:'doughnut',data:{labels:cLabels,datasets:[{data:cLabels.map(k=>+porConc[k].toFixed(2)),backgroundColor:cColors.slice(0,cLabels.length),borderWidth:0}]},options:{...base,cutout:'60%',plugins:{...base.plugins,title:{display:true,text:'Por concepto',color:tc,font:{size:11}}}}});
+  }
+}
 async function _renderCadetesContent(){
   const el=document.getElementById('rep-cad-content');
   if(!el)return;
   if(repCadetesSubTab==='general'){
     el.innerHTML=`<div class="empty"><div class="et">Cargando estadísticas...</div></div>`;
-    // Fetch paralelo: asistencias, notas, resultados físicos, pagos
     const [{data:asist},{data:notas},{data:rf},{data:pagos}]=await Promise.all([
       sb.from('asistencias').select('alumno_id,estado,fecha'),
       sb.from('notas').select('nota_1,materias(sector)'),
       sb.from('resultados_fisicos').select('nota,pruebas_fisicas(materia_id)'),
       sb.from('pagos').select('monto,concepto,fecha,metodo_pago')
     ]);
+    // Guardar datos para las sub-pestañas
+    window._gAsist=asist||[]; window._gNotas=notas||[]; window._gRf=rf||[]; window._gPagos=pagos||[];
+    window._gStatTab='asistencia';
 
-    // ── ASISTENCIA ──
-    const totalAsist=(asist||[]).length;
-    const presentes=(asist||[]).filter(a=>a.estado==='presente').length;
-    const tardanzas=(asist||[]).filter(a=>a.estado==='tardanza').length;
-    const ausentes=(asist||[]).filter(a=>a.estado==='ausente').length;
-    const pctPres=totalAsist?Math.round(presentes/totalAsist*100):0;
-    const pctTard=totalAsist?Math.round(tardanzas/totalAsist*100):0;
-    const pctAus=totalAsist?Math.round(ausentes/totalAsist*100):0;
-    // Asistencia por mes
-    const asistPorMes={};
-    (asist||[]).forEach(a=>{
-      const m=a.fecha?.slice(0,7)||'';if(!m)return;
-      if(!asistPorMes[m])asistPorMes[m]={p:0,t:0,au:0};
-      if(a.estado==='presente')asistPorMes[m].p++;
-      else if(a.estado==='tardanza')asistPorMes[m].t++;
-      else asistPorMes[m].au++;
-    });
-    const meses=Object.keys(asistPorMes).sort().slice(-6);
-
-    // ── NOTAS ──
-    const notasSectores={aptitud_fisica:[],aptitud_academica:[],entrevista_personal:[]};
-    (notas||[]).forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)(notasSectores[s]||[]).push(n.nota_1);});
-    (rf||[]).filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)notasSectores.aptitud_fisica.push(r.nota);});
-    const avg=arr=>arr.length?+(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):null;
-    const avgFisica=avg(notasSectores.aptitud_fisica);
-    const avgAcad=avg(notasSectores.aptitud_academica);
-    const avgEntrev=avg(notasSectores.entrevista_personal);
-    // Distribución de notas (todas)
-    const todasNotas=[...notasSectores.aptitud_fisica,...notasSectores.aptitud_academica,...notasSectores.entrevista_personal];
-    const dist=[0,0,0,0]; // 0-10, 11-14, 15-17, 18-20
-    todasNotas.forEach(n=>{if(n<=10)dist[0]++;else if(n<=14)dist[1]++;else if(n<=17)dist[2]++;else dist[3]++;});
-
-    // ── INGRESOS ──
-    const totalPagos=(pagos||[]).reduce((s,p)=>s+parseFloat(p.monto||0),0);
-    const numPagos=(pagos||[]).length;
-    const pagosPorMes={};
-    (pagos||[]).forEach(p=>{const m=p.fecha?.slice(0,7)||'';if(!m)return;pagosPorMes[m]=(pagosPorMes[m]||0)+parseFloat(p.monto||0);});
-    const mesesPag=Object.keys(pagosPorMes).sort().slice(-6);
-    const porConcepto={};
-    (pagos||[]).forEach(p=>{const c=p.concepto||'Otro';porConcepto[c]=(porConcepto[c]||0)+parseFloat(p.monto||0);});
-
-    el.innerHTML=`<div style="padding:16px 14px;display:flex;flex-direction:column;gap:24px">
-
-      <!-- ASISTENCIA -->
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:var(--gold);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px">Asistencia</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Total registros</div><div class="sc-val">${totalAsist}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">% Presentes</div><div class="sc-val" style="color:var(--green)">${pctPres}%</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">% Tardanzas</div><div class="sc-val" style="color:var(--yellow)">${pctTard}%</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">% Ausentes</div><div class="sc-val" style="color:var(--red)">${pctAus}%</div></div>
-        </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <div style="flex:0 0 180px;max-width:180px"><canvas id="ch-asist-donut" height="180"></canvas></div>
-          <div style="flex:1;min-width:220px"><canvas id="ch-asist-meses" height="160"></canvas></div>
-        </div>
+    el.innerHTML=`
+      <div class="aula-tabs" id="rep-gen-tabs" style="border-bottom:1px solid var(--border)">
+        <div class="aula-tab active" onclick="showGenStatTab('asistencia')">Asistencia</div>
+        <div class="aula-tab" onclick="showGenStatTab('notas')">Notas</div>
+        <div class="aula-tab" onclick="showGenStatTab('ingresos')">Ingresos</div>
       </div>
-
-      <!-- NOTAS -->
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:var(--gold);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px">Notas</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Prom. Apt. Física</div><div class="sc-val" style="color:${avgFisica>=11?'var(--green)':'var(--red)'}">${avgFisica??'--'}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Prom. Académico</div><div class="sc-val" style="color:${avgAcad>=11?'var(--green)':'var(--red)'}">${avgAcad??'--'}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Prom. Entrevista</div><div class="sc-val" style="color:${avgEntrev>=11?'var(--green)':'var(--red)'}">${avgEntrev??'--'}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Total notas reg.</div><div class="sc-val">${todasNotas.length}</div></div>
-        </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <div style="flex:1;min-width:220px"><canvas id="ch-notas-prom" height="160"></canvas></div>
-          <div style="flex:1;min-width:220px"><canvas id="ch-notas-dist" height="160"></canvas></div>
-        </div>
-      </div>
-
-      <!-- INGRESOS -->
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:var(--gold);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px">Ingresos</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Total recaudado</div><div class="sc-val" style="color:var(--gold)">S/${totalPagos.toFixed(0)}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Núm. de pagos</div><div class="sc-val">${numPagos}</div></div>
-          <div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">Prom. por pago</div><div class="sc-val">S/${numPagos?Math.round(totalPagos/numPagos):0}</div></div>
-        </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <div style="flex:1;min-width:220px"><canvas id="ch-ing-meses" height="160"></canvas></div>
-          <div style="flex:0 0 200px;max-width:200px"><canvas id="ch-ing-concepto" height="180"></canvas></div>
-        </div>
-      </div>
-    </div>`;
-
-    const GOLD='#c9a84c', GREEN='#4caf84', RED='#c94c4c', YELLOW='#c9b84c', BLUE='#4c84c9';
-    const gridColor='rgba(255,255,255,.08)', textColor='#8a96a3';
-    const baseOpts={responsive:true,plugins:{legend:{labels:{color:textColor,font:{size:11}}}}};
-
-    // Donut asistencia
-    new Chart(document.getElementById('ch-asist-donut'),{type:'doughnut',data:{
-      labels:['Presentes','Tardanzas','Ausentes'],
-      datasets:[{data:[presentes,tardanzas,ausentes],backgroundColor:[GREEN,YELLOW,RED],borderWidth:0}]
-    },options:{...baseOpts,cutout:'65%'}});
-
-    // Barras asistencia por mes
-    new Chart(document.getElementById('ch-asist-meses'),{type:'bar',data:{
-      labels:meses.map(m=>{const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}),
-      datasets:[
-        {label:'Presentes',data:meses.map(m=>asistPorMes[m]?.p||0),backgroundColor:GREEN},
-        {label:'Tardanzas',data:meses.map(m=>asistPorMes[m]?.t||0),backgroundColor:YELLOW},
-        {label:'Ausentes',data:meses.map(m=>asistPorMes[m]?.au||0),backgroundColor:RED}
-      ]
-    },options:{...baseOpts,scales:{x:{ticks:{color:textColor},grid:{color:gridColor}},y:{ticks:{color:textColor},grid:{color:gridColor}}},plugins:{...baseOpts.plugins,title:{display:true,text:'Asistencia últimos 6 meses',color:textColor,font:{size:11}}}}});
-
-    // Barras promedio por sector
-    new Chart(document.getElementById('ch-notas-prom'),{type:'bar',data:{
-      labels:['Apt. Física','Apt. Académica','Entrevista'],
-      datasets:[{label:'Promedio',data:[avgFisica,avgAcad,avgEntrev],backgroundColor:[GOLD,BLUE,GREEN],borderRadius:3}]
-    },options:{...baseOpts,indexAxis:'y',scales:{x:{min:0,max:20,ticks:{color:textColor},grid:{color:gridColor}},y:{ticks:{color:textColor},grid:{color:gridColor}}},plugins:{...baseOpts.plugins,title:{display:true,text:'Promedio por sector',color:textColor,font:{size:11}}}}});
-
-    // Barras distribución de notas
-    new Chart(document.getElementById('ch-notas-dist'),{type:'bar',data:{
-      labels:['0 – 10','11 – 14','15 – 17','18 – 20'],
-      datasets:[{label:'Alumnos',data:dist,backgroundColor:[RED,YELLOW,BLUE,GREEN],borderRadius:3}]
-    },options:{...baseOpts,scales:{x:{ticks:{color:textColor},grid:{color:gridColor}},y:{ticks:{color:textColor,stepSize:1},grid:{color:gridColor}}},plugins:{...baseOpts.plugins,title:{display:true,text:'Distribución de notas',color:textColor,font:{size:11}}}}});
-
-    // Barras ingresos por mes
-    new Chart(document.getElementById('ch-ing-meses'),{type:'bar',data:{
-      labels:mesesPag.map(m=>{const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}),
-      datasets:[{label:'S/',data:mesesPag.map(m=>+(pagosPorMes[m]||0).toFixed(2)),backgroundColor:GOLD,borderRadius:3}]
-    },options:{...baseOpts,scales:{x:{ticks:{color:textColor},grid:{color:gridColor}},y:{ticks:{color:textColor,callback:v=>`S/${v}`},grid:{color:gridColor}}},plugins:{...baseOpts.plugins,title:{display:true,text:'Ingresos últimos 6 meses',color:textColor,font:{size:11}}}}});
-
-    // Donut por concepto
-    const concLabels=Object.keys(porConcepto);
-    const concColors=[GOLD,BLUE,GREEN,RED,YELLOW,'#a04cc9','#4cc9c9'];
-    new Chart(document.getElementById('ch-ing-concepto'),{type:'doughnut',data:{
-      labels:concLabels,
-      datasets:[{data:concLabels.map(k=>+porConcepto[k].toFixed(2)),backgroundColor:concColors.slice(0,concLabels.length),borderWidth:0}]
-    },options:{...baseOpts,cutout:'60%',plugins:{...baseOpts.plugins,title:{display:true,text:'Por concepto',color:textColor,font:{size:11}}}}});
-
+      <div id="rep-gen-stat"></div>`;
+    _renderGenStat();
     return;
   }
   // Por Alumno — buscador + 3 pestañas
