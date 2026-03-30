@@ -1983,123 +1983,145 @@ async function cerrarSesion(){
   showFacialTab('registros');
   loadDashboard();
 }
-function showGenStatTab(tab){
-  window._gStatTab=tab;
-  document.querySelectorAll('#rep-gen-tabs .aula-tab').forEach((t,i)=>{
-    t.classList.toggle('active',['asistencia','notas','ingresos'][i]===tab);
-  });
-  _renderGenStat();
-}
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
 function _renderGenStat(){
   const el=document.getElementById('rep-gen-stat');
   if(!el)return;
-  const GOLD='#c9a84c',GREEN='#4caf84',RED='#c94c4c',YELLOW='#c9b84c',BLUE='#4c84c9';
-  const gc='rgba(255,255,255,.08)',tc='#8a96a3';
-  const base={responsive:true,plugins:{legend:{labels:{color:tc,font:{size:11}}}}};
-  const tab=window._gStatTab||'asistencia';
-
-  if(tab==='asistencia'){
-    const asist=window._gAsist||[];
-    const tot=asist.length,pres=asist.filter(a=>a.estado==='presente').length,
-          tard=asist.filter(a=>a.estado==='tardanza').length,aus=asist.filter(a=>a.estado==='ausente').length;
-    const pm=tot?Math.round(pres/tot*100):0,tm=tot?Math.round(tard/tot*100):0,am=tot?Math.round(aus/tot*100):0;
-    const byMes={};
-    asist.forEach(a=>{const m=a.fecha?.slice(0,7)||'';if(!m)return;if(!byMes[m])byMes[m]={p:0,t:0,au:0};if(a.estado==='presente')byMes[m].p++;else if(a.estado==='tardanza')byMes[m].t++;else byMes[m].au++;});
-    const meses=Object.keys(byMes).sort();
-    el.innerHTML=`<div style="padding:14px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total</div><div class="sc-val">${tot}</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Presentes</div><div class="sc-val" style="color:var(--green)">${pm}%</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Tardanzas</div><div class="sc-val" style="color:var(--yellow)">${tm}%</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">% Ausentes</div><div class="sc-val" style="color:var(--red)">${am}%</div></div>
-      </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="flex:0 0 170px"><canvas id="ch-a-donut" height="170"></canvas></div>
-        <div style="flex:1;min-width:200px;overflow-x:auto"><canvas id="ch-a-mes" height="160"></canvas></div>
-      </div></div>`;
-    new Chart(document.getElementById('ch-a-donut'),{type:'doughnut',data:{labels:['Presentes','Tardanzas','Ausentes'],datasets:[{data:[pres,tard,aus],backgroundColor:[GREEN,YELLOW,RED],borderWidth:0}]},options:{...base,cutout:'65%'}});
-    new Chart(document.getElementById('ch-a-mes'),{type:'bar',data:{
-      labels:meses.map(_fmtMes),
-      datasets:[{label:'Presentes',data:meses.map(m=>byMes[m].p),backgroundColor:GREEN},{label:'Tardanzas',data:meses.map(m=>byMes[m].t),backgroundColor:YELLOW},{label:'Ausentes',data:meses.map(m=>byMes[m].au),backgroundColor:RED}]
-    },options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}}}});
-    return;
-  }
-
-  if(tab==='notas'){
-    const notas=window._gNotas||[],rf=window._gRf||[],sxMap=window._gSexoMap||{};
-    // Acumuladores: total, masculino, femenino
-    const mk=()=>({tot:[],m:[],f:[]});
-    const sec={aptitud_fisica:mk(),aptitud_academica:mk(),entrevista_personal:mk()};
-    const push=(arr,nota,aid)=>{arr.tot.push(nota);const sx=(sxMap[aid]||'').toLowerCase();if(sx==='masculino'||sx==='m')arr.m.push(nota);else if(sx==='femenino'||sx==='f')arr.f.push(nota);};
-    notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)push(sec[s],n.nota_1,n.alumno_id);});
-    rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)push(sec.aptitud_fisica,r.nota,r.alumno_id);});
-    const avg=a=>a.length?+(a.reduce((x,b)=>x+b,0)/a.length).toFixed(1):null;
-    const col=v=>v==null?tc:v>=11?GREEN:RED;
-    const todas=[...sec.aptitud_fisica.tot,...sec.aptitud_academica.tot,...sec.entrevista_personal.tot];
-    const dist=[0,0,0,0];todas.forEach(n=>{if(n<=10)dist[0]++;else if(n<=14)dist[1]++;else if(n<=17)dist[2]++;else dist[3]++;});
-
-    const cardSector=(label,s)=>{
-      const aT=avg(s.tot),aM=avg(s.m),aF2=avg(s.f);
-      return`<div class="sc" style="flex:1;min-width:140px">
-        <div class="sc-lbl">${label}</div>
-        <div class="sc-val" style="color:${col(aT)}">${aT??'--'}</div>
-        <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:#7ab0e8">♂ ${aM??'--'}</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:#e87ab0">♀ ${aF2??'--'}</span>
+  const asist=window._gAsist||[],notas=window._gNotas||[],rf=window._gRf||[],pagos=window._gPagos||[],sxMap=window._gSexoMap||{};
+  const GOLD='#c9a84c',GREEN='#4caf84',RED='#c94c4c',YELLOW='#c9b84c';
+  const avg=a=>a.length?+(a.reduce((x,b)=>x+b,0)/a.length).toFixed(1):null;
+  const mk=()=>({tot:[],m:[],f:[]});
+  const push=(arr,nota,aid)=>{arr.tot.push(nota);const sx=(sxMap[aid]||'').toLowerCase();if(sx==='masculino'||sx==='m')arr.m.push(nota);else if(sx==='femenino'||sx==='f')arr.f.push(nota);};
+  // Recolectar todos los meses con datos
+  const mesSet=new Set();
+  asist.forEach(a=>{if(a.fecha)mesSet.add(a.fecha.slice(0,7));});
+  notas.forEach(n=>{if(n.creado_en)mesSet.add(n.creado_en.slice(0,7));});
+  rf.forEach(r=>{if(r.fecha)mesSet.add(r.fecha.slice(0,7));});
+  pagos.forEach(p=>{if(p.fecha)mesSet.add(p.fecha.slice(0,7));});
+  const meses=[...mesSet].sort().reverse();
+  if(!meses.length){el.innerHTML='<div class="empty"><div class="et">Sin datos para mostrar</div></div>';return;}
+  let html='<div style="padding:8px">';
+  meses.forEach(mes=>{
+    const label=new Date(mes+'-15').toLocaleDateString('es-PE',{month:'long',year:'numeric'});
+    const labelCap=label.charAt(0).toUpperCase()+label.slice(1);
+    const mAsist=asist.filter(a=>a.fecha?.slice(0,7)===mes);
+    const mNotas=notas.filter(n=>n.creado_en?.slice(0,7)===mes);
+    const mRf=rf.filter(r=>r.fecha?.slice(0,7)===mes);
+    const mPagos=pagos.filter(p=>p.fecha?.slice(0,7)===mes);
+    // Asistencia stats
+    const totA=mAsist.length,presA=mAsist.filter(a=>a.estado==='presente').length,tardA=mAsist.filter(a=>a.estado==='tardanza').length,ausA=mAsist.filter(a=>a.estado==='ausente').length;
+    // Notas stats
+    const secN={aptitud_fisica:mk(),aptitud_academica:mk(),entrevista_personal:mk()};
+    mNotas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)push(secN[s],n.nota_1,n.alumno_id);});
+    mRf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)push(secN.aptitud_fisica,r.nota,r.alumno_id);});
+    const todasN=[...secN.aptitud_fisica.tot,...secN.aptitud_academica.tot,...secN.entrevista_personal.tot];
+    const promN=avg(todasN);
+    // Ingresos stats
+    const totalI=mPagos.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+    // Header badges
+    const badgesHtml=[
+      totA?`<span class="nota-mat-badge" style="background:rgba(76,175,132,.18);color:${GREEN}">${totA?Math.round(presA/totA*100):0}% asist.</span>`:'',
+      promN!=null?`<span class="nota-mat-badge" style="background:rgba(201,168,76,.18);color:${GOLD}">prom. ${promN}</span>`:'',
+      totalI?`<span class="nota-mat-badge" style="background:rgba(122,176,232,.18);color:#7ab0e8">S/${totalI.toFixed(0)}</span>`:'',
+    ].join('');
+    // Notas cards helper
+    const notaCard=(lbl,s)=>{const aT=avg(s.tot),aM=avg(s.m),aF2=avg(s.f);return`<div class="sc" style="flex:1;min-width:90px"><div class="sc-lbl">${lbl}</div><div class="sc-val" style="color:${aT==null?'#8a96a3':aT>=11?GREEN:RED}">${aT??'--'}</div><div style="display:flex;gap:6px;margin-top:4px"><span style="font-size:11px;color:#7ab0e8">♂ ${aM??'--'}</span><span style="font-size:11px;color:#e87ab0">♀ ${aF2??'--'}</span></div><div class="sc-sub">${s.tot.length} reg.</div></div>`;};
+    html+=`<div class="nota-mat-card">
+      <div class="nota-mat-hdr" onclick="this.parentElement.classList.toggle('open')">
+        <span class="nota-mat-nom">${labelCap}</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${badgesHtml}
+          <button onclick="event.stopPropagation();generarPdfMes('${mes}')" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:11px;padding:3px 10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;border-radius:2px">PDF</button>
         </div>
-        <div class="sc-sub">${s.tot.length} reg.</div>
-      </div>`;
-    };
-
-    el.innerHTML=`<div style="padding:14px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        ${cardSector('Prom. Apt. Física',sec.aptitud_fisica)}
-        ${cardSector('Prom. Académico',sec.aptitud_academica)}
-        ${cardSector('Prom. Entrevista',sec.entrevista_personal)}
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total registros</div><div class="sc-val">${todas.length}</div></div>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px"><canvas id="ch-n-prom" height="160"></canvas></div>
-        <div style="flex:1;min-width:200px"><canvas id="ch-n-dist" height="160"></canvas></div>
-      </div></div>`;
-
-    const aF=avg(sec.aptitud_fisica.tot),aA=avg(sec.aptitud_academica.tot),aE=avg(sec.entrevista_personal.tot);
-    const aFm=avg(sec.aptitud_fisica.m),aAm=avg(sec.aptitud_academica.m),aEm=avg(sec.entrevista_personal.m);
-    const aFf=avg(sec.aptitud_fisica.f),aAf=avg(sec.aptitud_academica.f),aEf=avg(sec.entrevista_personal.f);
-    new Chart(document.getElementById('ch-n-prom'),{type:'bar',data:{
-      labels:['Apt. Física','Apt. Académica','Entrevista'],
-      datasets:[
-        {label:'Total',data:[aF,aA,aE],backgroundColor:GOLD,borderRadius:3},
-        {label:'Masculino',data:[aFm,aAm,aEm],backgroundColor:'#7ab0e8',borderRadius:3},
-        {label:'Femenino',data:[aFf,aAf,aEf],backgroundColor:'#e87ab0',borderRadius:3}
-      ]
-    },options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{min:0,max:20,ticks:{color:tc},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Promedio por sector y sexo',color:tc,font:{size:11}}}}});
-    new Chart(document.getElementById('ch-n-dist'),{type:'bar',data:{labels:['0–10','11–14','15–17','18–20'],datasets:[{label:'Notas',data:dist,backgroundColor:[RED,YELLOW,BLUE,GREEN],borderRadius:3}]},options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,stepSize:1},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Distribución de notas',color:tc,font:{size:11}}}}});
-    return;
-  }
-
-  if(tab==='ingresos'){
-    const pagos=window._gPagos||[];
-    const total=pagos.reduce((s,p)=>s+parseFloat(p.monto||0),0);
-    const byMes={};pagos.forEach(p=>{const m=p.fecha?.slice(0,7)||'';if(!m)return;byMes[m]=(byMes[m]||0)+parseFloat(p.monto||0);});
-    const meses=Object.keys(byMes).sort();
-    const porConc={};pagos.forEach(p=>{const c=p.concepto||'Otro';porConc[c]=(porConc[c]||0)+parseFloat(p.monto||0);});
-    const cLabels=Object.keys(porConc);
-    const cColors=[GOLD,BLUE,GREEN,RED,YELLOW,'#a04cc9','#4cc9c9'];
-    el.innerHTML=`<div style="padding:14px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total recaudado</div><div class="sc-val" style="color:var(--gold)">S/${total.toFixed(0)}</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Núm. pagos</div><div class="sc-val">${pagos.length}</div></div>
-        <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom. por pago</div><div class="sc-val">S/${pagos.length?Math.round(total/pagos.length):0}</div></div>
+      <div class="nota-mat-bdy">
+        <div style="padding:14px;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.12em;color:var(--gold);margin-bottom:8px">ASISTENCIA</div>
+            ${totA?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div class="sc" style="flex:1;min-width:70px"><div class="sc-lbl">Total</div><div class="sc-val">${totA}</div></div>
+              <div class="sc" style="flex:1;min-width:70px"><div class="sc-lbl">Presentes</div><div class="sc-val" style="color:${GREEN}">${Math.round(presA/totA*100)}%</div></div>
+              <div class="sc" style="flex:1;min-width:70px"><div class="sc-lbl">Tardanzas</div><div class="sc-val" style="color:${YELLOW}">${Math.round(tardA/totA*100)}%</div></div>
+              <div class="sc" style="flex:1;min-width:70px"><div class="sc-lbl">Ausentes</div><div class="sc-val" style="color:${RED}">${Math.round(ausA/totA*100)}%</div></div>
+            </div>`:'<div style="color:var(--muted);font-size:12px">Sin registros</div>'}
+          </div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.12em;color:var(--gold);margin-bottom:8px">NOTAS</div>
+            ${todasN.length?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${notaCard('Apt. Física',secN.aptitud_fisica)}
+              ${notaCard('Académico',secN.aptitud_academica)}
+              ${notaCard('Entrevista',secN.entrevista_personal)}
+            </div>`:'<div style="color:var(--muted);font-size:12px">Sin registros</div>'}
+          </div>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.12em;color:var(--gold);margin-bottom:8px">INGRESOS</div>
+            ${mPagos.length?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Total</div><div class="sc-val" style="color:${GOLD}">S/${totalI.toFixed(0)}</div></div>
+              <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Núm. pagos</div><div class="sc-val">${mPagos.length}</div></div>
+              <div class="sc" style="flex:1;min-width:80px"><div class="sc-lbl">Prom./pago</div><div class="sc-val">S/${Math.round(totalI/mPagos.length)}</div></div>
+            </div>`:'<div style="color:var(--muted);font-size:12px">Sin registros</div>'}
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px;overflow-x:auto"><canvas id="ch-i-mes" height="160"></canvas></div>
-        <div style="flex:0 0 190px"><canvas id="ch-i-conc" height="180"></canvas></div>
-      </div></div>`;
-    new Chart(document.getElementById('ch-i-mes'),{type:'bar',data:{labels:meses.map(_fmtMes),datasets:[{label:'S/',data:meses.map(m=>+byMes[m].toFixed(2)),backgroundColor:GOLD,borderRadius:3}]},options:{...base,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>`S/${v}`},grid:{color:gc}}},plugins:{...base.plugins,title:{display:true,text:'Ingresos por mes',color:tc,font:{size:11}}}}});
-    new Chart(document.getElementById('ch-i-conc'),{type:'doughnut',data:{labels:cLabels,datasets:[{data:cLabels.map(k=>+porConc[k].toFixed(2)),backgroundColor:cColors.slice(0,cLabels.length),borderWidth:0}]},options:{...base,cutout:'60%',plugins:{...base.plugins,title:{display:true,text:'Por concepto',color:tc,font:{size:11}}}}});
-  }
+    </div>`;
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  el.querySelector('.nota-mat-card')?.classList.add('open');
+}
+function generarPdfMes(mes){
+  const asist=(window._gAsist||[]).filter(a=>a.fecha?.slice(0,7)===mes);
+  const notas=(window._gNotas||[]).filter(n=>n.creado_en?.slice(0,7)===mes);
+  const rf=(window._gRf||[]).filter(r=>r.fecha?.slice(0,7)===mes);
+  const pagos=(window._gPagos||[]).filter(p=>p.fecha?.slice(0,7)===mes);
+  const sxMap=window._gSexoMap||{};
+  const label=new Date(mes+'-15').toLocaleDateString('es-PE',{month:'long',year:'numeric'});
+  const labelCap=label.charAt(0).toUpperCase()+label.slice(1);
+  const avg=a=>a.length?+(a.reduce((x,b)=>x+b,0)/a.length).toFixed(1):null;
+  const mk=()=>({tot:[],m:[],f:[]});
+  const push=(arr,nota,aid)=>{arr.tot.push(nota);const sx=(sxMap[aid]||'').toLowerCase();if(sx==='masculino'||sx==='m')arr.m.push(nota);else if(sx==='femenino'||sx==='f')arr.f.push(nota);};
+  const totA=asist.length,presA=asist.filter(a=>a.estado==='presente').length,tardA=asist.filter(a=>a.estado==='tardanza').length,ausA=asist.filter(a=>a.estado==='ausente').length;
+  const secN={aptitud_fisica:mk(),aptitud_academica:mk(),entrevista_personal:mk()};
+  notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)push(secN[s],n.nota_1,n.alumno_id);});
+  rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)push(secN.aptitud_fisica,r.nota,r.alumno_id);});
+  const totalI=pagos.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+  const w=window.open('','_blank');
+  if(!w)return;
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte ${labelCap}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#222;padding:30px;max-width:800px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:4px;color:#1a1a2e}h2{font-size:14px;font-weight:700;letter-spacing:.1em;color:#555;margin:22px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px;text-transform:uppercase}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}.card{border:1px solid #ddd;padding:10px 16px;min-width:100px;border-radius:6px;background:#fafafa}
+  .card-lbl{font-size:11px;color:#888;margin-bottom:2px}.card-val{font-size:24px;font-weight:700}.sub{font-size:11px;color:#666;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px}th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:12px;border-bottom:2px solid #ddd}
+  td{padding:6px 10px;border-bottom:1px solid #eee;font-size:12px}tr:last-child td{border-bottom:none}
+  .muted{color:#999;font-style:italic}@media print{body{padding:15px}.no-print{display:none}}</style></head><body>
+  <h1>Reporte Mensual — ${labelCap}</h1>
+  <p style="color:#888;font-size:12px;margin-top:2px">Generado el ${new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'})}</p>
+  <h2>Asistencia</h2>
+  ${totA?`<div class="cards">
+    <div class="card"><div class="card-lbl">Total registros</div><div class="card-val">${totA}</div></div>
+    <div class="card"><div class="card-lbl">Presentes</div><div class="card-val" style="color:green">${Math.round(presA/totA*100)}%</div><div class="sub">${presA} alumnos</div></div>
+    <div class="card"><div class="card-lbl">Tardanzas</div><div class="card-val" style="color:orange">${Math.round(tardA/totA*100)}%</div><div class="sub">${tardA} alumnos</div></div>
+    <div class="card"><div class="card-lbl">Ausentes</div><div class="card-val" style="color:red">${Math.round(ausA/totA*100)}%</div><div class="sub">${ausA} alumnos</div></div>
+  </div>`:'<p class="muted">Sin registros de asistencia</p>'}
+  <h2>Notas</h2>
+  <table><tr><th>Sector</th><th>Promedio Total</th><th>♂ Masculino</th><th>♀ Femenino</th><th>Registros</th></tr>
+    <tr><td>Aptitud Física</td><td>${avg(secN.aptitud_fisica.tot)??'--'}</td><td>${avg(secN.aptitud_fisica.m)??'--'}</td><td>${avg(secN.aptitud_fisica.f)??'--'}</td><td>${secN.aptitud_fisica.tot.length}</td></tr>
+    <tr><td>Aptitud Académica</td><td>${avg(secN.aptitud_academica.tot)??'--'}</td><td>${avg(secN.aptitud_academica.m)??'--'}</td><td>${avg(secN.aptitud_academica.f)??'--'}</td><td>${secN.aptitud_academica.tot.length}</td></tr>
+    <tr><td>Entrevista Personal</td><td>${avg(secN.entrevista_personal.tot)??'--'}</td><td>${avg(secN.entrevista_personal.m)??'--'}</td><td>${avg(secN.entrevista_personal.f)??'--'}</td><td>${secN.entrevista_personal.tot.length}</td></tr>
+  </table>
+  <h2>Ingresos</h2>
+  ${pagos.length?`<div class="cards">
+    <div class="card"><div class="card-lbl">Total recaudado</div><div class="card-val" style="color:#c9a84c">S/${totalI.toFixed(2)}</div></div>
+    <div class="card"><div class="card-lbl">Núm. pagos</div><div class="card-val">${pagos.length}</div></div>
+    <div class="card"><div class="card-lbl">Promedio/pago</div><div class="card-val">S/${Math.round(totalI/pagos.length)}</div></div>
+  </div>
+  <table><tr><th>Concepto</th><th>Método</th><th>Monto</th><th>Fecha</th></tr>
+    ${pagos.slice(0,60).map(p=>`<tr><td>${p.concepto||'-'}</td><td>${p.metodo_pago||'-'}</td><td>S/${parseFloat(p.monto||0).toFixed(2)}</td><td>${p.fecha||'-'}</td></tr>`).join('')}
+    ${pagos.length>60?`<tr><td colspan="4" class="muted">... y ${pagos.length-60} pagos más</td></tr>`:''}
+  </table>`:'<p class="muted">Sin registros de ingresos</p>'}
+  <script>window.onload=()=>window.print();<\/script></body></html>`);
+  w.document.close();
 }
 async function _renderCadetesContent(){
   const el=document.getElementById('rep-cad-content');
@@ -2108,8 +2130,8 @@ async function _renderCadetesContent(){
     el.innerHTML=`<div class="empty"><div class="et">Cargando estadísticas...</div></div>`;
     const [{data:asist},{data:notas},{data:rf},{data:alumnos},{data:pagos}]=await Promise.all([
       sb.from('asistencias').select('alumno_id,estado,fecha'),
-      sb.from('notas').select('nota_1,alumno_id,materias(sector)'),
-      sb.from('resultados_fisicos').select('nota,alumno_id,pruebas_fisicas(materia_id)'),
+      sb.from('notas').select('nota_1,alumno_id,creado_en,materias(sector)'),
+      sb.from('resultados_fisicos').select('nota,alumno_id,fecha,pruebas_fisicas(materia_id)'),
       sb.from('alumnos').select('id,sexo'),
       sb.from('pagos').select('monto,concepto,fecha,metodo_pago')
     ]);
@@ -2117,15 +2139,7 @@ async function _renderCadetesContent(){
     const sexoMap={};(alumnos||[]).forEach(a=>{sexoMap[a.id]=a.sexo||'';});
     // Guardar datos para las sub-pestañas
     window._gAsist=asist||[]; window._gNotas=notas||[]; window._gRf=rf||[]; window._gPagos=pagos||[]; window._gSexoMap=sexoMap;
-    window._gStatTab='asistencia';
-
-    el.innerHTML=`
-      <div class="aula-tabs" id="rep-gen-tabs" style="border-bottom:1px solid var(--border)">
-        <div class="aula-tab active" onclick="showGenStatTab('asistencia')">Asistencia</div>
-        <div class="aula-tab" onclick="showGenStatTab('notas')">Notas</div>
-        <div class="aula-tab" onclick="showGenStatTab('ingresos')">Ingresos</div>
-      </div>
-      <div id="rep-gen-stat"></div>`;
+    el.innerHTML=`<div id="rep-gen-stat"></div>`;
     _renderGenStat();
     return;
   }
