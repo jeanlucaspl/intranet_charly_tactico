@@ -3526,7 +3526,20 @@ function onNotaPruebaChange(){
   document.getElementById('n-campo-marca').style.display='';
   document.getElementById('n-campo-nota-calc').style.display='';
 }
-async function onNotaMarcaChange(){
+let _marcaSeq=0,_marcaTimer=null;
+function onNotaMarcaChange(){
+  clearTimeout(_marcaTimer);
+  // Limpiar mientras el usuario sigue escribiendo
+  const marcaRaw=document.getElementById('n-marca').value.trim();
+  if(!marcaRaw){
+    document.getElementById('n-nota-fisica').value='';
+    document.getElementById('n-nota-calc').textContent='--';
+    return;
+  }
+  _marcaTimer=setTimeout(()=>_calcularNotaMarca(),400);
+}
+async function _calcularNotaMarca(){
+  const seq=++_marcaSeq;
   const pruebaId=document.getElementById('n-prueba').value;
   const opt=document.getElementById('n-prueba').selectedOptions[0];
   if(!pruebaId||!opt)return;
@@ -3540,11 +3553,13 @@ async function onNotaMarcaChange(){
     .select('nota').eq('prueba_id',pruebaId)
     .lte('valor_min',valor).gte('valor_max',valor)
     .order('nota',{ascending:false}).limit(1);
+  if(seq!==_marcaSeq)return; // respuesta obsoleta, ignorar
   let nota=match?.[0]?.nota;
   // Si no hay match, aplicar lógica de bordes
   if(nota===undefined||nota===null){
     const {data:rangos}=await sb.from('prueba_conversion')
       .select('valor_min,valor_max').eq('prueba_id',pruebaId);
+    if(seq!==_marcaSeq)return; // respuesta obsoleta, ignorar
     if(rangos?.length){
       const minVal=Math.min(...rangos.map(r=>r.valor_min));
       const maxVal=Math.max(...rangos.map(r=>r.valor_max));
