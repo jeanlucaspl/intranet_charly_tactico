@@ -649,16 +649,16 @@ async function openSolucion(pathOrUrl,btnEl){
     const path=pathOrUrl.startsWith('http')
       ?pathOrUrl.replace(/.*\/object\/sign\/soluciones\//,'').replace(/\?.*$/,'')
       :pathOrUrl;
-    if(!path){alert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    if(!path){await myAlert('Archivo sin path. Volvé a entregar la solución.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     const {data,error:signErr}=await sb.storage.from('soluciones').createSignedUrl(path,3600);
-    if(signErr||!data?.signedUrl){alert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+    if(signErr||!data?.signedUrl){await myAlert('Sin permiso para leer el archivo: '+(signErr?.message||'sin signedUrl'));if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
     if(window.AndroidNative&&typeof AndroidNative.downloadFile==='function'){
       AndroidNative.downloadFile(data.signedUrl, path.split('/').pop()||'solucion');
     }else if(window.AndroidNative&&AndroidNative.openUrl){
       AndroidNative.openUrl(data.signedUrl);
     }else{
       const resp=await fetch(data.signedUrl);
-      if(!resp.ok){alert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
+      if(!resp.ok){await myAlert('Error al descargar ('+resp.status+'). Intentá de nuevo.');if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}return;}
       const blob=await resp.blob();
       const ext=path.split('.').pop()||'jpg';
       const a=document.createElement('a');
@@ -666,7 +666,7 @@ async function openSolucion(pathOrUrl,btnEl){
       a.download=`solucion.${ext}`;
       document.body.appendChild(a);a.click();document.body.removeChild(a);
     }
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){await myAlert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⬇';}
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
@@ -677,14 +677,14 @@ async function openPractica(urlOrPath,btnEl){
   try{
     const path=urlOrPath.startsWith('http')?_pracPath(urlOrPath):urlOrPath;
     const {data,error}=await sb.storage.from('practicas').createSignedUrl(path,3600);
-    if(error||!data?.signedUrl){alert('No se pudo descargar: '+(error?.message||'sin URL'));return;}
+    if(error||!data?.signedUrl){await myAlert('No se pudo descargar: '+(error?.message||'sin URL'));return;}
     if(window.AndroidNative&&typeof AndroidNative.downloadFile==='function'){
       AndroidNative.downloadFile(data.signedUrl, path.split('/').pop()||'practica.pdf');
     }else if(window.AndroidNative&&AndroidNative.openUrl){
       AndroidNative.openUrl(data.signedUrl);
     }else{
       const resp=await fetch(data.signedUrl);
-      if(!resp.ok){alert('Error al descargar ('+resp.status+')');return;}
+      if(!resp.ok){await myAlert('Error al descargar ('+resp.status+')');return;}
       const blob=await resp.blob();
       const ext=path.split('.').pop()||'pdf';
       const a=document.createElement('a');
@@ -692,7 +692,7 @@ async function openPractica(urlOrPath,btnEl){
       a.download=`practica.${ext}`;
       document.body.appendChild(a);a.click();document.body.removeChild(a);
     }
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){await myAlert('Error: '+e.message);}
   if(btnEl){btnEl.disabled=false;btnEl.textContent=origTxt;}
 }
 function renderSolPreview(pid){
