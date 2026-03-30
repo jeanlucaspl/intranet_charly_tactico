@@ -1983,7 +1983,7 @@ async function cerrarSesion(){
   showFacialTab('registros');
   loadDashboard();
 }
-function _renderCadetesContent(){
+async function _renderCadetesContent(){
   const el=document.getElementById('rep-cad-content');
   if(!el)return;
   if(repCadetesSubTab==='general'){
