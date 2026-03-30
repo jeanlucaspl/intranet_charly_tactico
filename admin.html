@@ -270,6 +270,7 @@
     .nota-mat-nom{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;flex:1}
     .nota-mat-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);background:rgba(255,255,255,.04);padding:2px 8px;border:1px solid var(--border)}
     .nota-mat-bdy{border-top:1px solid var(--border);display:none}
+    .nota-mat-card.open .nota-mat-bdy{display:block}
     .nota-alu-row{border-bottom:1px solid var(--border)}
     .nota-alu-row:last-child{border-bottom:none}
     .nota-alu-hdr{display:flex;align-items:center;gap:10px;padding:9px 18px 9px 28px;cursor:pointer;user-select:none;transition:background .15s}
@@ -2085,42 +2086,113 @@ function generarPdfMes(mes){
   notas.forEach(n=>{const s=n.materias?.sector||'aptitud_academica';if(n.nota_1!=null)push(secN[s],n.nota_1,n.alumno_id);});
   rf.filter(r=>!r.pruebas_fisicas?.materia_id).forEach(r=>{if(r.nota!=null)push(secN.aptitud_fisica,r.nota,r.alumno_id);});
   const totalI=pagos.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+  const logoUrl=new URL('icono_final.png',window.location.href).href;
+  const fechaHoy=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
   const w=window.open('','_blank');
   if(!w)return;
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte ${labelCap}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#222;padding:30px;max-width:800px;margin:0 auto}
-  h1{font-size:22px;margin-bottom:4px;color:#1a1a2e}h2{font-size:14px;font-weight:700;letter-spacing:.1em;color:#555;margin:22px 0 8px;border-bottom:2px solid #eee;padding-bottom:4px;text-transform:uppercase}
-  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}.card{border:1px solid #ddd;padding:10px 16px;min-width:100px;border-radius:6px;background:#fafafa}
-  .card-lbl{font-size:11px;color:#888;margin-bottom:2px}.card-val{font-size:24px;font-weight:700}.sub{font-size:11px;color:#666;margin-top:2px}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px}th{background:#f0f0f0;text-align:left;padding:7px 10px;font-size:12px;border-bottom:2px solid #ddd}
-  td{padding:6px 10px;border-bottom:1px solid #eee;font-size:12px}tr:last-child td{border-bottom:none}
-  .muted{color:#999;font-style:italic}@media print{body{padding:15px}.no-print{display:none}}</style></head><body>
-  <h1>Reporte Mensual — ${labelCap}</h1>
-  <p style="color:#888;font-size:12px;margin-top:2px">Generado el ${new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'})}</p>
-  <h2>Asistencia</h2>
-  ${totA?`<div class="cards">
-    <div class="card"><div class="card-lbl">Total registros</div><div class="card-val">${totA}</div></div>
-    <div class="card"><div class="card-lbl">Presentes</div><div class="card-val" style="color:green">${Math.round(presA/totA*100)}%</div><div class="sub">${presA} alumnos</div></div>
-    <div class="card"><div class="card-lbl">Tardanzas</div><div class="card-val" style="color:orange">${Math.round(tardA/totA*100)}%</div><div class="sub">${tardA} alumnos</div></div>
-    <div class="card"><div class="card-lbl">Ausentes</div><div class="card-val" style="color:red">${Math.round(ausA/totA*100)}%</div><div class="sub">${ausA} alumnos</div></div>
-  </div>`:'<p class="muted">Sin registros de asistencia</p>'}
-  <h2>Notas</h2>
-  <table><tr><th>Sector</th><th>Promedio Total</th><th>♂ Masculino</th><th>♀ Femenino</th><th>Registros</th></tr>
-    <tr><td>Aptitud Física</td><td>${avg(secN.aptitud_fisica.tot)??'--'}</td><td>${avg(secN.aptitud_fisica.m)??'--'}</td><td>${avg(secN.aptitud_fisica.f)??'--'}</td><td>${secN.aptitud_fisica.tot.length}</td></tr>
-    <tr><td>Aptitud Académica</td><td>${avg(secN.aptitud_academica.tot)??'--'}</td><td>${avg(secN.aptitud_academica.m)??'--'}</td><td>${avg(secN.aptitud_academica.f)??'--'}</td><td>${secN.aptitud_academica.tot.length}</td></tr>
-    <tr><td>Entrevista Personal</td><td>${avg(secN.entrevista_personal.tot)??'--'}</td><td>${avg(secN.entrevista_personal.m)??'--'}</td><td>${avg(secN.entrevista_personal.f)??'--'}</td><td>${secN.entrevista_personal.tot.length}</td></tr>
-  </table>
-  <h2>Ingresos</h2>
-  ${pagos.length?`<div class="cards">
-    <div class="card"><div class="card-lbl">Total recaudado</div><div class="card-val" style="color:#c9a84c">S/${totalI.toFixed(2)}</div></div>
-    <div class="card"><div class="card-lbl">Núm. pagos</div><div class="card-val">${pagos.length}</div></div>
-    <div class="card"><div class="card-lbl">Promedio/pago</div><div class="card-val">S/${Math.round(totalI/pagos.length)}</div></div>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte ${labelCap} — Charly Tactico TEDAX</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Arial',sans-serif;font-size:12px;color:#1a1a2e;background:#fff;padding:0}
+    /* HEADER */
+    .pdf-header{background:linear-gradient(135deg,#0d1b2e 0%,#1a2e4a 60%,#0d1b2e 100%);color:#fff;padding:18px 30px;display:flex;align-items:center;gap:20px;border-bottom:3px solid #c9a84c}
+    .pdf-logo{width:72px;height:72px;border-radius:50%;border:2px solid #c9a84c;flex-shrink:0}
+    .pdf-titulo{flex:1}
+    .pdf-titulo h1{font-size:22px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#c9a84c;line-height:1.1}
+    .pdf-titulo h2{font-size:13px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:#a0b4c8;margin-top:3px}
+    .pdf-titulo .pdf-mes{font-size:15px;font-weight:700;color:#fff;margin-top:6px;letter-spacing:.04em}
+    .pdf-meta{text-align:right;font-size:11px;color:#a0b4c8;line-height:1.6;flex-shrink:0}
+    /* DIVISOR */
+    .pdf-divider{height:2px;background:linear-gradient(to right,#c9a84c,transparent);margin:0}
+    /* BODY */
+    .pdf-body{padding:20px 30px 30px}
+    /* SECCIÓN */
+    .sec-title{display:flex;align-items:center;gap:8px;margin:20px 0 10px;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0d1b2e}
+    .sec-title::before{content:'';display:inline-block;width:4px;height:16px;background:#c9a84c;border-radius:2px;flex-shrink:0}
+    .sec-title::after{content:'';flex:1;height:1px;background:#dce3ea;margin-left:8px}
+    /* CARDS */
+    .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+    .card{border:1px solid #dce3ea;padding:10px 16px;min-width:110px;border-radius:4px;background:#f8fafc;border-top:3px solid #c9a84c}
+    .card-lbl{font-size:10px;color:#8a96a3;margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em}
+    .card-val{font-size:22px;font-weight:900;color:#0d1b2e;line-height:1}
+    .card-sub{font-size:10px;color:#6a7a8a;margin-top:3px}
+    /* TABLA */
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
+    th{background:#0d1b2e;color:#c9a84c;text-align:left;padding:7px 10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+    td{padding:6px 10px;border-bottom:1px solid #eef1f4;color:#2a3a4a}
+    tr:nth-child(even) td{background:#f8fafc}
+    tr:last-child td{border-bottom:none}
+    .muted{color:#aaa;font-style:italic;padding:10px 0}
+    /* FOOTER */
+    .pdf-footer{background:#f0f4f8;border-top:2px solid #c9a84c;padding:10px 30px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#6a7a8a;letter-spacing:.06em;margin-top:30px}
+    @media print{
+      .no-print{display:none}
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pdf-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style></head><body>
+
+  <!-- HEADER TEMÁTICO -->
+  <div class="pdf-header">
+    <img class="pdf-logo" src="${logoUrl}" alt="Logo Charly Tactico" onerror="this.style.display='none'">
+    <div class="pdf-titulo">
+      <h1>Charly Tactico TEDAX</h1>
+      <h2>Academia Pre-Cadetes</h2>
+      <div class="pdf-mes">Reporte Mensual &mdash; ${labelCap}</div>
+    </div>
+    <div class="pdf-meta">
+      <div>Generado el</div>
+      <div style="color:#fff;font-weight:700">${fechaHoy}</div>
+      <div style="margin-top:6px;color:#c9a84c;font-weight:700;font-size:12px">CONFIDENCIAL</div>
+    </div>
   </div>
-  <table><tr><th>Concepto</th><th>Método</th><th>Monto</th><th>Fecha</th></tr>
-    ${pagos.slice(0,60).map(p=>`<tr><td>${p.concepto||'-'}</td><td>${p.metodo_pago||'-'}</td><td>S/${parseFloat(p.monto||0).toFixed(2)}</td><td>${p.fecha||'-'}</td></tr>`).join('')}
-    ${pagos.length>60?`<tr><td colspan="4" class="muted">... y ${pagos.length-60} pagos más</td></tr>`:''}
-  </table>`:'<p class="muted">Sin registros de ingresos</p>'}
-  <script>window.onload=()=>window.print();<\/script></body></html>`);
+  <div class="pdf-divider"></div>
+
+  <div class="pdf-body">
+
+    <!-- ASISTENCIA -->
+    <div class="sec-title">Asistencia</div>
+    ${totA?`<div class="cards">
+      <div class="card"><div class="card-lbl">Total registros</div><div class="card-val">${totA}</div></div>
+      <div class="card" style="border-top-color:#4caf84"><div class="card-lbl">Presentes</div><div class="card-val" style="color:#2e7d52">${Math.round(presA/totA*100)}%</div><div class="card-sub">${presA} alumnos</div></div>
+      <div class="card" style="border-top-color:#c9b84c"><div class="card-lbl">Tardanzas</div><div class="card-val" style="color:#8a7a20">${Math.round(tardA/totA*100)}%</div><div class="card-sub">${tardA} alumnos</div></div>
+      <div class="card" style="border-top-color:#c94c4c"><div class="card-lbl">Ausentes</div><div class="card-val" style="color:#8a2020">${Math.round(ausA/totA*100)}%</div><div class="card-sub">${ausA} alumnos</div></div>
+    </div>`:'<p class="muted">Sin registros de asistencia este mes.</p>'}
+
+    <!-- NOTAS -->
+    <div class="sec-title">Notas por Sector</div>
+    ${(secN.aptitud_fisica.tot.length+secN.aptitud_academica.tot.length+secN.entrevista_personal.tot.length)?`
+    <table>
+      <tr><th>Sector</th><th>Prom. Total</th><th>&#9794; Masculino</th><th>&#9792; Femenino</th><th>Registros</th></tr>
+      <tr><td><strong>Aptitud F&iacute;sica</strong></td><td style="font-weight:700;color:${avg(secN.aptitud_fisica.tot)>=11?'#2e7d52':'#8a2020'}">${avg(secN.aptitud_fisica.tot)??'--'}</td><td style="color:#3a6ea8">${avg(secN.aptitud_fisica.m)??'--'}</td><td style="color:#a83a6e">${avg(secN.aptitud_fisica.f)??'--'}</td><td>${secN.aptitud_fisica.tot.length}</td></tr>
+      <tr><td><strong>Aptitud Acad&eacute;mica</strong></td><td style="font-weight:700;color:${avg(secN.aptitud_academica.tot)>=11?'#2e7d52':'#8a2020'}">${avg(secN.aptitud_academica.tot)??'--'}</td><td style="color:#3a6ea8">${avg(secN.aptitud_academica.m)??'--'}</td><td style="color:#a83a6e">${avg(secN.aptitud_academica.f)??'--'}</td><td>${secN.aptitud_academica.tot.length}</td></tr>
+      <tr><td><strong>Entrevista Personal</strong></td><td style="font-weight:700;color:${avg(secN.entrevista_personal.tot)>=11?'#2e7d52':'#8a2020'}">${avg(secN.entrevista_personal.tot)??'--'}</td><td style="color:#3a6ea8">${avg(secN.entrevista_personal.m)??'--'}</td><td style="color:#a83a6e">${avg(secN.entrevista_personal.f)??'--'}</td><td>${secN.entrevista_personal.tot.length}</td></tr>
+    </table>`:'<p class="muted">Sin registros de notas este mes.</p>'}
+
+    <!-- INGRESOS -->
+    <div class="sec-title">Ingresos</div>
+    ${pagos.length?`<div class="cards">
+      <div class="card" style="border-top-color:#c9a84c"><div class="card-lbl">Total recaudado</div><div class="card-val" style="color:#8a6a00">S/${totalI.toFixed(2)}</div></div>
+      <div class="card"><div class="card-lbl">N&uacute;m. pagos</div><div class="card-val">${pagos.length}</div></div>
+      <div class="card"><div class="card-lbl">Promedio/pago</div><div class="card-val">S/${Math.round(totalI/pagos.length)}</div></div>
+    </div>
+    <table style="margin-top:10px">
+      <tr><th>Concepto</th><th>M&eacute;todo</th><th>Monto</th><th>Fecha</th></tr>
+      ${pagos.slice(0,60).map(p=>`<tr><td>${p.concepto||'-'}</td><td>${p.metodo_pago||'-'}</td><td style="font-weight:700">S/${parseFloat(p.monto||0).toFixed(2)}</td><td>${p.fecha||'-'}</td></tr>`).join('')}
+      ${pagos.length>60?`<tr><td colspan="4" class="muted">&hellip; y ${pagos.length-60} pagos m&aacute;s</td></tr>`:''}
+    </table>`:'<p class="muted">Sin registros de ingresos este mes.</p>'}
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="pdf-footer">
+    <span>Charly Tactico TEDAX &mdash; Academia Pre-Cadetes</span>
+    <span>${fechaHoy}</span>
+    <span>Documento generado autom&aacute;ticamente</span>
+  </div>
+
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`);
   w.document.close();
 }
 async function _renderCadetesContent(){
