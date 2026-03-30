@@ -2046,20 +2046,31 @@ async function loadReportes(){
   }
 
   if(repTabActual==='padres'){
-    tit.textContent='Padres Registrados';
-    const {data}=await sb.from('padres_alumnos').select('padre_id,parentesco,alumnos(perfiles(nombre,apellido)),perfiles!padre_id(nombre,apellido,dni,telefono)');
-    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return;}
-    // Agrupar por padre
-    const map={};
-    data.forEach(r=>{
-      const pid=r.padre_id;
-      if(!map[pid])map[pid]={nombre:`${r.perfiles?.apellido||''} ${r.perfiles?.nombre||''}`.trim(),dni:r.perfiles?.dni||'--',tel:r.perfiles?.telefono||'--',hijos:[]};
-      const hijo=r.alumnos?.perfiles;
-      if(hijo)map[pid].hijos.push(`${hijo.apellido||''} ${hijo.nombre||''}`.trim());
-    });
-    el.innerHTML=`<table><thead><tr><th>Padre / Madre / Tutor</th><th>DNI</th><th>Teléfono</th><th>Cadete(s)</th></tr></thead><tbody>${
-      Object.values(map).map(p=>`<tr><td>${p.nombre}</td><td style="font-size:11px;color:var(--muted)">${p.dni}</td><td style="font-size:11px;color:var(--muted)">${p.tel}</td><td style="font-size:12px">${p.hijos.join(', ')||'--'}</td></tr>`).join('')
-    }</tbody></table>`;
+    tit.textContent='Historial de Notificaciones — Padres';
+    // Notificaciones enviadas a padres (destinatario con rol padre, o globales)
+    const {data:padreIds}=await sb.from('perfiles').select('id').eq('rol','padre');
+    const ids=new Set((padreIds||[]).map(p=>p.id));
+    const {data:notifs}=await sb.from('notificaciones')
+      .select('*,perfiles!destinatario_id(nombre,apellido)')
+      .order('creado_en',{ascending:false})
+      .limit(200);
+    const filtradas=(notifs||[]).filter(n=>n.global||ids.has(n.destinatario_id));
+    if(!filtradas.length){el.innerHTML=`<div class="empty"><div class="et">Sin notificaciones para padres</div></div>`;return;}
+    const clrMap={urgente:'var(--red)',alerta:'var(--yellow)',info:'var(--blue)'};
+    el.innerHTML=`<div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px">${filtradas.map(n=>{
+      const clr=clrMap[n.tipo]||'var(--gold)';
+      const fecha=new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const dest=n.global?'<span style="color:var(--muted);font-size:10px;letter-spacing:.1em;font-family:\'Barlow Condensed\',sans-serif;text-transform:uppercase">GLOBAL</span>'
+        :`<span style="font-size:11px;color:var(--muted)">${n.perfiles?.apellido||''} ${n.perfiles?.nombre||''}</span>`;
+      return`<div style="border-left:3px solid ${clr};padding:10px 14px;background:var(--navy)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;color:${clr}">${n.titulo}</div>
+          ${dest}
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${n.mensaje}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha} · <span style="color:${clr};text-transform:uppercase">${n.tipo}</span>${n.leida?' · <span style="color:var(--green)">Leída</span>':''}</div>
+      </div>`;
+    }).join('')}</div>`;
   }
 }
 async function loadNotifHist(){
