@@ -624,13 +624,13 @@
 <!-- ══ REPORTES ══ -->
 <div class="panel" id="panel-reportes">
   <div class="ph"><div class="ph-left"><div class="eye">Análisis académico</div><div class="ttl">REPORTES</div></div></div>
-  <div class="cg">
-    <div class="sc"><div class="sc-lbl">% Asistencia</div><div class="sc-val" id="r-pct">--%</div></div>
-    <div class="sc"><div class="sc-lbl">Total registros</div><div class="sc-val" id="r-tot">--</div></div>
-    <div class="sc"><div class="sc-lbl">Verificados facial</div><div class="sc-val" id="r-fac">--</div></div>
+  <div class="aula-tabs" id="rep-tabs">
+    <div class="aula-tab active" onclick="showRepTab('cadetes')">Cadetes</div>
+    <div class="aula-tab" onclick="showRepTab('profesores')">Profesores</div>
+    <div class="aula-tab" onclick="showRepTab('padres')">Padres</div>
   </div>
   <div class="tw">
-    <div class="th"><span class="th-ttl">Resumen por Alumno</span></div>
+    <div class="th"><span class="th-ttl" id="rep-titulo">Asistencia por Cadete</span></div>
     <div id="d-reporte"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
@@ -1982,17 +1982,85 @@ async function cerrarSesion(){
   showFacialTab('registros');
   loadDashboard();
 }
+let repTabActual='cadetes';
+function showRepTab(tab){
+  repTabActual=tab;
+  document.querySelectorAll('#rep-tabs .aula-tab').forEach((t,i)=>{
+    t.classList.toggle('active',['cadetes','profesores','padres'][i]===tab);
+  });
+  loadReportes();
+}
 async function loadReportes(){
-  const {data} = await sb.from('asistencias').select('*');
-  if(!data) return;
-  const tot=data.length, fac=data.filter(a=>a.verificado_facial).length, pres=data.filter(a=>a.estado==='presente').length;
-  document.getElementById('r-pct').textContent=`${tot?Math.round(pres/tot*100):0}%`;
-  document.getElementById('r-tot').textContent=tot;
-  document.getElementById('r-fac').textContent=fac;
-  const map={}; data.forEach(a=>{if(!map[a.alumno_id])map[a.alumno_id]={p:0,t:0,au:0};if(a.estado==='presente')map[a.alumno_id].p++;else if(a.estado==='tardanza')map[a.alumno_id].t++;else map[a.alumno_id].au++});
-  const ids=Object.keys(map); if(!ids.length){document.getElementById('d-reporte').innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return}
-  const {data:als}=await sb.from('alumnos').select('id,perfiles(nombre,apellido)').in('id',ids);
-  document.getElementById('d-reporte').innerHTML=`<table><thead><tr><th>Alumno</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>% Asist.</th></tr></thead><tbody>${als?.map(a=>{const m2=map[a.id];if(!m2)return'';const tot2=m2.p+m2.t+m2.au||1;const p=Math.round(m2.p/tot2*100);const c=p>=80?'bg':p>=60?'by':'br';return`<tr><td>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td><td style="color:var(--green)">${m2.p}</td><td style="color:var(--yellow)">${m2.t}</td><td style="color:var(--red)">${m2.au}</td><td><span class="badge ${c}">${p}%</span></td></tr>`}).join('')}</tbody></table>`;
+  const el=document.getElementById('d-reporte');
+  const tit=document.getElementById('rep-titulo');
+  el.innerHTML=`<div class="empty"><div class="et">Cargando...</div></div>`;
+
+  if(repTabActual==='cadetes'){
+    tit.textContent='Asistencia por Cadete';
+    const {data}=await sb.from('asistencias').select('alumno_id,estado');
+    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return;}
+    const map={};
+    data.forEach(a=>{
+      if(!map[a.alumno_id])map[a.alumno_id]={p:0,t:0,au:0};
+      if(a.estado==='presente')map[a.alumno_id].p++;
+      else if(a.estado==='tardanza')map[a.alumno_id].t++;
+      else map[a.alumno_id].au++;
+    });
+    const ids=Object.keys(map);
+    const {data:als}=await sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').in('id',ids);
+    el.innerHTML=`<table><thead><tr><th>Cadete</th><th>DNI</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>% Asist.</th></tr></thead><tbody>${
+      (als||[]).map(a=>{
+        const m=map[a.id];if(!m)return'';
+        const tot=m.p+m.t+m.au||1;
+        const p=Math.round(m.p/tot*100);
+        const c=p>=80?'bg':p>=60?'by':'br';
+        return`<tr><td>${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</td><td style="font-size:11px;color:var(--muted)">${a.perfiles?.dni||'--'}</td><td style="color:var(--green)">${m.p}</td><td style="color:var(--yellow)">${m.t}</td><td style="color:var(--red)">${m.au}</td><td><span class="badge ${c}">${p}%</span></td></tr>`;
+      }).join('')
+    }</tbody></table>`;
+    return;
+  }
+
+  if(repTabActual==='profesores'){
+    tit.textContent='Asistencia por Profesor';
+    const {data}=await sb.from('asistencias_profesores').select('profesor_id,estado,hora_ingreso,hora_salida');
+    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return;}
+    const map={};
+    data.forEach(a=>{
+      if(!map[a.profesor_id])map[a.profesor_id]={p:0,t:0,au:0};
+      if(a.estado==='presente')map[a.profesor_id].p++;
+      else if(a.estado==='tardanza')map[a.profesor_id].t++;
+      else map[a.profesor_id].au++;
+    });
+    const ids=Object.keys(map);
+    const {data:profs}=await sb.from('profesores').select('id,perfiles(nombre,apellido,dni),especialidad').in('id',ids);
+    el.innerHTML=`<table><thead><tr><th>Profesor</th><th>DNI</th><th>Especialidad</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>% Asist.</th></tr></thead><tbody>${
+      (profs||[]).map(pr=>{
+        const m=map[pr.id];if(!m)return'';
+        const tot=m.p+m.t+m.au||1;
+        const p=Math.round(m.p/tot*100);
+        const c=p>=80?'bg':p>=60?'by':'br';
+        return`<tr><td>${pr.perfiles?.apellido||''} ${pr.perfiles?.nombre||''}</td><td style="font-size:11px;color:var(--muted)">${pr.perfiles?.dni||'--'}</td><td style="font-size:12px;color:var(--muted)">${pr.especialidad||'--'}</td><td style="color:var(--green)">${m.p}</td><td style="color:var(--yellow)">${m.t}</td><td style="color:var(--red)">${m.au}</td><td><span class="badge ${c}">${p}%</span></td></tr>`;
+      }).join('')
+    }</tbody></table>`;
+    return;
+  }
+
+  if(repTabActual==='padres'){
+    tit.textContent='Padres Registrados';
+    const {data}=await sb.from('padres_alumnos').select('padre_id,parentesco,alumnos(perfiles(nombre,apellido)),perfiles!padre_id(nombre,apellido,dni,telefono)');
+    if(!data?.length){el.innerHTML=`<div class="empty"><div class="et">Sin datos</div></div>`;return;}
+    // Agrupar por padre
+    const map={};
+    data.forEach(r=>{
+      const pid=r.padre_id;
+      if(!map[pid])map[pid]={nombre:`${r.perfiles?.apellido||''} ${r.perfiles?.nombre||''}`.trim(),dni:r.perfiles?.dni||'--',tel:r.perfiles?.telefono||'--',hijos:[]};
+      const hijo=r.alumnos?.perfiles;
+      if(hijo)map[pid].hijos.push(`${hijo.apellido||''} ${hijo.nombre||''}`.trim());
+    });
+    el.innerHTML=`<table><thead><tr><th>Padre / Madre / Tutor</th><th>DNI</th><th>Teléfono</th><th>Cadete(s)</th></tr></thead><tbody>${
+      Object.values(map).map(p=>`<tr><td>${p.nombre}</td><td style="font-size:11px;color:var(--muted)">${p.dni}</td><td style="font-size:11px;color:var(--muted)">${p.tel}</td><td style="font-size:12px">${p.hijos.join(', ')||'--'}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
 }
 async function loadNotifHist(){
   const {data}=await sb.from('notificaciones').select('*').order('creado_en',{ascending:false}).limit(50);
