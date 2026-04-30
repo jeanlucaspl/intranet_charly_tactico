@@ -1821,11 +1821,12 @@ function limpiarNotasFiltros(){
   document.getElementById('nf-desde').value='';
   document.getElementById('nf-hasta').value='';
   _nfTexto='';_nfDesde='';_nfHasta='';
-  _notasConsultaActiva=false;
-  document.getElementById('d-notas').style.display='none';
-  document.getElementById('d-notas-placeholder').style.display='';
-  document.getElementById('btn-notas-pdf').style.display='none';
+  _notasConsultaActiva=true;
+  document.getElementById('d-notas').style.display='';
+  document.getElementById('d-notas-placeholder').style.display='none';
+  document.getElementById('btn-notas-pdf').style.display='';
   nfCerrarSug();
+  renderNotas();
 }
 
 // ── AUTOCOMPLETE FILTRO NOTAS ──
