@@ -21,6 +21,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -1836,127 +1838,149 @@ function _aluMatchFiltro(nombre,dni){
   return(nombre||'').toLowerCase().includes(_nfTexto)||(dni||'').toLowerCase().includes(_nfTexto);
 }
 
-function generarNotasFiltradosPDF(){
-  const logoUrl=new URL('icono_final.png',window.location.href).href;
-  const fechaHoy=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+async function generarNotasFiltradosPDF(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210,ML=14,MR=14,CW=PW-ML-MR;
+  const NAVY=[13,27,46],GOLD=[201,168,76],WHITE=[255,255,255],MUTED=[160,180,200],LIGHT=[248,250,252],BORDER=[220,227,234];
 
-  // Armar descripción del filtro
+  // Cargar logo como base64
+  const logoB64=await new Promise(res=>{
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
+    img.onerror=()=>res(null);
+    img.src='icono_final.png';
+  });
+
+  const fechaHoy=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
   const fmtFecha=f=>{try{return new Date(f+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});}catch{return f;}};
+
   let descripcion='';
   if(_nfTexto&&_nfDesde&&_nfHasta&&_nfDesde===_nfHasta)
-    descripcion=`Alumno que coincide con <strong>"${document.getElementById('nf-texto').value.trim()}"</strong> &mdash; Fecha: <strong>${fmtFecha(_nfDesde)}</strong>`;
+    descripcion=`"${document.getElementById('nf-texto').value.trim()}" — Fecha: ${fmtFecha(_nfDesde)}`;
   else if(_nfTexto&&_nfDesde&&_nfHasta)
-    descripcion=`Alumno: <strong>"${document.getElementById('nf-texto').value.trim()}"</strong> &mdash; Rango: <strong>${fmtFecha(_nfDesde)}</strong> al <strong>${fmtFecha(_nfHasta)}</strong>`;
+    descripcion=`"${document.getElementById('nf-texto').value.trim()}" — Rango: ${fmtFecha(_nfDesde)} al ${fmtFecha(_nfHasta)}`;
   else if(_nfTexto)
-    descripcion=`Notas registradas del alumno: <strong>"${document.getElementById('nf-texto').value.trim()}"</strong>`;
+    descripcion=`Notas del alumno: "${document.getElementById('nf-texto').value.trim()}"`;
   else if(_nfDesde&&_nfHasta&&_nfDesde===_nfHasta)
-    descripcion=`Notas registradas el <strong>${fmtFecha(_nfDesde)}</strong>`;
+    descripcion=`Notas registradas el ${fmtFecha(_nfDesde)}`;
   else if(_nfDesde&&_nfHasta)
-    descripcion=`Notas registradas del <strong>${fmtFecha(_nfDesde)}</strong> al <strong>${fmtFecha(_nfHasta)}</strong>`;
+    descripcion=`Notas registradas del ${fmtFecha(_nfDesde)} al ${fmtFecha(_nfHasta)}`;
   else if(_nfDesde)
-    descripcion=`Notas registradas desde el <strong>${fmtFecha(_nfDesde)}</strong>`;
+    descripcion=`Notas registradas desde el ${fmtFecha(_nfDesde)}`;
   else if(_nfHasta)
-    descripcion=`Notas registradas hasta el <strong>${fmtFecha(_nfHasta)}</strong>`;
+    descripcion=`Notas registradas hasta el ${fmtFecha(_nfHasta)}`;
 
-  // Recopilar datos filtrados por sector
-  const sectores=[
-    {key:'aptitud_fisica',label:'Aptitud Física'},
-    {key:'aptitud_academica',label:'Apt. Académica y Conocimientos'},
-    {key:'entrevista_personal',label:'Entrevista Personal'}
-  ];
-  let tablasSectores='';
+  // ── HEADER ──────────────────────────────────────────────────────
+  const HDR=38;
+  doc.setFillColor(...NAVY);doc.rect(0,0,PW,HDR,'F');
+  doc.setFillColor(...GOLD);doc.rect(0,HDR,PW,0.7,'F');
+  if(logoB64)doc.addImage(logoB64,'PNG',10,7,22,22);
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(...GOLD);
+  doc.text('CHARLY TACTICO TEDAX',36,16);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MUTED);
+  doc.text('ACADEMIA PRE-CADETES — REGISTRO DE NOTAS',36,22);
+  doc.setFontSize(9);doc.setTextColor(...WHITE);
+  doc.text(descripcion,36,30,{maxWidth:120});
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MUTED);
+  doc.text('Generado el',PW-MR,16,{align:'right'});
+  doc.setTextColor(...WHITE);doc.setFont('helvetica','bold');
+  doc.text(fechaHoy,PW-MR,21,{align:'right'});
+  doc.setTextColor(...GOLD);doc.setFontSize(7.5);
+  doc.text('CONFIDENCIAL',PW-MR,27,{align:'right'});
 
-  // Aptitud física (resultados_fisicos)
+  let curY=HDR+8;
+
+  const drawSecTitle=(label)=>{
+    if(curY>260){doc.addPage();curY=14;}
+    doc.setFillColor(...GOLD);doc.rect(ML,curY,3,5,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...NAVY);
+    doc.text(label.toUpperCase(),ML+5,curY+4);
+    doc.setDrawColor(...BORDER);doc.line(ML+5+doc.getTextWidth(label.toUpperCase())+3,curY+2,PW-MR,curY+2);
+    curY+=9;
+  };
+
+  const drawSubTitle=(label)=>{
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(60,80,100);
+    doc.text(label,ML,curY);curY+=5;
+  };
+
+  const tableStyles={
+    startY:curY,margin:{left:ML,right:MR},
+    styles:{fontSize:8,cellPadding:2,textColor:[30,40,60]},
+    headStyles:{fillColor:NAVY,textColor:GOLD,fontStyle:'bold',fontSize:7.5},
+    alternateRowStyles:{fillColor:LIGHT},
+    tableLineColor:BORDER,tableLineWidth:0.1
+  };
+
+  let hayDatos=false;
+
+  // Aptitud Física
   const rfFilt=allResultadosFisicos.filter(r=>_aluMatchFiltro(`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`,r.alumnos?.perfiles?.dni)&&_notaMatchFiltro(r.fecha||r.creado_en));
   if(rfFilt.length){
+    hayDatos=true;
+    drawSecTitle('Aptitud Física');
     const byP={};
     rfFilt.forEach(r=>{const pid=r.prueba_id;if(!byP[pid])byP[pid]={nombre:r.pruebas_fisicas?.nombre||'--',tipo:r.pruebas_fisicas?.tipo,rows:[]};byP[pid].rows.push(r);});
-    let html='';
     Object.values(byP).forEach(pd=>{
-      const filas=pd.rows.map(r=>{
-        const marca=r.valor!=null?(pd.tipo==='tiempo'?formatTiempo(r.valor):r.valor):'--';
+      drawSubTitle(pd.nombre);
+      const body=pd.rows.map(r=>{
+        const marca=r.valor!=null?(pd.tipo==='tiempo'?formatTiempo(r.valor):String(r.valor)):'--';
         const nombre=`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`.trim();
-        const dni=r.alumnos?.perfiles?.dni||'--';
         const fecha=r.fecha||new Date(r.creado_en).toLocaleDateString('es-PE');
-        const c=r.nota>=11?'color:#2e7d52;font-weight:700':'color:#8a2020;font-weight:700';
-        return`<tr><td>${nombre}</td><td>${dni}</td><td>${fecha}</td><td>${marca}</td><td style="${c}">${r.nota??'--'}</td></tr>`;
-      }).join('');
-      html+=`<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0d1b2e;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #dce3ea">${pd.nombre}</div>
-      <table><thead><tr><th>Alumno</th><th>DNI</th><th>Fecha</th><th>Marca</th><th>Nota</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+        const nota=r.nota??'--';
+        return[nombre,r.alumnos?.perfiles?.dni||'--',fecha,marca,nota];
+      });
+      doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Marca','Nota']],body,
+        didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
+      });
+      curY=doc.lastAutoTable.finalY+6;
     });
-    tablasSectores+=`<div class="sec-title">Aptitud Física</div>${html}`;
   }
 
   // Sectores académicos
-  ['aptitud_academica','entrevista_personal'].forEach(sec=>{
+  for(const sec of['aptitud_academica','entrevista_personal']){
     const label=sec==='aptitud_academica'?'Apt. Académica y Conocimientos':'Entrevista Personal';
     const sMatIds=new Set(allMaterias.filter(m=>(m.sector||'aptitud_academica')===sec).map(m=>m.id));
     const nFilt=allNotas.filter(n=>sMatIds.has(n.materia_id)&&_aluMatchFiltro(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&_notaMatchFiltro(n.creado_en));
-    if(!nFilt.length)return;
+    if(!nFilt.length)continue;
+    hayDatos=true;
+    drawSecTitle(label);
     const byMat={};
     nFilt.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',rows:[]};byMat[k].rows.push(n);});
-    let html='';
     Object.values(byMat).forEach(md=>{
-      const filas=md.rows.map(n=>{
+      drawSubTitle(md.nombre);
+      const body=md.rows.map(n=>{
         const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
         const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
-        const c=(n.nota_1??-1)>=11?'color:#2e7d52;font-weight:700':'color:#8a2020;font-weight:700';
-        return`<tr><td>${nombre}</td><td>${n.alumnos?.perfiles?.dni||'--'}</td><td>${fecha}</td><td>${n.periodo||'--'}</td><td style="${c}">${n.nota_1??'--'}</td></tr>`;
-      }).join('');
-      html+=`<div style="margin-bottom:16px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#0d1b2e;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #dce3ea">${md.nombre}</div>
-      <table><thead><tr><th>Alumno</th><th>DNI</th><th>Fecha</th><th>Período</th><th>Nota</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+        return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
+      });
+      doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Período','Nota']],body,
+        didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
+      });
+      curY=doc.lastAutoTable.finalY+6;
     });
-    tablasSectores+=`<div class="sec-title">${label}</div>${html}`;
-  });
+  }
 
-  if(!tablasSectores){tablasSectores='<p style="color:#888;font-style:italic;padding:12px 0">Sin registros para los filtros aplicados.</p>';}
+  if(!hayDatos){
+    doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(140,140,140);
+    doc.text('Sin registros para los filtros aplicados.',ML,curY);
+  }
 
-  const w=window.open('','_blank');
-  if(!w)return;
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Notas — Charly Táctico TEDAX</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;background:#fff}
-    .pdf-header{background:linear-gradient(135deg,#0d1b2e 0%,#1a2e4a 60%,#0d1b2e 100%);color:#fff;padding:18px 30px;display:flex;align-items:center;gap:20px;border-bottom:3px solid #c9a84c}
-    .pdf-logo{width:64px;height:64px;border-radius:50%;border:2px solid #c9a84c;flex-shrink:0;object-fit:contain}
-    .pdf-titulo h1{font-size:20px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#c9a84c;line-height:1.1}
-    .pdf-titulo h2{font-size:11px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:#a0b4c8;margin-top:2px}
-    .pdf-titulo .pdf-desc{font-size:12px;color:#fff;margin-top:8px;line-height:1.4}
-    .pdf-meta{text-align:right;font-size:10px;color:#a0b4c8;line-height:1.7;flex-shrink:0;margin-left:auto}
-    .pdf-divider{height:2px;background:linear-gradient(to right,#c9a84c,transparent)}
-    .pdf-body{padding:20px 30px 30px}
-    .sec-title{display:flex;align-items:center;gap:8px;margin:20px 0 10px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0d1b2e}
-    .sec-title::before{content:'';display:inline-block;width:4px;height:14px;background:#c9a84c;border-radius:2px;flex-shrink:0}
-    .sec-title::after{content:'';flex:1;height:1px;background:#dce3ea;margin-left:8px}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{background:#0d1b2e;color:#c9a84c;text-align:left;padding:6px 10px;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
-    td{padding:5px 10px;border-bottom:1px solid #eef1f4}
-    tr:nth-child(even) td{background:#f8fafc}
-    .pdf-footer{background:#f0f4f8;border-top:2px solid #c9a84c;padding:8px 30px;display:flex;justify-content:space-between;font-size:10px;color:#6a7a8a;margin-top:30px}
-    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.pdf-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
-  </style></head><body>
-  <div class="pdf-header">
-    <img class="pdf-logo" src="${logoUrl}" alt="" onerror="this.style.display='none'">
-    <div class="pdf-titulo" style="flex:1">
-      <h1>Charly T&aacute;ctico TEDAX</h1>
-      <h2>Academia Pre-Cadetes &mdash; Registro de Notas</h2>
-      <div class="pdf-desc">${descripcion}</div>
-    </div>
-    <div class="pdf-meta">
-      <div>Generado el</div>
-      <div style="color:#fff;font-weight:700">${fechaHoy}</div>
-      <div style="color:#c9a84c;font-weight:700;font-size:11px;margin-top:4px">CONFIDENCIAL</div>
-    </div>
-  </div>
-  <div class="pdf-divider"></div>
-  <div class="pdf-body">${tablasSectores}</div>
-  <div class="pdf-footer">
-    <span>Charly T&aacute;ctico TEDAX &mdash; Academia Pre-Cadetes</span>
-    <span class="no-print" style="cursor:pointer;color:#0d1b2e;font-weight:700" onclick="window.print()">&#128438; Imprimir / Guardar PDF</span>
-    <span>${fechaHoy}</span>
-  </div>
-  </body></html>`);
-  w.document.close();
+  // Footer en última página
+  const pageCount=doc.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFillColor(240,244,248);doc.rect(0,286,PW,11,'F');
+    doc.setFillColor(...GOLD);doc.rect(0,286,PW,0.5,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(106,122,138);
+    doc.text('Charly Tactico TEDAX — Academia Pre-Cadetes',ML,292);
+    doc.text(`${i} / ${pageCount}`,PW/2,292,{align:'center'});
+    doc.text(fechaHoy,PW-MR,292,{align:'right'});
+  }
+
+  const slug=(_nfTexto?_nfTexto.replace(/\s+/g,'_')+'_':'')+((_nfDesde||_nfHasta)?(_nfDesde||'')+((_nfHasta&&_nfHasta!==_nfDesde)?'_al_'+_nfHasta:''):'notas');
+  doc.save(`charly_tactico_notas_${slug}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 async function loadNotas(){
