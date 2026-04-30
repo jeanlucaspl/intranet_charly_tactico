@@ -4154,10 +4154,10 @@ async function saveNota(){
   if(!materiaId)return showMsg(msg,'Selecciona alumno y materia','err');
   let n1,periodo;
   periodo=document.getElementById('n-periodo').value.trim();
-  n1=parseFloat(document.getElementById('n-n1').value)||null;
+  const _v1=document.getElementById('n-n1').value;n1=_v1!==''?parseFloat(_v1):null;
   if(!periodo)return showMsg(msg,'Ingresa el campo / período','err');
-  const n2=parseFloat(document.getElementById('n-n2').value)||null;
-  const n3=parseFloat(document.getElementById('n-n3').value)||null;
+  const _v2=document.getElementById('n-n2').value;const n2=_v2!==''?parseFloat(_v2):null;
+  const _v3=document.getElementById('n-n3').value;const n3=_v3!==''?parseFloat(_v3):null;
   const ns=[n1,n2,n3].filter(n=>n!==null);
   const prom=ns.length?parseFloat((ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(2)):null;
   const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
