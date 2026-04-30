@@ -3446,20 +3446,20 @@ function renderNotas(){
             <span class="nota-alu-nombre">${ad.nombre}</span>
             <span class="nota-alu-dni">${ad.dni}</span>
             <span class="nota-alu-cnt">${ad.resultados.length} resultado(s)</span>
-            <span class="nota-alu-arr">▸</span>
+            <span class="nota-alu-arr">${_notasConsultaActiva?'▾':'▸'}</span>
           </div>
-          <div class="nota-alu-bdy">
+          <div class="nota-alu-bdy" style="${_notasConsultaActiva?'display:block':''}">
             <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Marca</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>
           </div>
         </div>`;
       }).join('');
       return`<div class="nota-mat-card">
         <div class="nota-mat-hdr" onclick="toggleNotaMat(this)">
-          <span class="nota-mat-ico">▸</span>
+          <span class="nota-mat-ico">${_notasConsultaActiva?'▾':'▸'}</span>
           <span class="nota-mat-nom">${pd.nombre}</span>
           <span class="nota-mat-badge">${aluEntries.length} alumno(s)</span>
         </div>
-        <div class="nota-mat-bdy">${aluHTML}</div>
+        <div class="nota-mat-bdy" style="${_notasConsultaActiva?'display:block':''}">${aluHTML}</div>
       </div>`;
     }).join('')}</div>`;
     return;
@@ -3506,20 +3506,20 @@ function renderNotas(){
           <span class="nota-alu-nombre">${ad.nombre}</span>
           <span class="nota-alu-dni">${ad.dni}</span>
           <span class="nota-alu-cnt">${ad.notas.length} nota(s)</span>
-          <span class="nota-alu-arr">▸</span>
+          <span class="nota-alu-arr">${_notasConsultaActiva?'▾':'▸'}</span>
         </div>
-        <div class="nota-alu-bdy">
+        <div class="nota-alu-bdy" style="${_notasConsultaActiva?'display:block':''}">
           <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Período</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Prom.</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         </div>
       </div>`;
     }).join('');
     return`<div class="nota-mat-card">
       <div class="nota-mat-hdr" onclick="toggleNotaMat(this)">
-        <span class="nota-mat-ico">▸</span>
+        <span class="nota-mat-ico">${_notasConsultaActiva?'▾':'▸'}</span>
         <span class="nota-mat-nom">${md.nombre}</span>
         <span class="nota-mat-badge">${aluEntries.length} alumno(s)</span>
       </div>
-      <div class="nota-mat-bdy">${aluHTML}</div>
+      <div class="nota-mat-bdy" style="${_notasConsultaActiva?'display:block':''}">${aluHTML}</div>
     </div>`;
   }).join('')}</div>`;
 }
