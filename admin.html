@@ -682,8 +682,7 @@
       <button class="btn btn-outline" onclick="limpiarNotasFiltros()" style="font-size:11px;padding:5px 12px">&#10005; Limpiar</button>
       <button class="btn btn-gold" id="btn-notas-pdf" onclick="generarNotasFiltradosPDF()" style="font-size:11px;padding:5px 12px;display:none">&#8595; Exportar PDF</button>
     </div>
-    <div id="d-notas" style="display:none"></div>
-    <div id="d-notas-placeholder" class="empty"><div class="ei"></div><div class="et">Ingresa un filtro y presiona Consultar</div></div>
+    <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -1802,9 +1801,7 @@ function applyNotasFiltro(){
   _nfTexto=document.getElementById('nf-texto').value.trim().toLowerCase();
   _nfDesde=document.getElementById('nf-desde').value;
   _nfHasta=document.getElementById('nf-hasta').value;
-  _notasConsultaActiva=true;
-  document.getElementById('d-notas').style.display='';
-  document.getElementById('d-notas-placeholder').style.display='none';
+  _notasConsultaActiva=!!(  _nfTexto||_nfDesde||_nfHasta);
   document.getElementById('btn-notas-pdf').style.display='';
   renderNotas();
 }
@@ -1821,10 +1818,7 @@ function limpiarNotasFiltros(){
   document.getElementById('nf-desde').value='';
   document.getElementById('nf-hasta').value='';
   _nfTexto='';_nfDesde='';_nfHasta='';
-  _notasConsultaActiva=true;
-  document.getElementById('d-notas').style.display='';
-  document.getElementById('d-notas-placeholder').style.display='none';
-  document.getElementById('btn-notas-pdf').style.display='';
+  _notasConsultaActiva=false;
   nfCerrarSug();
   renderNotas();
 }
@@ -2053,7 +2047,7 @@ async function loadNotas(){
   allNotas=nd||[];
   allResultadosFisicos=(rf||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
   buildFechasDropdown();
-  if(_notasConsultaActiva)renderNotas();
+  renderNotas();
 }
 async function loadPracticas(){
   const {data} = await sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
@@ -3417,7 +3411,7 @@ function showNotasSector(sector){
   document.querySelectorAll('#notas-sector-tabs .aula-tab').forEach((t,i)=>{
     t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
   });
-  if(_notasConsultaActiva)renderNotas();
+  renderNotas();
 }
 function renderNotas(){
   const el=document.getElementById('d-notas');
