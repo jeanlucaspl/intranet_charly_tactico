@@ -293,6 +293,11 @@
     .notas-filtros input::placeholder{color:var(--muted)}
     .notas-filtros option{background:#0d1b2e}
     .nf-sep{color:var(--muted);font-size:11px;align-self:center}
+    .nf-wrap{position:relative}
+    .nf-sug{position:absolute;top:100%;left:0;min-width:240px;background:#0d1b2e;border:1px solid var(--gold);z-index:200;max-height:200px;overflow-y:auto;display:none}
+    .nf-sug-item{padding:7px 12px;font-size:12px;font-family:'Barlow Condensed',sans-serif;color:var(--white);cursor:pointer;display:flex;gap:10px;align-items:center}
+    .nf-sug-item:hover,.nf-sug-item.active{background:rgba(201,168,76,.15)}
+    .nf-sug-dni{color:var(--muted);font-size:11px}
 
     /* HORARIO PLANTILLA TABLE */
     .hor-table{width:100%;border-collapse:collapse;font-size:12px}
@@ -662,16 +667,23 @@
       <button class="btn btn-gold" style="font-size:11px;padding:6px 14px" onclick="openCargarNota()">+ Cargar Nota</button>
     </div>
     <div class="notas-filtros" id="notas-filtros">
-      <input type="text" id="nf-texto" placeholder="Apellido o DNI del alumno..." oninput="applyNotasFiltro()" style="min-width:180px">
+      <div class="nf-wrap">
+        <input type="text" id="nf-texto" placeholder="Apellido o DNI del alumno..." style="min-width:200px" autocomplete="off"
+          oninput="nfSuggest(this.value)"
+          onkeydown="nfSugKey(event)">
+        <div id="nf-sug" class="nf-sug"></div>
+      </div>
       <select id="nf-fecha-sel" onchange="onNotasFechaSelect()"><option value="">— Fecha específica —</option></select>
       <span class="nf-sep">o rango:</span>
-      <input type="date" id="nf-desde" onchange="applyNotasFiltro()" title="Desde">
+      <input type="date" id="nf-desde" title="Desde">
       <span class="nf-sep">→</span>
-      <input type="date" id="nf-hasta" onchange="applyNotasFiltro()" title="Hasta">
-      <button class="btn btn-outline" onclick="limpiarNotasFiltros()" style="font-size:11px;padding:5px 12px">✕ Limpiar</button>
-      <button class="btn btn-gold" id="btn-notas-pdf" onclick="generarNotasFiltradosPDF()" style="font-size:11px;padding:5px 12px;display:none">↓ Exportar PDF</button>
+      <input type="date" id="nf-hasta" title="Hasta">
+      <button class="btn btn-gold" onclick="applyNotasFiltro()" style="font-size:11px;padding:5px 14px">Consultar</button>
+      <button class="btn btn-outline" onclick="limpiarNotasFiltros()" style="font-size:11px;padding:5px 12px">&#10005; Limpiar</button>
+      <button class="btn btn-gold" id="btn-notas-pdf" onclick="generarNotasFiltradosPDF()" style="font-size:11px;padding:5px 12px;display:none">&#8595; Exportar PDF</button>
     </div>
-    <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-notas" style="display:none"></div>
+    <div id="d-notas-placeholder" class="empty"><div class="ei"></div><div class="et">Ingresa un filtro y presiona Consultar</div></div>
   </div>
 </div>
 
@@ -1784,13 +1796,16 @@ async function loadAulas(){
 }
 let notasSectorTab='aptitud_fisica';
 let _nfTexto='',_nfDesde='',_nfHasta='';
+let _notasConsultaActiva=false;
 
 function applyNotasFiltro(){
   _nfTexto=document.getElementById('nf-texto').value.trim().toLowerCase();
   _nfDesde=document.getElementById('nf-desde').value;
   _nfHasta=document.getElementById('nf-hasta').value;
-  const activo=_nfTexto||_nfDesde||_nfHasta;
-  document.getElementById('btn-notas-pdf').style.display=activo?'':'none';
+  _notasConsultaActiva=true;
+  document.getElementById('d-notas').style.display='';
+  document.getElementById('d-notas-placeholder').style.display='none';
+  document.getElementById('btn-notas-pdf').style.display='';
   renderNotas();
 }
 
@@ -1798,7 +1813,6 @@ function onNotasFechaSelect(){
   const v=document.getElementById('nf-fecha-sel').value;
   document.getElementById('nf-desde').value=v;
   document.getElementById('nf-hasta').value=v;
-  applyNotasFiltro();
 }
 
 function limpiarNotasFiltros(){
@@ -1807,9 +1821,56 @@ function limpiarNotasFiltros(){
   document.getElementById('nf-desde').value='';
   document.getElementById('nf-hasta').value='';
   _nfTexto='';_nfDesde='';_nfHasta='';
+  _notasConsultaActiva=false;
+  document.getElementById('d-notas').style.display='none';
+  document.getElementById('d-notas-placeholder').style.display='';
   document.getElementById('btn-notas-pdf').style.display='none';
-  renderNotas();
+  nfCerrarSug();
 }
+
+// ── AUTOCOMPLETE FILTRO NOTAS ──
+let _nfSugIdx=-1;
+function nfSuggest(q){
+  const box=document.getElementById('nf-sug');
+  const term=q.trim().toLowerCase();
+  if(!term){box.style.display='none';box.innerHTML='';_nfSugIdx=-1;return;}
+  const matches=allAlumnos.filter(a=>{
+    const nombre=`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase();
+    const dni=(a.perfiles?.dni||'').toLowerCase();
+    return nombre.includes(term)||dni.includes(term);
+  }).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  _nfSugIdx=-1;
+  box.innerHTML=matches.map((a,i)=>{
+    const nombre=`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.trim();
+    const dni=a.perfiles?.dni||'';
+    return`<div class="nf-sug-item" data-val="${nombre}" onmousedown="nfSelSug('${nombre.replace(/'/g,"\\'")}')">
+      <span>${nombre}</span><span class="nf-sug-dni">${dni}</span>
+    </div>`;
+  }).join('');
+  box.style.display='block';
+}
+function nfSelSug(val){
+  document.getElementById('nf-texto').value=val;
+  nfCerrarSug();
+  applyNotasFiltro();
+}
+function nfCerrarSug(){
+  const box=document.getElementById('nf-sug');
+  if(box){box.style.display='none';box.innerHTML='';}_nfSugIdx=-1;
+}
+function nfSugKey(e){
+  const box=document.getElementById('nf-sug');
+  const items=box?box.querySelectorAll('.nf-sug-item'):[];
+  if(e.key==='ArrowDown'){e.preventDefault();_nfSugIdx=Math.min(_nfSugIdx+1,items.length-1);items.forEach((it,i)=>it.classList.toggle('active',i===_nfSugIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_nfSugIdx=Math.max(_nfSugIdx-1,0);items.forEach((it,i)=>it.classList.toggle('active',i===_nfSugIdx));}
+  else if(e.key==='Enter'){
+    if(_nfSugIdx>=0&&items[_nfSugIdx]){nfSelSug(items[_nfSugIdx].dataset.val);}
+    else{nfCerrarSug();applyNotasFiltro();}
+  }
+  else if(e.key==='Escape'){nfCerrarSug();}
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.nf-wrap'))nfCerrarSug();});
 
 function buildFechasDropdown(){
   const fechas=new Set();
@@ -1953,10 +2014,10 @@ async function generarNotasFiltradosPDF(){
       const body=md.rows.map(n=>{
         const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
         const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
-        return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
+        return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
       });
-      doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Período','Nota']],body,
-        didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
+      doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Período','Nota 1','Nota 2','Nota 3','Prom.']],body,
+        didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
       });
       curY=doc.lastAutoTable.finalY+6;
     });
@@ -1991,7 +2052,7 @@ async function loadNotas(){
   allNotas=nd||[];
   allResultadosFisicos=(rf||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
   buildFechasDropdown();
-  renderNotas();
+  if(_notasConsultaActiva)renderNotas();
 }
 async function loadPracticas(){
   const {data} = await sb.from('practicas').select('*,materias(nombre)').order('semana_inicio',{ascending:false});
@@ -3355,7 +3416,7 @@ function showNotasSector(sector){
   document.querySelectorAll('#notas-sector-tabs .aula-tab').forEach((t,i)=>{
     t.classList.toggle('active',['aptitud_fisica','aptitud_academica','entrevista_personal'][i]===sector);
   });
-  renderNotas();
+  if(_notasConsultaActiva)renderNotas();
 }
 function renderNotas(){
   const el=document.getElementById('d-notas');
@@ -3421,13 +3482,19 @@ function renderNotas(){
     const aluHTML=aluEntries.map(([aid,ad])=>{
       const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
       const rows=sorted.map(n=>{
-        const nota=n.nota_1??'--';const c=(n.nota_1||0)>=11?'bg':'br';
+        const n1=n.nota_1??'--';const n2=n.nota_2??'--';const n3=n.nota_3??'--';
+        const prom=n.promedio??'--';
+        const c1=(n.nota_1||0)>=11?'bg':'br';
+        const cp=(n.promedio||0)>=11?'bg':'br';
         const nomEsc=ad.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const perEsc=(n.periodo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         return`<tr>
           <td>${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
           <td style="color:var(--muted)">${n.periodo||'--'}</td>
-          <td><span class="badge ${c}">${nota}</span></td>
+          <td><span class="badge ${c1}">${n1}</span></td>
+          <td>${n2!=='--'?`<span class="badge ${(n.nota_2||0)>=11?'bg':'br'}">${n2}</span>`:'<span style="color:var(--muted)">--</span>'}</td>
+          <td>${n3!=='--'?`<span class="badge ${(n.nota_3||0)>=11?'bg':'br'}">${n3}</span>`:'<span style="color:var(--muted)">--</span>'}</td>
+          <td><span class="badge ${cp}" style="font-weight:700">${prom}</span></td>
           <td style="display:flex;gap:4px">
             <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="adminEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'})">Editar</button>
             <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="adminEliminarNota('${n.id}')">Elim.</button>
@@ -3442,7 +3509,7 @@ function renderNotas(){
           <span class="nota-alu-arr">▸</span>
         </div>
         <div class="nota-alu-bdy">
-          <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Período</th><th>Nota</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+          <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Período</th><th>Nota 1</th><th>Nota 2</th><th>Nota 3</th><th>Prom.</th><th></th></tr></thead><tbody>${rows}</tbody></table>
         </div>
       </div>`;
     }).join('');
