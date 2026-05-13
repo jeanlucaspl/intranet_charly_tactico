@@ -5532,7 +5532,7 @@ const gpEsc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 function gpIniciar(){
   if(!GP.init){
     GP.cfg.fecha=new Date().toISOString().slice(0,10);
-    GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',preguntas:[{e:'',p:1,sp:0,si:[]}]}];
+    GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,preguntas:[{e:'',p:1,sp:0,si:[]}]}];
     GP.init=true;
   }
   // Refresh section names con allMaterias si está vacío
@@ -5562,7 +5562,7 @@ function gpSimular(nc){
   let col=0,pages=1,curY=topF,colTop=topF;
   const next=()=>{col++;if(col>=nc){col=0;pages++;colTop=topO;}curY=colTop;};
   GP.secciones.forEach((sec,si)=>{
-    if(multi){if(curY+10>gpFOOT)next();curY+=10;}
+    if(multi){if(curY+12>gpFOOT)next();curY+=12;}
     sec.preguntas.forEach(q=>{const h=gpEstimarH(doc,q,nc);if(curY+h>gpFOOT)next();curY+=h;});
   });
   return pages;
@@ -5593,8 +5593,10 @@ function gpRenderUI(){
     <div style="background:var(--navy2);border:1px solid var(--border);margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--border);background:var(--navy3)">
         <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:15px">■</span>
-        <input style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:none;border:none;border-bottom:1px solid transparent;outline:none"
-          value="${gpEsc(sec.nombre)}" oninput="GP.secciones[${si}].nombre=this.value" placeholder="Nombre de sección">
+        <select style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:var(--navy3);border:none;border-bottom:1px solid var(--gold);outline:none;padding:2px 4px"
+          onchange="GP.secciones[${si}].materia_id=this.value;GP.secciones[${si}].nombre=this.options[this.selectedIndex].text;gpRefreshBadge()">
+          ${allMaterias.map(m=>`<option value="${m.id}" style="background:var(--navy2)" ${m.id==sec.materia_id?'selected':''}>${m.nombre}</option>`).join('')}
+        </select>
         ${GP.secciones.length>1?`<button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="gpDelSec(${si})">✕ Sección</button>`:''}
       </div>
       <div style="padding:11px 13px;display:flex;flex-direction:column;gap:9px">
@@ -5664,7 +5666,7 @@ function gpAddQ(si){GP.secciones[si].preguntas.push({e:'',p:1,sp:0,si:[]});gpRen
 function gpDelQ(si,qi){GP.secciones[si].preguntas.splice(qi,1);gpRenderUI();}
 function gpAddSI(si,qi){GP.secciones[si].preguntas[qi].si.push('');gpRenderUI();}
 function gpDelSI(si,qi,sii){GP.secciones[si].preguntas[qi].si.splice(sii,1);gpRenderUI();}
-function gpAddSec(){GP.secciones.push({nombre:'Nueva Sección',preguntas:[{e:'',p:1,sp:0,si:[]}]});gpRenderUI();}
+function gpAddSec(){GP.secciones.push({nombre:allMaterias[0]?.nombre||'Nueva Sección',materia_id:allMaterias[0]?.id||null,preguntas:[{e:'',p:1,sp:0,si:[]}]});gpRenderUI();}
 function gpDelSec(si){if(GP.secciones.length===1)return;GP.secciones.splice(si,1);gpRenderUI();}
 function gpSetPages(n){GP.targetPages=n;gpRenderUI();}
 
@@ -5828,20 +5830,23 @@ async function generarPracticaPDF(){
     };
 
     const drawDiv=(nombre)=>{
-      if(curY+10>gpFOOT)moveNext();
+      if(curY+12>gpFOOT)moveNext();
       const cx=colXs[curCol];
-      doc.setFillColor(...gpNAVY);doc.rect(cx,curY,cw,7.5,'F');
-      doc.setFillColor(...gpGOLD);doc.rect(cx,curY+7.5,cw,.5,'F');
-      doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...gpGOLD);
-      doc.text('— '+nombre.toUpperCase(),cx+4,curY+5);
-      curY+=10;
+      // Fondo navy con borde dorado arriba y abajo
+      doc.setFillColor(...gpNAVY);doc.rect(cx,curY,cw,9,'F');
+      doc.setFillColor(...gpGOLD);doc.rect(cx,curY,cw,.6,'F');
+      doc.setFillColor(...gpGOLD);doc.rect(cx,curY+9,cw,.6,'F');
+      // Texto centrado
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?8:7);doc.setTextColor(...gpGOLD);
+      doc.text(nombre.toUpperCase(),cx+cw/2,curY+6,{align:'center'});
+      curY+=12;
     };
 
     status.textContent='Compilando PDF...';
     const multi=GP.secciones.length>1;
     let gnum=1;
     GP.secciones.forEach((sec,si)=>{
-      if(multi)drawDiv(sec.nombre);
+      if(multi)drawDiv(sec.nombre); // cabezal para cada sección
       sec.preguntas.forEach(q=>drawQ(q,gnum++));
     });
 
