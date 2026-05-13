@@ -5886,12 +5886,13 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   doc.text(tLines,W/2,145,{align:'center'});
   const afterT=145+tLines.length*9;
   // Materia y tiempo
-  if(materia){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(160,190,210);doc.text(materia.toUpperCase(),W/2,afterT+6,{align:'center'});}
-  const info=[fecha,tiempo?tiempo+' minutos':null].filter(Boolean).join('   ·   ');
-  if(info){doc.setFontSize(8.5);doc.setTextColor(110,140,165);doc.text(info,W/2,afterT+(materia?12:6),{align:'center'});}
+  if(materia){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(160,190,210);doc.text(materia.toUpperCase(),W/2,afterT+5,{align:'center'});}
+  let infoY=afterT+(materia?5:0);
+  if(fecha){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(110,140,165);doc.text(fecha,W/2,infoY+8,{align:'center'});infoY+=8;}
+  if(tiempo){doc.setFontSize(8);doc.setTextColor(90,120,145);doc.text(tiempo+' minutos',W/2,infoY+7,{align:'center'});infoY+=7;}
   // Separador 2
   doc.setDrawColor(40,65,95);doc.setLineWidth(0.3);
-  doc.line(22,afterT+18,W-22,afterT+18);
+  doc.line(22,infoY+6,W-22,infoY+6);
   // ── CAJA DATOS DEL ESTUDIANTE ──
   const cX=18,cY=210,cW=W-36,cH=66;
   doc.setFillColor(5,12,22);doc.rect(cX+2,cY+2,cW,cH,'F'); // sombra
@@ -5913,14 +5914,12 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   };
   // Fila 1: Apellidos y Nombres
   field('APELLIDOS Y NOMBRES',fL,fR,fy);fy+=15;
-  // Fila 2: DNI | Sección | Nota
-  const w3=(cW-16)/3;
-  field('DNI',fL,fL+w3-4,fy);
-  field('SECCIÓN',fL+w3,fL+w3*2-4,fy);
-  field('NOTA',fL+w3*2,fR,fy);fy+=15;
-  // Fila 3: Firma docente | Fecha entrega
+  // Fila 2: DNI | Nota
   const w2=(cW-16)/2;
-  field('FIRMA DEL DOCENTE',fL,fL+w2-4,fy);
+  field('DNI',fL,fL+w2-4,fy);
+  field('NOTA',fL+w2,fR,fy);fy+=15;
+  // Fila 3: Firma del estudiante | Fecha entrega
+  field('FIRMA DEL ESTUDIANTE',fL,fL+w2-4,fy);
   field('FECHA DE ENTREGA',fL+w2,fR,fy);
   // Pie de página carátula
   doc.setFont('helvetica','normal');doc.setFontSize(6.2);doc.setTextColor(70,95,115);
