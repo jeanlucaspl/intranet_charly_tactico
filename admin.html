@@ -5733,15 +5733,15 @@ async function generarPracticaPDF(){
     if(logoB64)doc.addImage(logoB64,'PNG',gpML,3.5,15,15);
     const hx=gpML+20;
     doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(20,20,20);
-    doc.text('CHARLY TACTICO TEDAX',hx,10);
+    doc.text('CHARLY TACTICO TEDAX',hx,9);
     doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(90,90,90);
     const matLabel=GP.secciones.length===1?' | '+GP.secciones[0].nombre.toUpperCase():'';
-    doc.text('Academia Pre-Cadetes — Práctica'+matLabel,hx,15.5);
+    doc.text('Academia Pre-Cadetes'+matLabel,hx,13.5);
     doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(20,20,20);
-    doc.text(titulo,hx,21,{maxWidth:110});
+    doc.text(titulo,hx,18,{maxWidth:110});
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(90,90,90);
-    doc.text(fechaPrac,gpPW-gpMR,10,{align:'right'});
-    if(GP.cfg.tiempo)doc.text(GP.cfg.tiempo+' min',gpPW-gpMR,16,{align:'right'});
+    doc.text(fechaPrac,gpPW-gpMR,9,{align:'right'});
+    if(GP.cfg.tiempo)doc.text(GP.cfg.tiempo+' min',gpPW-gpMR,13.5,{align:'right'});
     doc.setDrawColor(40,40,40);doc.setLineWidth(.5);
     doc.line(0,HDR,gpPW,HDR);
 
