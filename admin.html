@@ -5529,13 +5529,13 @@ function gpCX(n,i){return gpML+i*(gpCW(n)+gpGAP);}
 function gpTW(n){return gpCW(n)-gpIND[n]-2;}
 const gpEsc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-function gpIniciar(){
+async function gpIniciar(){
+  if(!allMaterias.length) await loadMaterias();
   if(!GP.init){
     GP.cfg.fecha=new Date().toISOString().slice(0,10);
     GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,preguntas:[{e:'',p:1,sp:0,si:[]}]}];
     GP.init=true;
   }
-  // Refresh section names con allMaterias si está vacío
   gpRenderUI();
 }
 
