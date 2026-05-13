@@ -5727,22 +5727,23 @@ async function generarPracticaPDF(){
       img.onerror=()=>res(null);img.src='icono_final.png';
     });
 
-    // ── HEADER slim, blanco/negro ────────────────────────────
+    // ── HEADER elegante gris ─────────────────────────────────
     const HDR=22;
-    if(logoB64)doc.addImage(logoB64,'PNG',gpML,3,15,15);
-    const hx=gpML+19;
-    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(0,0,0);
+    doc.setFillColor(228,228,228);doc.rect(0,0,gpPW,HDR,'F');
+    if(logoB64)doc.addImage(logoB64,'PNG',gpML,3.5,15,15);
+    const hx=gpML+20;
+    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(20,20,20);
     doc.text('CHARLY TACTICO TEDAX',hx,10);
     doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(90,90,90);
     const matLabel=GP.secciones.length===1?' | '+GP.secciones[0].nombre.toUpperCase():'';
     doc.text('Academia Pre-Cadetes — Práctica'+matLabel,hx,15.5);
-    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(0,0,0);
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(20,20,20);
     doc.text(titulo,hx,21,{maxWidth:110});
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(90,90,90);
     doc.text(fechaPrac,gpPW-gpMR,10,{align:'right'});
     if(GP.cfg.tiempo)doc.text(GP.cfg.tiempo+' min',gpPW-gpMR,16,{align:'right'});
-    doc.setDrawColor(0,0,0);doc.setLineWidth(.5);
-    doc.line(gpML,HDR,gpPW-gpMR,HDR);
+    doc.setDrawColor(40,40,40);doc.setLineWidth(.5);
+    doc.line(0,HDR,gpPW,HDR);
 
     // ── INSTRUCCIONES ────────────────────────────────────────
     let curY=HDR+5;
@@ -5751,13 +5752,11 @@ async function generarPracticaPDF(){
       doc.setFont('helvetica','normal');doc.setFontSize(8);
       const iL=doc.splitTextToSize(istr,gpPW-gpML-gpMR);
       const iH=iL.length*4.5+2;
-      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(0,0,0);
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(20,20,20);
       doc.text('INSTRUCCIONES:',gpML,curY+4);
-      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(40,40,40);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(50,50,50);
       doc.text(iL,gpML,curY+9);
-      doc.setDrawColor(0,0,0);doc.setLineWidth(.3);
-      doc.line(gpML,curY+iH+10,gpPW-gpMR,curY+iH+10);
-      curY+=iH+14;
+      curY+=iH+12;
     }
 
     // Column setup
@@ -5772,13 +5771,15 @@ async function generarPracticaPDF(){
     };
     drawSeps(firstTop);
     const drawMini=()=>{
-      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(0,0,0);
-      doc.text('CHARLY TACTICO TEDAX',gpML,5);
+      const MH=8;
+      doc.setFillColor(228,228,228);doc.rect(0,0,gpPW,MH,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(20,20,20);
+      doc.text('CHARLY TACTICO TEDAX',gpML,5.5);
       doc.setFont('helvetica','normal');doc.setTextColor(90,90,90);
-      doc.text(titulo,gpPW/2,5,{align:'center'});
-      doc.text(fechaHoy,gpPW-gpMR,5,{align:'right'});
-      doc.setDrawColor(0,0,0);doc.setLineWidth(.4);
-      doc.line(gpML,7,gpPW-gpMR,7);
+      doc.text(titulo,gpPW/2,5.5,{align:'center'});
+      doc.text(fechaHoy,gpPW-gpMR,5.5,{align:'right'});
+      doc.setDrawColor(40,40,40);doc.setLineWidth(.5);
+      doc.line(0,MH,gpPW,MH);
     };
     const moveNext=()=>{
       curCol++;
@@ -5806,14 +5807,16 @@ async function generarPracticaPDF(){
     };
 
     const drawDiv=(nombre)=>{
-      if(curY+8>gpFOOT)moveNext();
+      const dh=8;
+      if(curY+dh>gpFOOT)moveNext();
       const cx=colXs[curCol];
-      doc.setDrawColor(0,0,0);doc.setLineWidth(.5);
+      doc.setFillColor(235,235,235);doc.rect(cx,curY,cw,dh,'F');
+      doc.setDrawColor(80,80,80);doc.setLineWidth(.3);
       doc.line(cx,curY,cx+cw,curY);
-      doc.line(cx,curY+7,cx+cw,curY+7);
-      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?8:7);doc.setTextColor(0,0,0);
-      doc.text(nombre.toUpperCase(),cx+cw/2,curY+4.8,{align:'center'});
-      curY+=9;
+      doc.line(cx,curY+dh,cx+cw,curY+dh);
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?8:7);doc.setTextColor(20,20,20);
+      doc.text(nombre.toUpperCase(),cx+cw/2,curY+5.2,{align:'center'});
+      curY+=dh+2;
     };
 
     status.textContent='Compilando PDF...';
@@ -5828,9 +5831,9 @@ async function generarPracticaPDF(){
     const pc=doc.getNumberOfPages();
     for(let i=1;i<=pc;i++){
       doc.setPage(i);
-      doc.setDrawColor(0,0,0);doc.setLineWidth(.3);
+      doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(100,100,100);
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
       doc.text('Charly Tactico TEDAX — Academia Pre-Cadetes',gpML,gpFOOT+7);
       doc.text(`${i} / ${pc}`,gpPW/2,gpFOOT+7,{align:'center'});
       doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
