@@ -43,10 +43,11 @@ $$;
 -- ================================================================
 ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "perfiles_anon_login"       ON perfiles;
-DROP POLICY IF EXISTS "perfiles_own_select"        ON perfiles;
-DROP POLICY IF EXISTS "perfiles_own_update"        ON perfiles;
-DROP POLICY IF EXISTS "perfiles_admin_all"         ON perfiles;
+DROP POLICY IF EXISTS "perfiles_anon_login"           ON perfiles;
+DROP POLICY IF EXISTS "perfiles_own_select"            ON perfiles;
+DROP POLICY IF EXISTS "perfiles_own_update"            ON perfiles;
+DROP POLICY IF EXISTS "perfiles_admin_all"             ON perfiles;
+DROP POLICY IF EXISTS "perfiles_profesor_alumnos"      ON perfiles;
 
 -- anon: solo puede leer perfiles de padre y profesor (para login por DNI)
 CREATE POLICY "perfiles_anon_login" ON perfiles
@@ -68,6 +69,16 @@ CREATE POLICY "perfiles_admin_all" ON perfiles
   FOR ALL TO authenticated
   USING (es_admin());
 
+-- profesor: puede leer perfiles de alumnos (para joins en notas/prácticas)
+CREATE POLICY "perfiles_profesor_alumnos" ON perfiles
+  FOR SELECT TO authenticated
+  USING (
+    rol = 'alumno'
+    AND EXISTS (
+      SELECT 1 FROM perfiles p WHERE p.id = auth.uid() AND p.rol = 'profesor'
+    )
+  );
+
 
 -- ================================================================
 -- PASO 3: ALUMNOS
@@ -78,9 +89,10 @@ CREATE POLICY "perfiles_admin_all" ON perfiles
 -- ================================================================
 ALTER TABLE alumnos ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "alumnos_own_select"    ON alumnos;
-DROP POLICY IF EXISTS "alumnos_padre_select"  ON alumnos;
-DROP POLICY IF EXISTS "alumnos_admin_all"     ON alumnos;
+DROP POLICY IF EXISTS "alumnos_own_select"       ON alumnos;
+DROP POLICY IF EXISTS "alumnos_padre_select"    ON alumnos;
+DROP POLICY IF EXISTS "alumnos_admin_all"       ON alumnos;
+DROP POLICY IF EXISTS "alumnos_profesor_select" ON alumnos;
 
 CREATE POLICY "alumnos_own_select" ON alumnos
   FOR SELECT TO authenticated
@@ -98,6 +110,15 @@ CREATE POLICY "alumnos_padre_select" ON alumnos
 CREATE POLICY "alumnos_admin_all" ON alumnos
   FOR ALL TO authenticated
   USING (es_admin());
+
+-- profesor: puede leer todos los alumnos (autocomplete y joins en notas)
+CREATE POLICY "alumnos_profesor_select" ON alumnos
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'profesor'
+    )
+  );
 
 
 -- ================================================================
