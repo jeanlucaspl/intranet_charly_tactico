@@ -21,6 +21,12 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <!-- face-api.js para reconocimiento facial en el navegador -->
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+  <!-- PDF / LaTeX generador de prácticas -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre']}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0b1120;--navy2:#111a2e;--navy3:#162038;--gold:#c9a84c;--gold2:#e8c96a;--white:#f0f4ff;--muted:#7a90b0;--border:rgba(201,168,76,0.25);--green:#4caf7d;--red:#e05555;--yellow:#e8c96a;--blue:#6ab0e8}
@@ -212,6 +218,7 @@
     <button class="sb-link" onclick="showPanel('historial',this)">Mi Historial</button>
     <button class="sb-link" onclick="showPanel('notas',this)">Notas</button>
     <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
+    <button class="sb-link" onclick="showPanel('armar-practica',this)">Armar Práctica</button>
     <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
     <button class="sb-link" onclick="showPanel('notificaciones',this)">Notificaciones <span id="s-notif" style="background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;margin-left:4px;display:none"></span></button>
   </div>
@@ -431,6 +438,11 @@
       <button class="btn btn-gold" id="btn-subir-pp" onclick="saveProfPractica()">SUBIR PRÁCTICA</button>
     </div>
   </div>
+</div>
+
+<!-- ARMAR PRÁCTICA -->
+<div class="panel" id="panel-armar-practica">
+  <div id="gp-root-prof"><div class="empty"><div class="ei"></div><div class="et">Cargando generador...</div></div></div>
 </div>
 
 <!-- NOTIFICACIONES -->
@@ -1063,6 +1075,7 @@ function showPanel(id,btn){
   if(id==='asistencia'){checkYaMarcado();checkDeviceStatusProfesor();}
   if(id==='notas')loadNotasSelects();
   if(id==='practicas'){loadProfPracticas();populateProfPracticaSelect();}
+  if(id==='armar-practica') gpIniciarProf();
   if(id==='soluciones')loadProfPracticas();
   if(id==='notificaciones')loadNotifs();
 }
@@ -1458,6 +1471,608 @@ function myAlert(msg){return _openDialog(msg,false);}
 function myConfirm(msg){return _openDialog(msg,true);}
 function _dlgOk(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(true);_dialogResolve=null;}}
 function _dlgCancel(){document.getElementById('dlg-overlay').style.display='none';if(_dialogResolve){_dialogResolve(false);_dialogResolve=null;}}
+
+// ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
+let profGPMaterias=[];
+
+const GP={
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true},
+  targetPages:1,
+  secciones:[],
+  layout:{cols:1,pages:1},
+  init:false
+};
+
+/* Constantes PDF del generador */
+const gpPW=210,gpML=14,gpMR=14,gpGAP=5,gpFOOT=277;
+const gpNAVY=[13,27,46],gpGOLD=[201,168,76],gpWHITE=[255,255,255],gpMUTED=[160,180,200],gpLIGHT=[248,250,252],gpBORDER=[220,227,234];
+const gpFS={1:9,2:8,3:7.5},gpLH={1:4.5,2:4,3:3.8},gpIND={1:15,2:13,3:11};
+function gpCW(n){return(gpPW-gpML-gpMR-(n-1)*gpGAP)/n;}
+function gpCX(n,i){return gpML+i*(gpCW(n)+gpGAP);}
+function gpTW(n){return gpCW(n)-gpIND[n]-2;}
+const gpEsc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function gpFSn(nc){return Math.round(gpFS[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
+function gpLHn(nc){return Math.round(gpLH[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
+
+/* ── Draft (localStorage) ── */
+function gpSaveDraft(){try{localStorage.setItem('gp_draft_prof',JSON.stringify({cfg:GP.cfg,targetPages:GP.targetPages,secciones:GP.secciones}));}catch(e){}}
+function gpClearDraft(){localStorage.removeItem('gp_draft_prof');}
+async function gpNuevo(){
+  if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true});
+  GP.targetPages=1;
+  GP.secciones=[{nombre:profGPMaterias[0]?.nombre||'Sección',materia_id:profGPMaterias[0]?.id||null,
+    items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+  gpClearDraft();gpRenderUI();
+}
+
+async function gpCargarMaterias(){
+  if(profGPMaterias.length)return;
+  if(!profesorId)return;
+  const{data:mpRows}=await sb.from('materia_profesor').select('materias(id,nombre)').eq('profesor_id',profesorId);
+  profGPMaterias=(mpRows||[]).map(r=>r.materias).filter(Boolean);
+}
+
+async function gpIniciarProf(){
+  await gpCargarMaterias();
+  if(!GP.init){
+    const raw=localStorage.getItem('gp_draft_prof');
+    if(raw){
+      try{
+        const d=JSON.parse(raw);
+        const restore=await myConfirm('Hay un borrador guardado. ¿Recuperarlo?');
+        if(restore){
+          Object.assign(GP.cfg,d.cfg);GP.targetPages=d.targetPages;GP.secciones=d.secciones;
+        }else{
+          gpClearDraft();
+          GP.cfg.fecha=new Date().toISOString().slice(0,10);
+          GP.secciones=[{nombre:profGPMaterias[0]?.nombre||'Sección',materia_id:profGPMaterias[0]?.id||null,
+            items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+        }
+      }catch(e){
+        GP.cfg.fecha=new Date().toISOString().slice(0,10);
+        GP.secciones=[{nombre:profGPMaterias[0]?.nombre||'Sección',materia_id:profGPMaterias[0]?.id||null,
+          items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+      }
+    }else{
+      GP.cfg.fecha=new Date().toISOString().slice(0,10);
+      GP.secciones=[{nombre:profGPMaterias[0]?.nombre||'Sección',materia_id:profGPMaterias[0]?.id||null,
+        items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+    }
+    GP.init=true;
+  }
+  gpRenderUI();
+}
+
+/* ── Layout engine ── */
+function gpEstimarH(doc,item,nc){
+  const lh=gpLHn(nc),tw=gpTW(nc);
+  doc.setFont('helvetica','normal');doc.setFontSize(gpFSn(nc));
+  if(item.tipo==='texto'){
+    const lines=doc.splitTextToSize(item.texto||' ',gpCW(nc)-8);
+    return lines.length*lh+10;
+  }
+  let h=0;
+  (item.e||'').split('\n').forEach(p=>{if(!p.trim()){h+=lh*.4;return;}h+=doc.splitTextToSize(p,tw).length*lh;});
+  if(item.imgData&&item.imgW&&item.imgH){
+    h+=(item.imgH/item.imgW)*gpTW(nc)+4;
+    (item.ePost||'').split('\n').forEach(p=>{if(!p.trim()){h+=lh*.4;return;}h+=doc.splitTextToSize(p,tw).length*lh;});
+  }
+  if(item.tipo==='alternativas'){
+    const n=item.numAlts||5;
+    (item.alts||[]).slice(0,n).forEach(a=>{h+=doc.splitTextToSize(a||' ',tw-8).length*lh+1.5;});
+  }else{
+    (item.si||[]).forEach(s=>{h+=doc.splitTextToSize(s||' ',tw-8).length*lh+2;});
+  }
+  return 6+h+4;
+}
+function gpFirstY(doc){
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
+  const istr=GP.cfg.instrucciones||'';
+  const ih=istr?doc.splitTextToSize(istr,gpPW-gpML-gpMR).length*4.5+14:0;
+  return 22+5+ih;
+}
+function gpSimular(nc){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const topF=gpFirstY(doc),topO=14;
+  const multi=GP.secciones.length>1;
+  let col=0,pages=1,curY=topF,colTop=topF;
+  const next=()=>{col++;if(col>=nc){col=0;pages++;colTop=topO;}curY=colTop;};
+  GP.secciones.forEach(sec=>{
+    if(multi){if(curY+9>gpFOOT)next();curY+=9;}
+    sec.items.forEach(item=>{const h=gpEstimarH(doc,item,nc);if(curY+h>gpFOOT)next();curY+=h;});
+  });
+  return pages;
+}
+function gpCalcLayout(){
+  if(GP.cfg.colsForzar>0){GP.layout={cols:GP.cfg.colsForzar,pages:gpSimular(GP.cfg.colsForzar)};return;}
+  for(let c=1;c<=3;c++){const p=gpSimular(c);if(p<=GP.targetPages){GP.layout={cols:c,pages:p};return;}}
+  GP.layout={cols:3,pages:gpSimular(3)};
+}
+function gpBadgeHTML(){
+  gpCalcLayout();
+  const{cols,pages}=GP.layout,over=pages>GP.targetPages&&!GP.cfg.colsForzar,forced=GP.cfg.colsForzar>0;
+  const icons=Array.from({length:3},(_,i)=>`<div style="width:7px;background:${i<cols?'var(--gold)':'var(--border)'};height:24px"></div>`).join('');
+  const totalPts=GP.secciones.reduce((s,sec)=>s+sec.items.reduce((ss,it)=>ss+(it.tipo!=='texto'?(+it.p||0):0),0),0);
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--navy3);border:1px solid var(--border)">
+    <div style="display:flex;gap:3px">${icons}</div>
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--white);text-transform:uppercase">
+        ${cols} col${cols>1?'umnas':'umna'} · ${pages} pág${pages>1?'s':''}${forced?` <span style="color:var(--gold);font-size:9px">■ forzado</span>`:''}
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">Total: ${totalPts} pts</div>
+      ${over?`<div style="color:#e8a84c;font-size:10px">⚠ +${pages-GP.targetPages} pág. extra</div>`:''}
+    </div>
+  </div>`;
+}
+
+/* ── UI ── */
+function gpRenderUI(){
+  gpCalcLayout();
+  let gnum=0;
+  const multi=GP.secciones.length>1;
+  const secsHTML=GP.secciones.map((sec,si)=>`
+    <div style="background:var(--navy2);border:1px solid var(--border);margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--border);background:var(--navy3)">
+        <span style="color:var(--gold);font-family:'Bebas Neue',sans-serif;font-size:15px">■</span>
+        <select style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;background:var(--navy3);border:none;border-bottom:1px solid var(--gold);outline:none;padding:2px 4px"
+          onchange="GP.secciones[${si}].materia_id=this.value;GP.secciones[${si}].nombre=this.options[this.selectedIndex].text;gpRefreshBadge()">
+          ${profGPMaterias.map(m=>`<option value="${m.id}" style="background:var(--navy2)" ${m.id==sec.materia_id?'selected':''}>${m.nombre}</option>`).join('')}
+        </select>
+        ${GP.secciones.length>1?`<button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="gpDelSec(${si})">✕ Sección</button>`:''}
+      </div>
+      <div style="padding:11px 13px;display:flex;flex-direction:column;gap:9px">
+        ${sec.items.map((item,ii)=>{
+          if(item.tipo==='texto') return `
+            <div style="background:var(--navy3);border:1px solid var(--gold);border-left:3px solid var(--gold);padding:10px 12px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--gold)">TEXTO BASE</span>
+                  <input value="${gpEsc(item.etiqueta||'Texto')}"
+                    style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--muted);font-family:'Barlow',sans-serif;font-size:11px;padding:2px 4px;outline:none;width:120px"
+                    oninput="GP.secciones[${si}].items[${ii}].etiqueta=this.value">
+                </div>
+                <button class="btn btn-red" style="padding:3px 8px;font-size:10px" onclick="gpDelItem(${si},${ii})">✕</button>
+              </div>
+              <textarea style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:8px;outline:none;resize:vertical;line-height:1.6" rows="5"
+                oninput="GP.secciones[${si}].items[${ii}].texto=this.value;gpRefreshBadge()"
+                placeholder="Pega aquí el texto de lectura...">${gpEsc(item.texto||'')}</textarea>
+            </div>`;
+          gnum++;
+          const isAlt=item.tipo==='alternativas';
+          return `
+          <div style="display:flex;gap:9px;align-items:flex-start;background:var(--navy);border:1px solid var(--border);padding:9px 11px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);line-height:1;min-width:22px;text-align:center;padding-top:4px">${gnum}</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <textarea style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;outline:none;resize:vertical;line-height:1.5"
+                rows="3" oninput="GP.secciones[${si}].items[${ii}].e=this.value;gpRefreshBadge()"
+                placeholder="Enunciado — acepta LaTeX: $\\frac{3}{5}$">${gpEsc(item.e||'')}</textarea>
+              ${item.imgData?`
+              <div style="background:var(--navy3);border:1px solid var(--border);padding:8px">
+                <img src="${item.imgData}" style="max-width:100%;max-height:130px;object-fit:contain;display:block;margin:0 auto">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+                  <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.15em;color:var(--muted);text-transform:uppercase">Imagen adjunta</span>
+                  <button class="btn btn-red" style="padding:2px 8px;font-size:9px" onclick="gpRemoveImg(${si},${ii})">✕ Quitar</button>
+                </div>
+                <textarea style="width:100%;background:transparent;border:none;border-top:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:5px 0;outline:none;resize:vertical;line-height:1.5;margin-top:6px"
+                  rows="2" oninput="GP.secciones[${si}].items[${ii}].ePost=this.value;gpRefreshBadge()"
+                  placeholder="Texto después de la imagen (opcional)">${gpEsc(item.ePost||'')}</textarea>
+              </div>`:`
+              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:4px 10px;border:1px dashed var(--border);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;align-self:flex-start">
+                <input type="file" accept="image/*" style="display:none" onchange="gpSetImg(${si},${ii},this)">
+                + Imagen
+              </label>`}
+              ${isAlt?`
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:2px">
+                ${['A','B','C','D','E'].slice(0,item.numAlts||5).map((L,ai)=>`
+                <div style="display:flex;gap:7px;align-items:center">
+                  <label style="display:flex;align-items:center;gap:5px;cursor:pointer">
+                    <input type="radio" name="alt-${si}-${ii}" ${item.altCorrecta===ai?'checked':''}
+                      onchange="GP.secciones[${si}].items[${ii}].altCorrecta=${ai}" style="accent-color:var(--gold)">
+                    <span style="font-family:'Barlow Condensed',sans-serif;color:${item.altCorrecta===ai?'var(--gold)':'var(--muted)'};font-size:12px;font-weight:700">${L}</span>
+                  </label>
+                  <input style="flex:1;background:var(--navy3);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:11px;padding:5px 8px;outline:none"
+                    value="${gpEsc((item.alts||[])[ai]||'')}"
+                    oninput="GP.secciones[${si}].items[${ii}].alts[${ai}]=this.value;gpRefreshBadge()"
+                    placeholder="Alternativa ${L}...">
+                </div>`).join('')}
+              </div>`:`
+              ${(item.si||[]).map((s,sii)=>`
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-family:'Barlow Condensed',sans-serif;color:var(--gold);font-size:12px;font-weight:600;min-width:16px">${String.fromCharCode(97+sii)})</span>
+                <input style="flex:1;background:var(--navy3);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:11px;padding:5px 8px;outline:none"
+                  value="${gpEsc(s)}" oninput="GP.secciones[${si}].items[${ii}].si[${sii}]=this.value" placeholder="sub-ítem ${String.fromCharCode(97+sii)}...">
+                <button class="btn btn-red" onclick="gpDelSI(${si},${ii},${sii})">✕</button>
+              </div>`).join('')}`}
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px">
+                ${!isAlt?`<button class="btn btn-outline" style="padding:4px 9px;font-size:10px" onclick="gpAddSI(${si},${ii})">+ Sub-ítem</button>`:''}
+                <button onclick="gpToggleTipo(${si},${ii})"
+                  style="padding:4px 10px;font-size:10px;border:1px solid ${isAlt?'var(--gold)':'var(--border)'};background:${isAlt?'rgba(201,168,76,.15)':'transparent'};color:${isAlt?'var(--gold)':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.1em;cursor:pointer;text-transform:uppercase"
+                >${isAlt?'✓ Alternativas':'A–E Alternativas'}</button>
+                ${isAlt?`<div style="display:flex;align-items:center;gap:4px">
+                  <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.15em;color:var(--muted);text-transform:uppercase">Opciones</span>
+                  ${[2,3,4,5].map(n=>`<button onclick="GP.secciones[${si}].items[${ii}].numAlts=${n};gpRenderUI()" style="width:22px;height:22px;font-family:'Bebas Neue',sans-serif;font-size:13px;border:1px solid ${(item.numAlts||5)===n?'var(--gold)':'var(--border)'};background:${(item.numAlts||5)===n?'var(--gold)':'transparent'};color:${(item.numAlts||5)===n?'var(--navy)':'var(--muted)'};cursor:pointer">${n}</button>`).join('')}
+                </div>`:''}
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.18em;color:var(--muted);text-transform:uppercase">Pts</span>
+                <input type="number" min="0" max="20" value="${item.p||''}"
+                  style="width:50px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:5px 7px;outline:none;text-align:center"
+                  oninput="GP.secciones[${si}].items[${ii}].p=+this.value;gpRefreshBadge()">
+              </div>
+            </div>
+            <button class="btn btn-red" style="margin-top:4px;padding:4px 8px;font-size:10px" onclick="gpDelItem(${si},${ii})">✕</button>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <button class="btn btn-outline" style="padding:6px 12px;font-size:10px" onclick="gpAddQ(${si})">+ Pregunta</button>
+          <button class="btn btn-outline" style="padding:6px 12px;font-size:10px;border-color:var(--gold);color:var(--gold)" onclick="gpAddTexto(${si})">+ Texto base</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('gp-root-prof').innerHTML=`
+    <div class="ph"><div class="ph-left"><div class="eye">Generador inteligente</div><div class="ttl">ARMAR PRÁCTICA</div></div><button class="btn btn-outline" style="font-size:10px;padding:5px 11px;border-color:var(--red);color:var(--red)" onclick="gpNuevo()">Nueva práctica</button></div>
+    <div class="sc" style="margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
+        <div class="fg" style="margin-bottom:0"><label>Título</label>
+          <input value="${gpEsc(GP.cfg.titulo)}" oninput="GP.cfg.titulo=this.value;gpRefreshBadge()" placeholder="Práctica N°1"></div>
+        <div class="fg" style="margin-bottom:0"><label>Fecha</label>
+          <input type="date" value="${GP.cfg.fecha}" oninput="GP.cfg.fecha=this.value"></div>
+        <div class="fg" style="margin-bottom:0"><label>Tiempo (min)</label>
+          <input type="number" value="${GP.cfg.tiempo}" min="1" oninput="GP.cfg.tiempo=this.value" placeholder="45"></div>
+      </div>
+      <div class="fg" style="margin-bottom:11px"><label>Instrucciones</label>
+        <textarea rows="2" oninput="GP.cfg.instrucciones=this.value;gpRefreshBadge()" placeholder="Instrucciones generales...">${gpEsc(GP.cfg.instrucciones||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${GP.cfg.mostrarPts?'checked':''} onchange="GP.cfg.mostrarPts=this.checked;gpRefreshBadge()" style="accent-color:var(--gold);width:15px;height:15px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white)">Mostrar puntaje por pregunta</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${GP.cfg.caratula?'checked':''} onchange="GP.cfg.caratula=this.checked" style="accent-color:var(--gold);width:15px;height:15px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white)">Incluir carátula</span>
+        </label>
+      </div>
+    </div>
+    ${secsHTML}
+    <button class="btn btn-outline" style="margin-bottom:14px;padding:7px 14px;font-size:11px" onclick="gpAddSec()">+ Agregar sección</button>
+    <div class="sc" style="margin-bottom:14px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:12px">Layout</div>
+      <div style="display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Páginas objetivo</div>
+          <div style="display:flex;gap:5px">
+            ${[1,2,3,4].map(n=>`<button onclick="gpSetPages(${n})" style="width:34px;height:34px;font-family:'Bebas Neue',sans-serif;font-size:17px;border:1px solid ${GP.targetPages===n&&!GP.cfg.colsForzar?'var(--gold)':'var(--border)'};background:${GP.targetPages===n&&!GP.cfg.colsForzar?'var(--gold)':'transparent'};color:${GP.targetPages===n&&!GP.cfg.colsForzar?'var(--navy)':'var(--muted)'};cursor:pointer">${n}</button>`).join('')}
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Forzar columnas</div>
+          <div style="display:flex;gap:5px">
+            ${[1,2,3].map(n=>`<button onclick="gpSetColsForzar(${n})" style="width:34px;height:34px;font-family:'Bebas Neue',sans-serif;font-size:17px;border:1px solid ${GP.cfg.colsForzar===n?'var(--gold)':'var(--border)'};background:${GP.cfg.colsForzar===n?'var(--gold)':'transparent'};color:${GP.cfg.colsForzar===n?'var(--navy)':'var(--muted)'};cursor:pointer">${n}</button>`).join('')}
+          </div>
+          <div style="margin-top:5px;font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--muted)">Click de nuevo para desactivar</div>
+        </div>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Tamaño de fuente</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="range" min="0.7" max="1.3" step="0.05" value="${GP.cfg.escalaFuente||1}"
+              oninput="GP.cfg.escalaFuente=+this.value;document.getElementById('gp-fs-val').textContent=Math.round(this.value*100)+'%';gpRefreshBadge()"
+              style="width:90px;accent-color:var(--gold)">
+            <span id="gp-fs-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:34px">${Math.round((GP.cfg.escalaFuente||1)*100)}%</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-top:10px">
+            <input type="checkbox" ${GP.cfg.separadorCols?'checked':''} onchange="GP.cfg.separadorCols=this.checked" style="accent-color:var(--gold);width:14px;height:14px">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Líneas divisorias</span>
+          </label>
+        </div>
+        <div id="gp-badge">${gpBadgeHTML()}</div>
+      </div>
+    </div>
+    <button class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;letter-spacing:.2em" id="gp-btn-gen" onclick="generarPracticaPDF()"> Generar PDF</button>
+    <div id="gp-status" style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;min-height:16px"></div>`;
+  gpSaveDraft();
+}
+
+function gpRefreshBadge(){const el=document.getElementById('gp-badge');if(el)el.innerHTML=gpBadgeHTML();}
+function gpAddQ(si){GP.secciones[si].items.push({tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5});gpRenderUI();}
+function gpAddTexto(si){GP.secciones[si].items.push({tipo:'texto',texto:'',etiqueta:'Texto'});gpRenderUI();}
+function gpDelItem(si,ii){GP.secciones[si].items.splice(ii,1);gpRenderUI();}
+function gpToggleTipo(si,ii){
+  const it=GP.secciones[si].items[ii];
+  if(it.tipo==='pregunta'){it.tipo='alternativas';if(!it.alts?.length)it.alts=['','','','',''];if(it.altCorrecta==null)it.altCorrecta=-1;}
+  else if(it.tipo==='alternativas')it.tipo='pregunta';
+  gpRenderUI();
+}
+function gpSetImg(si,ii,input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      GP.secciones[si].items[ii].imgData=e.target.result;
+      GP.secciones[si].items[ii].imgW=img.width;
+      GP.secciones[si].items[ii].imgH=img.height;
+      gpRenderUI();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function gpRemoveImg(si,ii){GP.secciones[si].items[ii].imgData=null;GP.secciones[si].items[ii].imgW=0;GP.secciones[si].items[ii].imgH=0;gpRenderUI();}
+function gpAddSI(si,ii){GP.secciones[si].items[ii].si.push('');gpRenderUI();}
+function gpDelSI(si,ii,sii){GP.secciones[si].items[ii].si.splice(sii,1);gpRenderUI();}
+function gpAddSec(){GP.secciones.push({nombre:profGPMaterias[0]?.nombre||'Nueva Sección',materia_id:profGPMaterias[0]?.id||null,
+  items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]});gpRenderUI();}
+function gpDelSec(si){if(GP.secciones.length===1)return;GP.secciones.splice(si,1);gpRenderUI();}
+function gpSetPages(n){GP.targetPages=n;GP.cfg.colsForzar=0;gpRenderUI();}
+function gpSetColsForzar(n){GP.cfg.colsForzar=(GP.cfg.colsForzar===n?0:n);gpRenderUI();}
+
+/* ── MathJax pre-render ── */
+function gpBuildQHTML(item,fsPt){
+  const fsPx=(fsPt*(96/72)).toFixed(1),lhPx=(fsPt*(96/72)*1.55).toFixed(1);
+  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:2px 0">`;
+  (item.e||'').split('\n').forEach(par=>{
+    if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
+    h+=`<p style="margin:0 0 2px 0">${par}</p>`;
+  });
+  if(item.imgData){
+    h+=`<img src="${item.imgData}" style="max-width:100%;height:auto;display:block;margin:4px 0">`;
+    (item.ePost||'').split('\n').forEach(par=>{
+      if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
+      h+=`<p style="margin:0 0 2px 0">${par}</p>`;
+    });
+  }
+  if(item.tipo==='alternativas'){
+    const n=item.numAlts||5;
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;margin-top:5px">`;
+    ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
+      const txt=(item.alts||[])[i]||'';
+      h+=`<div style="display:flex;gap:5px;align-items:flex-start;padding:1px 0"><span style="font-weight:700;min-width:14px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
+    });
+    h+=`</div>`;
+  }else{
+    (item.si||[]).forEach((si,i)=>{
+      h+=`<div style="display:flex;gap:6px;margin-top:3px"><span style="color:#333333;font-weight:700;min-width:18px;flex-shrink:0">${String.fromCharCode(97+i)})</span><span>${si}</span></div>`;
+    });
+  }
+  return h+'</div>';
+}
+async function gpPrerenderAll(nc){
+  await MathJax.startup.promise;
+  const mmToPx=3.7795,colWpx=Math.round(gpTW(nc)*mmToPx),fsPt=gpFSn(nc);
+  const box=document.createElement('div');
+  box.style.cssText=`position:fixed;top:0;left:${-(colWpx+20)}px;width:${colWpx}px;background:#fff;z-index:9999;padding:0;margin:0`;
+  document.body.appendChild(box);
+  const imgs=[];
+  for(const sec of GP.secciones){
+    for(const item of sec.items){
+      if(item.tipo==='texto') continue;
+      box.innerHTML=gpBuildQHTML(item,fsPt);
+      await MathJax.typesetPromise([box]);
+      const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+      imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*2)});
+    }
+  }
+  document.body.removeChild(box);
+  return imgs;
+}
+
+/* ── Carátula ── */
+function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
+  const W=210,H=297;
+  doc.setFillColor(13,27,46);doc.rect(0,0,W,H,'F');
+  doc.setDrawColor(20,40,70);doc.setLineWidth(9);
+  for(let i=0;i<18;i++){const x=-20+i*24;doc.line(x,0,x+70,H);}
+  doc.setFillColor(201,168,76);doc.rect(0,0,W,4,'F');
+  doc.setFillColor(201,168,76);doc.rect(0,H-4,W,4,'F');
+  doc.setFillColor(201,168,76);doc.rect(12,0,0.7,H,'F');
+  doc.setFillColor(201,168,76);doc.rect(W-12.7,0,0.7,H,'F');
+  doc.setDrawColor(201,168,76);doc.setLineWidth(0.3);
+  doc.ellipse(W/2,110,52,52,'S');
+  doc.setLineWidth(0.15);
+  doc.ellipse(W/2,110,57,57,'S');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(201,168,76);
+  doc.text('ACADEMIA PRE-CADETES',W/2,72,{align:'center'});
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(255,255,255);
+  doc.text('CHARLY TÁCTICO',W/2,80,{align:'center'});
+  doc.setFontSize(12);doc.setTextColor(201,168,76);
+  doc.text('T  E  D  A  X',W/2,87,{align:'center'});
+  if(logoB64){try{doc.addImage(logoB64,'PNG',W/2-13,90,26,26);}catch(e){}}
+  doc.setDrawColor(100,130,160);doc.setLineWidth(0.2);
+  doc.line(40,120,W-40,120);
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(255,255,255);
+  const tLines=doc.splitTextToSize((titulo||'PRÁCTICA').toUpperCase(),W-60);
+  doc.text(tLines,W/2,129,{align:'center'});
+  const afterTitle=129+tLines.length*7;
+  if(fecha){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(200,215,230);doc.text(fecha,W/2,afterTitle+4,{align:'center'});}
+  if(tiempo){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(150,175,200);doc.text(tiempo+' minutos',W/2,afterTitle+(fecha?11:4),{align:'center'});}
+  doc.setDrawColor(201,168,76);doc.setLineWidth(0.6);
+  doc.line(22,168,W-22,168);
+  if(materia){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(160,190,210);doc.text(materia.toUpperCase(),W/2,178,{align:'center'});}
+  doc.setDrawColor(40,65,95);doc.setLineWidth(0.3);
+  doc.line(22,materia?186:174,W-22,materia?186:174);
+  const cX=18,cY=210,cW=W-36,cH=66;
+  doc.setFillColor(5,12,22);doc.rect(cX+2,cY+2,cW,cH,'F');
+  doc.setFillColor(255,255,255);doc.setDrawColor(201,168,76);doc.setLineWidth(0.8);
+  doc.rect(cX,cY,cW,cH,'FD');
+  doc.setFillColor(13,27,46);doc.rect(cX,cY,cW,11,'F');
+  doc.setFillColor(201,168,76);doc.rect(cX,cY+11,cW,0.5,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(201,168,76);
+  doc.text('DATOS DEL ESTUDIANTE',W/2,cY+7.5,{align:'center'});
+  const fL=cX+8,fR=cX+cW-8;
+  let fy=cY+21;
+  const field=(label,x1,x2,y)=>{
+    doc.setFont('helvetica','bold');doc.setFontSize(6.2);doc.setTextColor(90,90,110);
+    doc.text(label,x1,y);
+    doc.setDrawColor(170,175,190);doc.setLineWidth(0.3);
+    doc.line(x1,y+6.5,x2,y+6.5);
+  };
+  field('APELLIDOS Y NOMBRES',fL,fR,fy);fy+=15;
+  const w2=(cW-16)/2;
+  field('DNI',fL,fL+w2-4,fy);
+  field('NOTA',fL+w2,fR,fy);fy+=15;
+  field('FIRMA DEL ESTUDIANTE',fL,fL+w2-4,fy);
+  field('FECHA DE ENTREGA',fL+w2,fR,fy);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.2);doc.setTextColor(70,95,115);
+  doc.text('Prohibida la reproducción parcial o total sin autorización de Charly Táctico TEDAX.',W/2,H-9,{align:'center'});
+}
+
+/* ── PDF generation ── */
+async function generarPracticaPDF(){
+  const btn=document.getElementById('gp-btn-gen');
+  const status=document.getElementById('gp-status');
+  if(!btn)return;
+  const totalQ=GP.secciones.reduce((s,sec)=>s+sec.items.filter(it=>it.tipo!=='texto').length,0);
+  if(!totalQ){await myAlert('Agrega al menos una pregunta.');return;}
+  btn.disabled=true;status.textContent='Iniciando...';
+  try{
+    gpCalcLayout();
+    const nc=GP.layout.cols;
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const cw=gpCW(nc),colXs=Array.from({length:nc},(_,i)=>gpCX(nc,i));
+    const titulo=GP.cfg.titulo||'Práctica';
+    const fechaHoy=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+    const fechaPrac=GP.cfg.fecha?new Date(GP.cfg.fecha+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'}):fechaHoy;
+    const matNombre=GP.secciones.length===1?GP.secciones[0].nombre:'';
+    const logoB64=await new Promise(res=>{
+      const img=new Image();img.crossOrigin='anonymous';
+      img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
+      img.onerror=()=>res(null);img.src='icono_final.png';
+    });
+    if(GP.cfg.caratula){
+      gpDrawCaratula(doc,titulo,matNombre,fechaPrac,GP.cfg.tiempo,logoB64);
+      doc.addPage();
+    }
+    const HDR=22;
+    doc.setFillColor(228,228,228);doc.rect(0,0,gpPW,HDR,'F');
+    if(logoB64)doc.addImage(logoB64,'PNG',gpML,3.5,15,15);
+    const hx=gpML+20;
+    doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(20,20,20);
+    doc.text('CHARLY TACTICO TEDAX',hx,9);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(90,90,90);
+    const matLabel=GP.secciones.length===1?' | '+GP.secciones[0].nombre.toUpperCase():'';
+    doc.text('Academia Pre-Cadetes'+matLabel,hx,13.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(20,20,20);
+    doc.text(titulo,hx,18,{maxWidth:110});
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(90,90,90);
+    doc.text(fechaPrac,gpPW-gpMR,9,{align:'right'});
+    if(GP.cfg.tiempo)doc.text(GP.cfg.tiempo+' min',gpPW-gpMR,13.5,{align:'right'});
+    const totalPts=GP.secciones.reduce((s,sec)=>s+sec.items.reduce((ss,it)=>ss+(it.tipo!=='texto'?(+it.p||0):0),0),0);
+    if(GP.cfg.mostrarPts&&totalPts)doc.text('Total: '+totalPts+' pts',gpPW-gpMR,18,{align:'right'});
+    doc.setDrawColor(40,40,40);doc.setLineWidth(.5);
+    doc.line(0,HDR,gpPW,HDR);
+    let curY=HDR+5;
+    const istr=GP.cfg.instrucciones||'';
+    if(istr){
+      const iL=doc.splitTextToSize(istr,gpPW-gpML-gpMR);
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(20,20,20);
+      doc.text('INSTRUCCIONES:',gpML,curY+4);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(50,50,50);
+      doc.text(iL,gpML,curY+9);
+      curY+=iL.length*4.5+14;
+    }
+    const firstTop=curY;let curCol=0,colTop=firstTop;curY=firstTop;
+    const drawSeps=(topY)=>{
+      if(nc<2||!GP.cfg.separadorCols)return;
+      for(let c=1;c<nc;c++){
+        const x=colXs[c]-gpGAP/2;
+        doc.setDrawColor(180,180,180);doc.setLineWidth(.2);
+        doc.line(x,topY,x,gpFOOT);
+      }
+    };
+    drawSeps(firstTop);
+    const drawMini=()=>{
+      const MH=8;
+      doc.setFillColor(228,228,228);doc.rect(0,0,gpPW,MH,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(20,20,20);
+      doc.text('CHARLY TACTICO TEDAX',gpML,5.5);
+      doc.setFont('helvetica','normal');doc.setTextColor(90,90,90);
+      doc.text(titulo,gpPW/2,5.5,{align:'center'});
+      doc.text(fechaHoy,gpPW-gpMR,5.5,{align:'right'});
+      doc.setDrawColor(40,40,40);doc.setLineWidth(.5);
+      doc.line(0,MH,gpPW,MH);
+    };
+    const moveNext=()=>{
+      curCol++;
+      if(curCol>=nc){curCol=0;doc.addPage();drawMini();colTop=10;drawSeps(10);}
+      curY=colTop;
+    };
+    status.textContent='Renderizando LaTeX...';
+    const imgs=await gpPrerenderAll(nc);
+    let imgIdx=0;
+    const drawTexto=(item)=>{
+      const tw=gpCW(nc)-6;
+      const lines=doc.splitTextToSize(item.texto||'',tw-4);
+      const labelH=item.etiqueta?5:0;
+      const boxH=lines.length*gpLHn(nc)+labelH+8;
+      if(curY+boxH>gpFOOT)moveNext();
+      const cx=colXs[curCol];
+      doc.setFillColor(245,246,248);doc.setDrawColor(150,155,165);doc.setLineWidth(.3);
+      doc.rect(cx,curY,cw,boxH,'FD');
+      if(item.etiqueta){
+        doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(80,85,95);
+        doc.text((item.etiqueta).toUpperCase(),cx+4,curY+4.5);
+      }
+      doc.setFont('helvetica','italic');doc.setFontSize(gpFSn(nc)-0.5);doc.setTextColor(35,40,50);
+      doc.text(lines,cx+4,curY+labelH+6.5);
+      curY+=boxH+3;
+    };
+    const drawQ=(item,num)=>{
+      const img=imgs[imgIdx++];
+      const ind=gpIND[nc],h=6+img.hMm+4;
+      if(curY+h>gpFOOT)moveNext();
+      const cx=colXs[curCol];
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?11:9.5);doc.setTextColor(0,0,0);
+      doc.text(String(num)+'.',cx+1,curY+5);
+      if(GP.cfg.mostrarPts&&item.p){
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(80,80,80);
+        doc.text('('+item.p+'pt'+(item.p>1?'s':'')+')',cx+cw,curY+5,{align:'right'});
+      }
+      doc.addImage(img.url,'PNG',cx+ind,curY+6,img.wMm,img.hMm);
+      curY+=h;
+    };
+    const drawDiv=(nombre)=>{
+      const dh=8;
+      if(curY+dh>gpFOOT)moveNext();
+      const cx=colXs[curCol];
+      doc.setFillColor(235,235,235);doc.rect(cx,curY,cw,dh,'F');
+      doc.setDrawColor(80,80,80);doc.setLineWidth(.3);
+      doc.line(cx,curY,cx+cw,curY);doc.line(cx,curY+dh,cx+cw,curY+dh);
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?8:7);doc.setTextColor(20,20,20);
+      doc.text(nombre.toUpperCase(),cx+cw/2,curY+5.2,{align:'center'});
+      curY+=dh+2;
+    };
+    status.textContent='Compilando PDF...';
+    const multi=GP.secciones.length>1;
+    let gnum=1;
+    GP.secciones.forEach(sec=>{
+      if(multi)drawDiv(sec.nombre);
+      sec.items.forEach(item=>{
+        if(item.tipo==='texto') drawTexto(item);
+        else drawQ(item,gnum++);
+      });
+    });
+    const pc=doc.getNumberOfPages();
+    for(let i=1;i<=pc;i++){
+      doc.setPage(i);
+      if(i===1&&GP.cfg.caratula) continue;
+      doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
+      doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
+      doc.text('Charly Tactico TEDAX — Academia Pre-Cadetes',gpML,gpFOOT+7);
+      const cp=i-(GP.cfg.caratula?1:0),tp=pc-(GP.cfg.caratula?1:0);
+      doc.text(`${cp} / ${tp}`,gpPW/2,gpFOOT+7,{align:'center'});
+      doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
+    }
+    const slug=titulo.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+    doc.save(`practica_${slug}_${GP.cfg.fecha||new Date().toISOString().slice(0,10)}.pdf`);
+    status.textContent='PDF generado correctamente.';
+  }catch(err){status.textContent='Error: '+err.message;console.error(err);}
+  btn.disabled=false;
+}
+// ── FIN ARMAR PRÁCTICA ────────────────────────────────────────────────────────
 
 init();
 </script>
