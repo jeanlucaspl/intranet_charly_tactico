@@ -177,6 +177,34 @@
     .fg label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
     .fg input,.fg select,.fg textarea{background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 14px;outline:none;width:100%;transition:border-color .2s;resize:vertical}
     .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+    /* NOTAS — filtros y vista agrupada */
+    .notas-filtros{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+    .nf-wrap{position:relative}
+    .nf-sug{position:absolute;top:100%;left:0;min-width:240px;background:#0d1b2e;border:1px solid var(--gold);z-index:200;max-height:200px;overflow-y:auto;display:none}
+    .nf-sug-item{padding:7px 12px;font-size:12px;font-family:'Barlow Condensed',sans-serif;color:var(--white);cursor:pointer;display:flex;gap:10px;align-items:center}
+    .nf-sug-item:hover,.nf-sug-item.active{background:rgba(201,168,76,.15)}
+    .nf-sug-dni{color:var(--muted);font-size:11px}
+    .nf-sep{font-size:11px;color:var(--muted)}
+    .nota-mat-card{background:var(--navy2);border:1px solid var(--border);margin-bottom:8px;overflow:hidden}
+    .nota-mat-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s}
+    .nota-mat-hdr:hover{background:rgba(201,168,76,.06)}
+    .nota-mat-ico{font-size:13px;color:var(--gold);min-width:14px}
+    .nota-mat-nom{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:.04em;flex:1}
+    .nota-mat-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);background:rgba(255,255,255,.04);padding:2px 8px;border:1px solid var(--border)}
+    .nota-mat-bdy{border-top:1px solid var(--border);display:none}
+    .nota-alu-row{border-bottom:1px solid var(--border)}
+    .nota-alu-row:last-child{border-bottom:none}
+    .nota-alu-hdr{display:flex;align-items:center;gap:10px;padding:9px 18px 9px 28px;cursor:pointer;user-select:none;transition:background .15s}
+    .nota-alu-hdr:hover{background:rgba(255,255,255,.03)}
+    .nota-alu-nombre{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;flex:1}
+    .nota-alu-dni{font-size:10px;color:var(--muted);min-width:80px}
+    .nota-alu-cnt{font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.08em}
+    .nota-alu-arr{font-size:11px;color:var(--muted)}
+    .nota-alu-bdy{padding:0 28px 10px;display:none}
+    .nota-inner-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+    .nota-inner-table th{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+    .nota-inner-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+    .nota-inner-table tr:last-child td{border-bottom:none}
     /* SOLUCIONES */
     .sol-item{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--border)}
     .sol-item:last-child{border-bottom:none}
@@ -387,9 +415,23 @@
     </div>
   </div>
   <div class="tw" style="margin-top:12px">
-    <div class="th"><span class="th-ttl">Notas registradas</span></div>
-    <div id="pn-tabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 0;border-bottom:1px solid var(--border)"></div>
-    <div id="d-notas-prof"><div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div></div>
+    <div class="th"><span class="th-ttl">Notas Registradas</span></div>
+    <div class="notas-filtros">
+      <div class="nf-wrap">
+        <input type="text" id="pnf-texto" placeholder="Apellido o DNI del alumno..." autocomplete="off"
+          style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:7px 12px;outline:none;min-width:200px"
+          oninput="pnfSuggest(this.value)" onkeydown="pnfSugKey(event)">
+        <div id="pnf-sug" class="nf-sug"></div>
+      </div>
+      <select id="pnf-fecha-sel" onchange="onPnfFechaSelect()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:7px 10px;outline:none"><option value="">— Fecha específica —</option></select>
+      <span class="nf-sep">o rango:</span>
+      <input type="date" id="pnf-desde" title="Desde" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:6px 8px;outline:none">
+      <span class="nf-sep">→</span>
+      <input type="date" id="pnf-hasta" title="Hasta" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:6px 8px;outline:none">
+      <button class="btn btn-gold" onclick="applyPnfFiltro()" style="font-size:11px;padding:5px 14px">Consultar</button>
+      <button class="btn btn-outline" onclick="limpiarPnfFiltros()" style="font-size:11px;padding:5px 12px">&#10005; Limpiar</button>
+    </div>
+    <div id="d-notas-prof"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -1114,7 +1156,9 @@ function handleAndroidBack(){
 function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 
 // ── NOTAS ──
-let pnAlumnos=[],pnMaterias=[];
+let pnAlumnos=[],pnMaterias=[],allNotasProf=[];
+let _pnfTexto='',_pnfDesde='',_pnfHasta='',_pnfConsultaActiva=false,_pnfSugIdx=-1;
+
 async function loadNotasSelects(){
   const [{data:mpRows},{data:alumnos}]=await Promise.all([
     sb.from('materia_profesor').select('materias(id,nombre)').eq('profesor_id',profesorId),
@@ -1124,8 +1168,186 @@ async function loadNotasSelects(){
   pnAlumnos=alumnos||[];
   const sm=document.getElementById('pn-materia');
   sm.innerHTML='<option value="">Seleccionar materia...</option>'+pnMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
-  loadTodasNotas();
+  await loadNotasProf();
 }
+
+async function loadNotasProf(){
+  if(!pnMaterias.length){allNotasProf=[];renderNotasProf();return;}
+  const materiaIds=pnMaterias.map(m=>m.id);
+  const{data}=await sb.from('notas')
+    .select('*,materias(nombre),alumnos(perfiles(nombre,apellido,dni))')
+    .in('materia_id',materiaIds)
+    .order('creado_en',{ascending:false});
+  allNotasProf=data||[];
+  // Actualizar datalist de títulos para el form
+  const titulos=[...new Set(allNotasProf.map(n=>n.periodo).filter(Boolean))];
+  document.getElementById('pn-titulos-list').innerHTML=titulos.map(t=>`<option value="${t}">`).join('');
+  buildPnfFechasDropdown();
+  renderNotasProf();
+}
+
+function buildPnfFechasDropdown(){
+  const fechas=new Set();
+  allNotasProf.forEach(n=>{if(n.creado_en)fechas.add(n.creado_en.slice(0,10));});
+  const sorted=[...fechas].sort((a,b)=>b.localeCompare(a));
+  const sel=document.getElementById('pnf-fecha-sel');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Fecha específica —</option>'+sorted.map(f=>{
+    const lbl=new Date(f+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+    return`<option value="${f}"${f===cur?' selected':''}>${lbl}</option>`;
+  }).join('');
+}
+
+function renderNotasProf(){
+  const el=document.getElementById('d-notas-prof');
+  if(!allNotasProf.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>';return;}
+  const filtradas=allNotasProf.filter(n=>
+    _pnfAluMatch(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&
+    _pnfFechaMatch(n.creado_en)
+  );
+  if(!filtradas.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">${allNotasProf.length?'Sin notas para el filtro aplicado':'Sin notas registradas'}</div></div>`;return;}
+  // Agrupar: materia → alumno → notas
+  const byMat={};
+  filtradas.forEach(n=>{
+    const k=n.materia_id;
+    if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',alumnos:{}};
+    const aid=n.alumno_id;
+    if(!byMat[k].alumnos[aid])byMat[k].alumnos[aid]={
+      nombre:`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim(),
+      dni:n.alumnos?.perfiles?.dni||'--',
+      notas:[]
+    };
+    byMat[k].alumnos[aid].notas.push(n);
+  });
+  el.innerHTML=Object.entries(byMat).map(([mid,md])=>{
+    const aluEntries=Object.entries(md.alumnos);
+    const aluHTML=aluEntries.map(([aid,ad])=>{
+      const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
+      const rows=sorted.map(n=>{
+        const nota=n.nota_1??'--';
+        const c=(n.nota_1||0)>=11?'bg':'br';
+        const nomEsc=ad.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const perEsc=(n.periodo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return`<tr>
+          <td>${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+          <td style="color:var(--muted)">${n.periodo||'--'}</td>
+          <td><span class="badge ${c}">${nota}</span></td>
+          <td style="display:flex;gap:4px">
+            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="pnEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'})">Editar</button>
+            <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="pnEliminarNota('${n.id}')">Elim.</button>
+          </td>
+        </tr>`;
+      }).join('');
+      return`<div class="nota-alu-row">
+        <div class="nota-alu-hdr" onclick="toggleNotaAlu(this)">
+          <span class="nota-alu-nombre">${ad.nombre}</span>
+          <span class="nota-alu-dni">${ad.dni}</span>
+          <span class="nota-alu-cnt">${ad.notas.length} nota(s)</span>
+          <span class="nota-alu-arr">${_pnfConsultaActiva?'▾':'▸'}</span>
+        </div>
+        <div class="nota-alu-bdy" style="${_pnfConsultaActiva?'display:block':''}">
+          <table class="nota-inner-table"><thead><tr><th>Fecha</th><th>Período</th><th>Nota</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div class="nota-mat-card">
+      <div class="nota-mat-hdr" onclick="toggleNotaMat(this)">
+        <span class="nota-mat-ico">${_pnfConsultaActiva?'▾':'▸'}</span>
+        <span class="nota-mat-nom">${md.nombre}</span>
+        <span class="nota-mat-badge">${aluEntries.length} alumno(s)</span>
+      </div>
+      <div class="nota-mat-bdy" style="${_pnfConsultaActiva?'display:block':''}">${aluHTML}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleNotaMat(hdr){
+  const card=hdr.closest('.nota-mat-card');
+  const body=card.querySelector('.nota-mat-bdy');
+  const ico=hdr.querySelector('.nota-mat-ico');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  ico.textContent=open?'▸':'▾';
+}
+function toggleNotaAlu(hdr){
+  const row=hdr.closest('.nota-alu-row');
+  const body=row.querySelector('.nota-alu-bdy');
+  const arr=hdr.querySelector('.nota-alu-arr');
+  const open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  arr.textContent=open?'▸':'▾';
+}
+
+function _pnfAluMatch(nombre,dni){
+  if(!_pnfTexto)return true;
+  return(nombre||'').toLowerCase().includes(_pnfTexto)||(dni||'').toLowerCase().includes(_pnfTexto);
+}
+function _pnfFechaMatch(fechaStr){
+  if(!_pnfDesde&&!_pnfHasta)return true;
+  const f=fechaStr?fechaStr.slice(0,10):'';
+  if(_pnfDesde&&f<_pnfDesde)return false;
+  if(_pnfHasta&&f>_pnfHasta)return false;
+  return true;
+}
+function applyPnfFiltro(){
+  _pnfTexto=document.getElementById('pnf-texto').value.trim().toLowerCase();
+  _pnfDesde=document.getElementById('pnf-desde').value;
+  _pnfHasta=document.getElementById('pnf-hasta').value;
+  _pnfConsultaActiva=!!(_pnfTexto||_pnfDesde||_pnfHasta);
+  renderNotasProf();
+}
+function limpiarPnfFiltros(){
+  document.getElementById('pnf-texto').value='';
+  document.getElementById('pnf-fecha-sel').value='';
+  document.getElementById('pnf-desde').value='';
+  document.getElementById('pnf-hasta').value='';
+  _pnfTexto='';_pnfDesde='';_pnfHasta='';_pnfConsultaActiva=false;
+  pnfCerrarSug();renderNotasProf();
+}
+function onPnfFechaSelect(){
+  const v=document.getElementById('pnf-fecha-sel').value;
+  document.getElementById('pnf-desde').value=v;
+  document.getElementById('pnf-hasta').value=v;
+}
+function pnfSuggest(q){
+  const box=document.getElementById('pnf-sug');
+  const term=q.trim().toLowerCase();
+  if(!term){box.style.display='none';box.innerHTML='';_pnfSugIdx=-1;return;}
+  const matches=pnAlumnos.filter(a=>{
+    const nombre=`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase();
+    const dni=(a.perfiles?.dni||'').toLowerCase();
+    return nombre.includes(term)||dni.includes(term);
+  }).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  _pnfSugIdx=-1;
+  box.innerHTML=matches.map(a=>{
+    const nombre=`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.trim();
+    const dni=a.perfiles?.dni||'';
+    return`<div class="nf-sug-item" data-val="${nombre}" onmousedown="pnfSelSug('${nombre.replace(/'/g,"\\'")}')">
+      <span>${nombre}</span><span class="nf-sug-dni">${dni}</span>
+    </div>`;
+  }).join('');
+  box.style.display='block';
+}
+function pnfSelSug(val){
+  document.getElementById('pnf-texto').value=val;
+  pnfCerrarSug();applyPnfFiltro();
+}
+function pnfCerrarSug(){
+  const box=document.getElementById('pnf-sug');
+  if(box){box.style.display='none';box.innerHTML='';}_pnfSugIdx=-1;
+}
+function pnfSugKey(e){
+  const box=document.getElementById('pnf-sug');
+  const items=box?box.querySelectorAll('.nf-sug-item'):[];
+  if(e.key==='ArrowDown'){e.preventDefault();_pnfSugIdx=Math.min(_pnfSugIdx+1,items.length-1);items.forEach((it,i)=>it.classList.toggle('active',i===_pnfSugIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_pnfSugIdx=Math.max(_pnfSugIdx-1,0);items.forEach((it,i)=>it.classList.toggle('active',i===_pnfSugIdx));}
+  else if(e.key==='Enter'){if(_pnfSugIdx>=0&&items[_pnfSugIdx]){pnfSelSug(items[_pnfSugIdx].dataset.val);}else{pnfCerrarSug();applyPnfFiltro();}}
+  else if(e.key==='Escape'){pnfCerrarSug();}
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.nf-wrap'))pnfCerrarSug();});
+
 function pnSuggest(inp){
   const q=inp.value.trim().toLowerCase();
   const box=document.getElementById('pn-sug');
@@ -1146,58 +1368,12 @@ function pnSelect(id,nombre){
   document.getElementById('pn-alumno').value=id;
   document.getElementById('pn-alumno-inp').value=nombre;
   document.getElementById('pn-sug').style.display='none';
-  loadNotasAlumno(id);
-}
-async function loadNotasAlumno(alumnoId){
-  // solo refresca la tabla general, alumnoId ignorado
-  await loadTodasNotas();
-}
-let pnTabActual=null;
-async function loadTodasNotas(){
-  const el=document.getElementById('d-notas-prof');
-  const tabsEl=document.getElementById('pn-tabs');
-  if(!pnMaterias.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin materias asignadas</div></div>';tabsEl.innerHTML='';return;}
-  const materiaIds=pnMaterias.map(m=>m.id);
-  const{data}=await sb.from('notas')
-    .select('*,materias(nombre),alumnos(perfiles(nombre,apellido,dni))')
-    .in('materia_id',materiaIds)
-    .order('periodo').order('creado_en',{ascending:false});
-  // Actualizar datalist con títulos existentes
-  const titulos=[...new Set((data||[]).map(n=>n.periodo).filter(Boolean))];
-  document.getElementById('pn-titulos-list').innerHTML=titulos.map(t=>`<option value="${t}">`).join('');
-  if(!data?.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>';tabsEl.innerHTML='';return;}
-  // Agrupar por título
-  const byTitulo={};
-  data.forEach(n=>{const t=n.periodo||'Sin título';if(!byTitulo[t])byTitulo[t]=[];byTitulo[t].push(n);});
-  const tabs=Object.keys(byTitulo);
-  if(!pnTabActual||!byTitulo[pnTabActual])pnTabActual=tabs[0];
-  // Render tabs
-  tabsEl.innerHTML=tabs.map(t=>`<div class="aula-tab${t===pnTabActual?' active':''}" onclick="pnShowTab('${t.replace(/'/g,"\\'")}')" style="font-size:12px;padding:6px 14px">${t}</div>`).join('');
-  // Render tabla del tab activo
-  const rows=byTitulo[pnTabActual]||[];
-  el.innerHTML=`<table><thead><tr><th>Alumno</th><th>DNI</th><th>Materia</th><th>Nota</th><th>Fecha</th><th></th></tr></thead><tbody>${
-    rows.map(n=>`<tr>
-      <td>${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}</td>
-      <td style="font-size:11px;color:var(--muted)">${n.alumnos?.perfiles?.dni||'--'}</td>
-      <td style="font-size:12px">${n.materias?.nombre||'--'}</td>
-      <td><strong style="color:${(n.nota_1||0)>=11?'var(--green)':'var(--red)'}">${n.nota_1??'--'}</strong></td>
-      <td style="font-size:11px;color:var(--muted)">${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
-      <td style="display:flex;gap:4px">
-        <button class="btn btn-outline" style="font-size:10px;padding:4px 8px" onclick="pnEditarNota('${n.alumno_id}','${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}','${n.materia_id}','${n.periodo}',${n.nota_1??0})">Editar</button>
-        <button class="btn btn-red" style="font-size:10px;padding:4px 8px" onclick="pnEliminarNota('${n.id}')">Eliminar</button>
-      </td>
-    </tr>`).join('')
-  }</tbody></table>`;
-}
-function pnShowTab(titulo){
-  pnTabActual=titulo;
-  loadTodasNotas();
 }
 async function pnEliminarNota(id){
   if(!await myConfirm('¿Eliminar esta nota?'))return;
   const{error}=await sb.from('notas').delete().eq('id',id);
   if(error)return showMsg(document.getElementById('pn-msg'),error.message,'err');
-  loadTodasNotas();
+  loadNotasProf();
 }
 function pnEditarNota(alumnoId,nombreAlumno,materiaId,titulo,nota){
   document.getElementById('pn-alumno').value=alumnoId;
@@ -1226,7 +1402,7 @@ async function saveNotaProfesor(){
     sendFcmToUsers([al.perfil_id],' Notas actualizadas',`El profesor registró calificaciones en ${_matNota}.`);
     sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data:links})=>{if(links?.length)sendFcmToUsers(links.map(l=>l.padre_id),' Notas de tu hijo actualizadas',`Se registraron calificaciones en ${_matNota}.`);});
   });
-  loadTodasNotas();
+  loadNotasProf();
 }
 
 // ── PRÁCTICAS PROFESOR ──
