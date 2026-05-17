@@ -5512,7 +5512,7 @@ init();
 
 // ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
 const GP={
-  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10},
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10,wmSize:75},
   targetPages:1,
   secciones:[],
   layout:{cols:1,pages:1},
@@ -5535,7 +5535,7 @@ function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:G
 function gpClearDraft(){localStorage.removeItem('gp_draft');}
 async function gpNuevo(){
   if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
-  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10});
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10,wmSize:75});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
     items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
@@ -5814,11 +5814,21 @@ function gpRenderUI(){
           <input type="checkbox" ${GP.cfg.watermark?'checked':''} onchange="GP.cfg.watermark=this.checked;gpRefreshWM()" style="accent-color:var(--gold);width:15px;height:15px">
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white)">Marca de agua</span>
         </label>
-        <div id="gp-wm-ctrl" style="display:${GP.cfg.watermark?'flex':'none'};align-items:center;gap:10px">
-          <input type="range" min="3" max="25" step="1" value="${Math.round((GP.cfg.wmOpacity||0.10)*100)}"
-            oninput="GP.cfg.wmOpacity=this.value/100;document.getElementById('gp-wm-val').textContent=this.value+'%'"
-            style="width:80px;accent-color:var(--gold)">
-          <span id="gp-wm-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:30px">${Math.round((GP.cfg.wmOpacity||0.10)*100)}%</span>
+        <div id="gp-wm-ctrl" style="display:${GP.cfg.watermark?'flex':'none'};align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Opacidad</span>
+            <input type="range" min="3" max="30" step="1" value="${Math.round((GP.cfg.wmOpacity||0.10)*100)}"
+              oninput="GP.cfg.wmOpacity=this.value/100;document.getElementById('gp-wm-val').textContent=this.value+'%'"
+              style="width:80px;accent-color:var(--gold)">
+            <span id="gp-wm-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:30px">${Math.round((GP.cfg.wmOpacity||0.10)*100)}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tamaño</span>
+            <input type="range" min="40" max="160" step="5" value="${GP.cfg.wmSize||75}"
+              oninput="GP.cfg.wmSize=+this.value;document.getElementById('gp-wm-size-val').textContent=this.value+'mm'"
+              style="width:80px;accent-color:var(--gold)">
+            <span id="gp-wm-size-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:36px">${GP.cfg.wmSize||75}mm</span>
+          </div>
         </div>
       </div>
     </div>
@@ -6060,7 +6070,7 @@ async function generarPracticaPDF(){
       img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
       img.onerror=()=>res(null);img.src='icono_final.png';
     });
-    // Marca de agua — fondo blanco + opacidad configurable en canvas, exportado como JPEG
+    // Marca de agua — PNG con canal alpha (sin fondo blanco) para que se vea encima del contenido
     const wmB64=GP.cfg.watermark?await new Promise(res=>{
       const img=new Image();
       img.onload=()=>{
@@ -6068,9 +6078,8 @@ async function generarPracticaPDF(){
           const W=600,H=Math.round(600*(img.height/img.width));
           const c=document.createElement('canvas');c.width=W;c.height=H;
           const ctx=c.getContext('2d');
-          ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
           ctx.globalAlpha=GP.cfg.wmOpacity||0.10;ctx.drawImage(img,0,0,W,H);
-          res(c.toDataURL('image/jpeg',0.9));
+          res(c.toDataURL('image/png'));
         }catch(e){res(null);}
       };
       img.onerror=()=>res(null);img.src='watermark_logo.png';
@@ -6081,10 +6090,6 @@ async function generarPracticaPDF(){
       gpDrawCaratula(doc,titulo,matNombre,fechaPrac,GP.cfg.tiempo,logoB64);
       doc.addPage();
     }
-
-    // ── MARCA DE AGUA — helper para dibujar al inicio de cada página ──
-    const wmDraw=()=>{if(wmB64)try{const wmW=75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'JPEG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}};
-    wmDraw(); // primera página de contenido
 
     // ── HEADER elegante gris ──────────────────────────────────
     const HDR=22;
@@ -6141,7 +6146,7 @@ async function generarPracticaPDF(){
     };
     const moveNext=()=>{
       curCol++;
-      if(curCol>=nc){curCol=0;doc.addPage();wmDraw();drawMini();colTop=10;drawSeps(10);}
+      if(curCol>=nc){curCol=0;doc.addPage();drawMini();colTop=10;drawSeps(10);}
       curY=colTop;
     };
 
@@ -6211,6 +6216,7 @@ async function generarPracticaPDF(){
     for(let i=1;i<=pc;i++){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
+      if(wmB64){try{const wmW=GP.cfg.wmSize||75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'PNG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}}
       doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
