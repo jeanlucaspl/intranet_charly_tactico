@@ -6420,7 +6420,7 @@ function bpRenderUI(){
   </div>
 
   <div style="display:flex;gap:10px;padding-top:4px;align-items:center;flex-wrap:wrap">
-    <button class="btn btn-gold" id="bp-btn-guardar" onclick="bpGuardar()">GUARDAR PREGUNTA</button>
+    <button class="btn btn-gold" id="bp-btn-guardar" onclick="bpGuardar()">${ed.id?'ACTUALIZAR PREGUNTA':'GUARDAR PREGUNTA'}</button>
     <button class="btn btn-outline" onclick="bpNueva();bpRenderUI()">Limpiar / Nueva</button>
     <span id="bp-save-status" style="font-size:12px;color:#8aaac8"></span>
   </div>
@@ -6664,13 +6664,14 @@ function bpRenderLista(){
     const preview=(p.enunciado_texto||'').slice(0,90)+(p.enunciado_texto?.length>90?'…':'');
     const tipoTag=p.tipo==='texto_base'?`<span style="font-size:10px;border:1px solid var(--gold);color:var(--gold);padding:1px 6px">TEXTO BASE</span>`:`<span style="font-size:10px;border:1px solid var(--border);color:#8aaac8;padding:1px 6px">SIMPLE</span>`;
     const subTag=p.subtema?`<span style="font-size:10px;background:var(--gold);color:#0d1b2e;padding:1px 7px;font-weight:700">${gpEsc(p.subtema)}</span>`:'';
-    return `<div style="display:flex;align-items:flex-start;gap:12px;background:var(--navy2);border:1px solid var(--border);padding:12px;cursor:pointer;transition:border-color .15s" onclick="bpToggleSel('${p.id}',this)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=BP.sel.has('${p.id}')?'var(--gold)':'var(--border)'">
-      <input type="checkbox" ${chk} style="margin-top:2px;width:16px;height:16px;flex-shrink:0;cursor:pointer" onclick="event.stopPropagation();bpToggleSel('${p.id}',this.closest('div'))">
-      <div style="flex:1;min-width:0">
+    return `<div style="display:flex;align-items:flex-start;gap:12px;background:var(--navy2);border:1px solid var(--border);padding:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=BP.sel.has('${p.id}')?'var(--gold)':'var(--border)'">
+      <input type="checkbox" ${chk} style="margin-top:2px;width:16px;height:16px;flex-shrink:0;cursor:pointer" onclick="bpToggleSel('${p.id}',this.closest('div'))">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="bpToggleSel('${p.id}',this.closest('div'))">
         <div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">${subTag}${tipoTag}</div>
         <div style="font-size:13px;color:var(--white);line-height:1.4">${gpEsc(preview)||'[imagen]'}</div>
         ${p.enunciado_imagen_url?`<span style="font-size:10px;color:#6a9ac8">📷 con imagen</span>`:''}
       </div>
+      <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;flex-shrink:0;white-space:nowrap" onclick="event.stopPropagation();bpCargarParaEditar('${p.id}')">✏ Editar</button>
     </div>`;
   }).join('')}</div>`;
   if(selEl)selEl.textContent=`${BP.sel.size} seleccionada${BP.sel.size===1?'':'s'}`;
@@ -6683,6 +6684,54 @@ function bpToggleSel(id,el){
   el.style.borderColor=BP.sel.has(id)?'var(--gold)':'var(--border)';
   const selEl=document.getElementById('bp-lista-sel');
   if(selEl)selEl.textContent=`${BP.sel.size} seleccionada${BP.sel.size===1?'':'s'}`;
+}
+
+async function bpCargarParaEditar(pregId){
+  const{data:preg,error}=await sb.from('banco_preguntas').select(`
+    id,materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,
+    banco_subitems(id,orden,texto,imagen_url,banco_alternativas(id,orden,texto,imagen_url),banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)),
+    banco_alternativas(id,orden,texto,imagen_url),
+    banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
+  `).eq('id',pregId).single();
+  if(error||!preg){await myAlert('Error al cargar pregunta: '+(error?.message||'no encontrada'));return;}
+
+  const alts=(preg.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
+  const sol=preg.banco_soluciones?.[0]||null;
+  const sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
+
+  BP.ed={
+    id:preg.id,
+    materia_id:preg.materia_id||'',
+    subtema:preg.subtema||'',
+    tipo:preg.tipo||'simple',
+    enunciado_texto:preg.enunciado_texto||'',
+    enunciado_imagen_url:preg.enunciado_imagen_url||null,
+    enunciado_post:preg.enunciado_post||'',
+    alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
+    altImgs:Array.from({length:5},(_,i)=>alts[i]?.imagen_url||null),
+    sol:{
+      tipo:sol?.tipo||'alternativa',
+      alt:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
+      desarrollo:sol?.desarrollo_texto||'',
+      devImg:sol?.desarrollo_imagen_url||null
+    },
+    subitems:sis.map(si=>{
+      const siAlts=(si.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
+      const siSol=si.banco_soluciones?.[0]||null;
+      return{
+        id:si.id,texto:si.texto||'',imagen_url:si.imagen_url||null,
+        alts:Array.from({length:5},(_,j)=>siAlts[j]?.texto||''),
+        altImgs:Array.from({length:5},(_,j)=>siAlts[j]?.imagen_url||null),
+        sol:{
+          alt:siSol?.tipo==='alternativa'?(siSol.alternativa_correcta??-1):-1,
+          desarrollo:siSol?.desarrollo_texto||''
+        }
+      };
+    })
+  };
+  bpShowTab('gestionar');
+  bpRenderUI();
+  document.getElementById('bp-root')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 async function bpMandadAPractica(){
