@@ -6049,13 +6049,18 @@ async function generarPracticaPDF(){
       img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
       img.onerror=()=>res(null);img.src='icono_final.png';
     });
-    // Marca de agua — se pre-procesa con opacidad en canvas para compatibilidad con jsPDF
+    // Marca de agua — fondo blanco + opacidad en canvas, exportado como JPEG para compatibilidad
     const wmB64=await new Promise(res=>{
-      const img=new Image();img.crossOrigin='anonymous';
+      const img=new Image();
       img.onload=()=>{
-        const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
-        const ctx=c.getContext('2d');ctx.globalAlpha=0.07;ctx.drawImage(img,0,0);
-        res(c.toDataURL('image/png'));
+        try{
+          const W=600,H=Math.round(600*(img.height/img.width));
+          const c=document.createElement('canvas');c.width=W;c.height=H;
+          const ctx=c.getContext('2d');
+          ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+          ctx.globalAlpha=0.10;ctx.drawImage(img,0,0,W,H);
+          res(c.toDataURL('image/jpeg',0.9));
+        }catch(e){res(null);}
       };
       img.onerror=()=>res(null);img.src='watermark_logo.png';
     });
@@ -6193,7 +6198,7 @@ async function generarPracticaPDF(){
       if(i===1&&GP.cfg.caratula) continue;
       // Marca de agua centrada
       if(wmB64){
-        try{const wmW=75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'PNG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}
+        try{const wmW=75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'JPEG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}
       }
       doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
