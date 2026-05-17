@@ -5512,7 +5512,7 @@ init();
 
 // ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
 const GP={
-  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10,wmSize:75},
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.23,wmSize:75},
   targetPages:1,
   secciones:[],
   layout:{cols:1,pages:1},
@@ -5535,7 +5535,7 @@ function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:G
 function gpClearDraft(){localStorage.removeItem('gp_draft');}
 async function gpNuevo(){
   if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
-  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10,wmSize:75});
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.23,wmSize:75});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
     items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
