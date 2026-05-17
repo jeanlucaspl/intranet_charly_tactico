@@ -6071,6 +6071,10 @@ async function generarPracticaPDF(){
       doc.addPage();
     }
 
+    // ── MARCA DE AGUA — helper para dibujar al inicio de cada página ──
+    const wmDraw=()=>{if(wmB64)try{const wmW=75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'JPEG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}};
+    wmDraw(); // primera página de contenido
+
     // ── HEADER elegante gris ──────────────────────────────────
     const HDR=22;
     doc.setFillColor(228,228,228);doc.rect(0,0,gpPW,HDR,'F');
@@ -6126,7 +6130,7 @@ async function generarPracticaPDF(){
     };
     const moveNext=()=>{
       curCol++;
-      if(curCol>=nc){curCol=0;doc.addPage();drawMini();colTop=10;drawSeps(10);}
+      if(curCol>=nc){curCol=0;doc.addPage();wmDraw();drawMini();colTop=10;drawSeps(10);}
       curY=colTop;
     };
 
@@ -6196,10 +6200,6 @@ async function generarPracticaPDF(){
     for(let i=1;i<=pc;i++){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
-      // Marca de agua centrada
-      if(wmB64){
-        try{const wmW=75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'JPEG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}
-      }
       doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
