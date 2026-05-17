@@ -6233,6 +6233,22 @@ async function generarPracticaPDF(){
     const practicaPages=doc.getNumberOfPages();
     if(solMap.length){
       status.textContent='Generando solucionario...';
+      // Pre-renderizar desarrollos con MathJax (igual que las preguntas)
+      const devItems=solMap.filter(q=>q.bpSolTipo==='desarrollo'&&q.bpSolDesarrollo?.trim());
+      if(devItems.length){
+        await MathJax.startup.promise;
+        const mmToPx=3.7795,devW=Math.round(gpTW(1)*mmToPx);
+        const box=document.createElement('div');
+        box.style.cssText=`position:fixed;top:0;left:${-(devW+20)}px;width:${devW}px;background:#fff;z-index:9999;padding:4px 2px`;
+        document.body.appendChild(box);
+        for(const q of devItems){
+          box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:9px;line-height:15px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
+          await MathJax.typesetPromise([box]);
+          const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+          q._devImg={url:canvas.toDataURL('image/png'),wMm:gpTW(1),hMm:canvas.height/(mmToPx*2)};
+        }
+        document.body.removeChild(box);
+      }
       await gpGenerarSolucionario(doc,solMap,titulo,fechaHoy);
     }
 
@@ -6791,18 +6807,28 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
       }
       cy+=3;
     }
-    // Desarrollo
+    // Desarrollo (renderizado con MathJax si tiene _devImg)
     const devQs=qs.filter(q=>q.bpSolTipo==='desarrollo');
     for(const q of devQs){
-      const devText=(q.bpSolDesarrollo||'').trim()||'(ver desarrollo)';
-      const lines=doc.splitTextToSize(devText,PW2-22);
-      const neededH=lines.length*4+10;
-      if(cy+neededH>gpFOOT){doc.addPage();cy=10;}
-      doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(20,20,20);
-      doc.text(`Preg. ${q.num}:`,gpML,cy+4.5);
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(40,40,50);
-      lines.forEach((ln,li)=>doc.text(ln,gpML+20,cy+4.5+li*4));
-      cy+=neededH+2;
+      if(q._devImg){
+        const{url,wMm,hMm}=q._devImg;
+        const neededH=hMm+12;
+        if(cy+neededH>gpFOOT){doc.addPage();cy=10;}
+        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(20,20,20);
+        doc.text(`Preg. ${q.num}:`,gpML,cy+5);
+        doc.addImage(url,'PNG',gpML+20,cy+1,wMm-20,hMm);
+        cy+=neededH+2;
+      }else{
+        const devText=(q.bpSolDesarrollo||'').trim()||'(ver desarrollo)';
+        const lines=doc.splitTextToSize(devText,PW2-22);
+        const neededH=lines.length*4+10;
+        if(cy+neededH>gpFOOT){doc.addPage();cy=10;}
+        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(20,20,20);
+        doc.text(`Preg. ${q.num}:`,gpML,cy+4.5);
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(40,40,50);
+        lines.forEach((ln,li)=>doc.text(ln,gpML+20,cy+4.5+li*4));
+        cy+=neededH+2;
+      }
     }
     cy+=4;
   }
