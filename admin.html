@@ -5512,7 +5512,7 @@ init();
 
 // ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
 const GP={
-  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true},
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10},
   targetPages:1,
   secciones:[],
   layout:{cols:1,pages:1},
@@ -5535,7 +5535,7 @@ function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:G
 function gpClearDraft(){localStorage.removeItem('gp_draft');}
 async function gpNuevo(){
   if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
-  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true});
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true,watermark:true,wmOpacity:0.10});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
     items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
@@ -5810,6 +5810,16 @@ function gpRenderUI(){
           <input type="checkbox" ${GP.cfg.caratula?'checked':''} onchange="GP.cfg.caratula=this.checked" style="accent-color:var(--gold);width:15px;height:15px">
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white)">Incluir carátula</span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${GP.cfg.watermark?'checked':''} onchange="GP.cfg.watermark=this.checked;gpRefreshWM()" style="accent-color:var(--gold);width:15px;height:15px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--white)">Marca de agua</span>
+        </label>
+        <div id="gp-wm-ctrl" style="display:${GP.cfg.watermark?'flex':'none'};align-items:center;gap:10px">
+          <input type="range" min="3" max="25" step="1" value="${Math.round((GP.cfg.wmOpacity||0.10)*100)}"
+            oninput="GP.cfg.wmOpacity=this.value/100;document.getElementById('gp-wm-val').textContent=this.value+'%'"
+            style="width:80px;accent-color:var(--gold)">
+          <span id="gp-wm-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:30px">${Math.round((GP.cfg.wmOpacity||0.10)*100)}%</span>
+        </div>
       </div>
     </div>
     ${secsHTML}
@@ -5852,6 +5862,7 @@ function gpRenderUI(){
 }
 
 function gpRefreshBadge(){const el=document.getElementById('gp-badge');if(el)el.innerHTML=gpBadgeHTML();}
+function gpRefreshWM(){const el=document.getElementById('gp-wm-ctrl');if(el)el.style.display=GP.cfg.watermark?'flex':'none';}
 function gpAddQ(si){GP.secciones[si].items.push({tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'});gpRenderUI();}
 function gpAddTexto(si){GP.secciones[si].items.push({tipo:'texto',texto:'',etiqueta:'Texto'});gpRenderUI();}
 function gpDelItem(si,ii){GP.secciones[si].items.splice(ii,1);gpRenderUI();}
@@ -6049,8 +6060,8 @@ async function generarPracticaPDF(){
       img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
       img.onerror=()=>res(null);img.src='icono_final.png';
     });
-    // Marca de agua — fondo blanco + opacidad en canvas, exportado como JPEG para compatibilidad
-    const wmB64=await new Promise(res=>{
+    // Marca de agua — fondo blanco + opacidad configurable en canvas, exportado como JPEG
+    const wmB64=GP.cfg.watermark?await new Promise(res=>{
       const img=new Image();
       img.onload=()=>{
         try{
@@ -6058,12 +6069,12 @@ async function generarPracticaPDF(){
           const c=document.createElement('canvas');c.width=W;c.height=H;
           const ctx=c.getContext('2d');
           ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
-          ctx.globalAlpha=0.10;ctx.drawImage(img,0,0,W,H);
+          ctx.globalAlpha=GP.cfg.wmOpacity||0.10;ctx.drawImage(img,0,0,W,H);
           res(c.toDataURL('image/jpeg',0.9));
         }catch(e){res(null);}
       };
       img.onerror=()=>res(null);img.src='watermark_logo.png';
-    });
+    }):null;
 
     // ── CARÁTULA ──────────────────────────────────────────────
     if(GP.cfg.caratula){
