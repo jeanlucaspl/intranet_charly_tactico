@@ -5538,7 +5538,7 @@ async function gpNuevo(){
   Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:true,caratula:false,colsForzar:0,escalaFuente:1,separadorCols:true});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
-    items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+    items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
   gpClearDraft();gpRenderUI();
 }
 
@@ -5556,17 +5556,17 @@ async function gpIniciar(){
           gpClearDraft();
           GP.cfg.fecha=new Date().toISOString().slice(0,10);
           GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
-            items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+            items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
         }
       }catch(e){
         GP.cfg.fecha=new Date().toISOString().slice(0,10);
         GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
-          items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+          items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
       }
     } else {
       GP.cfg.fecha=new Date().toISOString().slice(0,10);
       GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
-        items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]}];
+        items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
     }
     GP.init=true;
   }
@@ -5636,8 +5636,47 @@ function gpBadgeHTML(){
   </div>`;
 }
 
+/* ── Modal edición expandida ── */
+function gpEnsureModal(){
+  if(document.getElementById('gp-edit-modal'))return;
+  const m=document.createElement('div');
+  m.id='gp-edit-modal';
+  m.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9997;align-items:center;justify-content:center';
+  m.innerHTML=`
+    <div style="background:var(--navy2);border:1px solid var(--gold);width:92%;max-width:820px;max-height:88vh;display:flex;flex-direction:column;border-radius:4px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.7)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--navy3)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.2em;color:var(--gold);text-transform:uppercase">Editar Enunciado</div>
+        <button onclick="gpCloseModal(false)" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;padding:3px 10px;cursor:pointer;text-transform:uppercase">✕ Cancelar</button>
+      </div>
+      <textarea id="gp-edit-ta" style="flex:1;min-height:340px;background:var(--navy);color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;line-height:1.75;padding:18px;border:none;outline:none;resize:none" placeholder="Pega o escribe el enunciado completo aquí..."></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid var(--border);background:var(--navy3)">
+        <button onclick="gpCloseModal(false)" style="padding:8px 20px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;border:1px solid var(--border);background:transparent;color:var(--white);cursor:pointer;text-transform:uppercase">Cancelar</button>
+        <button onclick="gpCloseModal(true)" style="padding:8px 22px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;border:none;background:var(--gold);color:var(--navy);cursor:pointer;text-transform:uppercase">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+}
+function gpOpenModal(si,ii){
+  gpEnsureModal();
+  const m=document.getElementById('gp-edit-modal');
+  document.getElementById('gp-edit-ta').value=GP.secciones[si].items[ii].e||'';
+  m._si=si;m._ii=ii;
+  m.style.display='flex';
+  document.getElementById('gp-edit-ta').focus();
+}
+function gpCloseModal(save){
+  const m=document.getElementById('gp-edit-modal');
+  if(!m)return;
+  if(save){
+    GP.secciones[m._si].items[m._ii].e=document.getElementById('gp-edit-ta').value;
+  }
+  m.style.display='none';
+  if(save)gpRenderUI();
+}
+
 /* ── UI ── */
 function gpRenderUI(){
+  gpEnsureModal();
   gpCalcLayout();
   let gnum=0;
   const multi=GP.secciones.length>1;
@@ -5676,6 +5715,13 @@ function gpRenderUI(){
           <div style="display:flex;gap:9px;align-items:flex-start;background:var(--navy);border:1px solid var(--border);padding:9px 11px">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);line-height:1;min-width:22px;text-align:center;padding-top:4px">${gnum}</div>
             <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;gap:3px;align-items:center">
+                  <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-right:3px">Alinear</span>
+                  ${[['left','L'],['center','C'],['right','R'],['justify','J']].map(([a,lab])=>`<button onclick="GP.secciones[${si}].items[${ii}].align='${a}';gpRenderUI()" style="width:22px;height:20px;font-size:10px;font-weight:700;font-family:'Barlow Condensed',sans-serif;border:1px solid ${(item.align||'left')===a?'var(--gold)':'var(--border)'};background:${(item.align||'left')===a?'rgba(201,168,76,.2)':'transparent'};color:${(item.align||'left')===a?'var(--gold)':'var(--muted)'};cursor:pointer">${lab}</button>`).join('')}
+                </div>
+                <button onclick="gpOpenModal(${si},${ii})" style="padding:2px 9px;font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.1em;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;text-transform:uppercase">⤢ Expandir</button>
+              </div>
               <textarea style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:3px 0;outline:none;resize:vertical;line-height:1.5"
                 rows="3" oninput="GP.secciones[${si}].items[${ii}].e=this.value;gpRefreshBadge()"
                 placeholder="Enunciado — acepta LaTeX: $\\frac{3}{5}$">${gpEsc(item.e||'')}</textarea>
@@ -5806,7 +5852,7 @@ function gpRenderUI(){
 }
 
 function gpRefreshBadge(){const el=document.getElementById('gp-badge');if(el)el.innerHTML=gpBadgeHTML();}
-function gpAddQ(si){GP.secciones[si].items.push({tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5});gpRenderUI();}
+function gpAddQ(si){GP.secciones[si].items.push({tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'});gpRenderUI();}
 function gpAddTexto(si){GP.secciones[si].items.push({tipo:'texto',texto:'',etiqueta:'Texto'});gpRenderUI();}
 function gpDelItem(si,ii){GP.secciones[si].items.splice(ii,1);gpRenderUI();}
 function gpToggleTipo(si,ii){
@@ -5834,7 +5880,7 @@ function gpRemoveImg(si,ii){GP.secciones[si].items[ii].imgData=null;GP.secciones
 function gpAddSI(si,ii){GP.secciones[si].items[ii].si.push('');gpRenderUI();}
 function gpDelSI(si,ii,sii){GP.secciones[si].items[ii].si.splice(sii,1);gpRenderUI();}
 function gpAddSec(){GP.secciones.push({nombre:allMaterias[0]?.nombre||'Nueva Sección',materia_id:allMaterias[0]?.id||null,
-  items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5}]});gpRenderUI();}
+  items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]});gpRenderUI();}
 function gpDelSec(si){if(GP.secciones.length===1)return;GP.secciones.splice(si,1);gpRenderUI();}
 function gpSetPages(n){GP.targetPages=n;GP.cfg.colsForzar=0;gpRenderUI();}
 function gpSetColsForzar(n){GP.cfg.colsForzar=(GP.cfg.colsForzar===n?0:n);gpRenderUI();}
@@ -5842,7 +5888,8 @@ function gpSetColsForzar(n){GP.cfg.colsForzar=(GP.cfg.colsForzar===n?0:n);gpRend
 /* ── MathJax pre-render ── */
 function gpBuildQHTML(item,fsPt){
   const fsPx=(fsPt*(96/72)).toFixed(1),lhPx=(fsPt*(96/72)*1.55).toFixed(1);
-  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:2px 0">`;
+  const aln=item.align||'left';
+  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:2px 0;text-align:${aln}">`;
   (item.e||'').split('\n').forEach(par=>{
     if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
     h+=`<p style="margin:0 0 2px 0">${par}</p>`;
@@ -5924,10 +5971,14 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   doc.setDrawColor(100,130,160);doc.setLineWidth(0.2);
   doc.line(40,120,W-40,120);
   // Título práctica (dentro del círculo)
-  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(255,255,255);
-  const tLines=doc.splitTextToSize((titulo||'PRÁCTICA').toUpperCase(),W-60);
+  // Título — auto-ajuste de fuente para no desbordarse del círculo
+  const tituloUp=(titulo||'PRÁCTICA').toUpperCase();
+  doc.setFont('helvetica','bold');
+  let tFz=14,tLines=[];
+  for(const fs of [14,12,10,9]){doc.setFontSize(fs);tLines=doc.splitTextToSize(tituloUp,84);tFz=fs;if(tLines.length<=3)break;}
+  doc.setTextColor(255,255,255);
   doc.text(tLines,W/2,129,{align:'center'});
-  const afterTitle=129+tLines.length*7;
+  const afterTitle=129+tLines.length*(tFz*0.5+0.5);
   // Fecha (dentro del círculo)
   if(fecha){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(200,215,230);doc.text(fecha,W/2,afterTitle+4,{align:'center'});}
   // Duración (dentro del círculo)
@@ -5997,6 +6048,12 @@ async function generarPracticaPDF(){
       const img=new Image();img.crossOrigin='anonymous';
       img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
       img.onerror=()=>res(null);img.src='icono_final.png';
+    });
+    // Marca de agua
+    const wmB64=await new Promise(res=>{
+      const img=new Image();img.crossOrigin='anonymous';
+      img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
+      img.onerror=()=>res(null);img.src='watermark_logo.png';
     });
 
     // ── CARÁTULA ──────────────────────────────────────────────
@@ -6130,6 +6187,16 @@ async function generarPracticaPDF(){
     for(let i=1;i<=pc;i++){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
+      // Marca de agua centrada
+      if(wmB64){
+        try{
+          const wmW=75,wmH=wmW*(2286/1856);
+          doc.saveGraphicsState();
+          doc.setGState(doc.GState({opacity:0.07}));
+          doc.addImage(wmB64,'PNG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);
+          doc.restoreGraphicsState();
+        }catch(e){}
+      }
       doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
