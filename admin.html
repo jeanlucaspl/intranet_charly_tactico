@@ -1554,9 +1554,9 @@ async function initPushSubscription(){
 }
 // ── SEGURIDAD ──
 async function checkAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { location.replace('login.html'); return false; }
-  const { data: pf } = await sb.from('perfiles').select('rol').eq('id', session.user.id).single();
+  const { data: { user }, error } = await sb.auth.getUser();
+  if (!user || error) { await sb.auth.signOut(); location.replace('login.html'); return false; }
+  const { data: pf } = await sb.from('perfiles').select('rol').eq('id', user.id).single();
   if (!['admin','profesor','dueno'].includes(pf?.rol)) {
     await sb.auth.signOut();
     location.replace('login.html');
@@ -1673,8 +1673,8 @@ async function init(){
   const ok = await checkAuth();
   if (!ok) return;
   // Get current user role to show/hide dueno-only sections
-  const {data:{session}}=await sb.auth.getSession();
-  uid=session.user.id;
+  const {data:{user:_u}}=await sb.auth.getUser();
+  uid=_u.id;
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',uid).single();
   esDueno = (pf?.rol==='dueno');
   // Show dueno-only sections
@@ -5969,11 +5969,8 @@ async function gpPrerenderAll(nc){
 /* ── Carátula ── */
 function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   const W=210,H=297;
-  // Fondo navy
-  doc.setFillColor(13,27,46);doc.rect(0,0,W,H,'F');
-  // Franjas diagonales decorativas
-  doc.setDrawColor(20,40,70);doc.setLineWidth(9);
-  for(let i=0;i<18;i++){const x=-20+i*24;doc.line(x,0,x+70,H);}
+  // Fondo blanco (mínimo consumo de tinta)
+  doc.setFillColor(255,255,255);doc.rect(0,0,W,H,'F');
   // Franja gold superior
   doc.setFillColor(201,168,76);doc.rect(0,0,W,4,'F');
   // Franja gold inferior
@@ -5988,17 +5985,17 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   doc.ellipse(W/2,110,57,57,'S');
   // ── Dentro del círculo (y=58 a y=162) ──
   // Nombre academia
-  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(201,168,76);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(160,128,40);
   doc.text('ACADEMIA PRE-CADETES',W/2,72,{align:'center'});
   // Institución
-  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(13,27,46);
   doc.text('CHARLY TÁCTICO',W/2,80,{align:'center'});
-  doc.setFontSize(12);doc.setTextColor(201,168,76);
+  doc.setFontSize(12);doc.setTextColor(160,128,40);
   doc.text('T  E  D  A  X',W/2,87,{align:'center'});
   // Logo (más pequeño para dejar espacio al título)
   if(logoB64){try{doc.addImage(logoB64,'PNG',W/2-13,90,26,26);}catch(e){}}
   // Separador fino interno
-  doc.setDrawColor(100,130,160);doc.setLineWidth(0.2);
+  doc.setDrawColor(180,185,195);doc.setLineWidth(0.2);
   doc.line(40,120,W-40,120);
   // Título práctica (dentro del círculo)
   // Título — auto-ajuste de fuente para no desbordarse del círculo
@@ -6006,30 +6003,29 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   doc.setFont('helvetica','bold');
   let tFz=14,tLines=[];
   for(const fs of [14,12,10,9]){doc.setFontSize(fs);tLines=doc.splitTextToSize(tituloUp,84);tFz=fs;if(tLines.length<=3)break;}
-  doc.setTextColor(255,255,255);
+  doc.setTextColor(13,27,46);
   doc.text(tLines,W/2,129,{align:'center'});
   const afterTitle=129+tLines.length*(tFz*0.5+0.5);
   // Fecha (dentro del círculo)
-  if(fecha){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(200,215,230);doc.text(fecha,W/2,afterTitle+4,{align:'center'});}
+  if(fecha){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(60,80,100);doc.text(fecha,W/2,afterTitle+4,{align:'center'});}
   // Duración (dentro del círculo)
-  if(tiempo){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(150,175,200);doc.text(tiempo+' minutos',W/2,afterTitle+(fecha?11:4),{align:'center'});}
+  if(tiempo){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(90,100,115);doc.text(tiempo+' minutos',W/2,afterTitle+(fecha?11:4),{align:'center'});}
   // Separador gold (debajo del círculo)
   doc.setDrawColor(201,168,76);doc.setLineWidth(0.6);
   doc.line(22,168,W-22,168);
   // Materia (fuera del círculo, si existe)
-  if(materia){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(160,190,210);doc.text(materia.toUpperCase(),W/2,178,{align:'center'});}
+  if(materia){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(40,60,85);doc.text(materia.toUpperCase(),W/2,178,{align:'center'});}
   // Separador 2
-  doc.setDrawColor(40,65,95);doc.setLineWidth(0.3);
+  doc.setDrawColor(190,190,200);doc.setLineWidth(0.3);
   doc.line(22,materia?186:174,W-22,materia?186:174);
   // ── CAJA DATOS DEL ESTUDIANTE ──
   const cX=18,cY=210,cW=W-36,cH=66;
-  doc.setFillColor(5,12,22);doc.rect(cX+2,cY+2,cW,cH,'F'); // sombra
   doc.setFillColor(255,255,255);doc.setDrawColor(201,168,76);doc.setLineWidth(0.8);
   doc.rect(cX,cY,cW,cH,'FD');
-  // Header caja
-  doc.setFillColor(13,27,46);doc.rect(cX,cY,cW,11,'F');
+  // Header caja (gris claro en vez de navy)
+  doc.setFillColor(240,240,242);doc.rect(cX,cY,cW,11,'F');
   doc.setFillColor(201,168,76);doc.rect(cX,cY+11,cW,0.5,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(201,168,76);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(13,27,46);
   doc.text('DATOS DEL ESTUDIANTE',W/2,cY+7.5,{align:'center'});
   // Campos
   const fL=cX+8,fR=cX+cW-8;
@@ -6050,7 +6046,7 @@ function gpDrawCaratula(doc,titulo,materia,fecha,tiempo,logoB64){
   field('FIRMA DEL ESTUDIANTE',fL,fL+w2-4,fy);
   field('FECHA DE ENTREGA',fL+w2,fR,fy);
   // Pie de página carátula
-  doc.setFont('helvetica','normal');doc.setFontSize(6.2);doc.setTextColor(70,95,115);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.2);doc.setTextColor(100,100,120);
   doc.text('Prohibida la reproducción parcial o total sin autorización de Charly Táctico TEDAX.',W/2,H-9,{align:'center'});
 }
 
