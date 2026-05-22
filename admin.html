@@ -2299,18 +2299,21 @@ async function cerrarSesion(){
 // ── REGISTROS DEL DÍA ──
 async function loadRegistrosDia(){
   const hoy=todayISO();
-  const {data:bloques}=await sb.from('bloques_asistencia')
-    .select('id,fecha,hora_apertura,hora_cierre,cerrado,materias(nombre),aulas(nombre)')
+  // Sin joins anidados — usamos allAulas/allMaterias/allAlumnos ya cargados
+  const {data:bloques,error:be}=await sb.from('bloques_asistencia')
+    .select('id,materia_id,aula_id,hora_apertura,hora_cierre,cerrado')
     .eq('fecha',hoy).order('hora_apertura',{ascending:true});
+  if(be)console.error('loadRegistrosDia bloques:',be);
   if(!bloques?.length){
     document.getElementById('f-log').innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin bloques hoy</div></div>';
     ['f-cnt','f-completo-cnt','f-tard-cnt','f-salio-cnt'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='0';});
     return;
   }
   const bloqueIds=bloques.map(b=>b.id);
-  const {data:asists}=await sb.from('asistencias')
-    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso,alumnos(codigo,perfiles(nombre,apellido))')
+  const {data:asists,error:ae}=await sb.from('asistencias')
+    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso')
     .in('bloque_id',bloqueIds);
+  if(ae)console.error('loadRegistrosDia asists:',ae);
   const all=asists||[];
   const entSet=new Set(all.filter(a=>a.tipo==='entrada').map(a=>a.alumno_id));
   const salSet=new Set(all.filter(a=>a.tipo==='salida').map(a=>a.alumno_id));
@@ -2320,22 +2323,28 @@ async function loadRegistrosDia(){
   document.getElementById('f-salio-cnt').textContent=salSet.size;
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
   const html=bloques.map(b=>{
+    const matNombre=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
+    const aulaNombre=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
     const ba=all.filter(a=>a.bloque_id===b.id);
     const ent=ba.filter(a=>a.tipo==='entrada');
     const sal=ba.filter(a=>a.tipo==='salida');
     const stBadge=b.cerrado
-      ?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);background:var(--navy);padding:2px 8px">CERRADO</span>'
-      :'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);background:var(--navy);padding:2px 8px">ABIERTO</span>';
-    const rowStyle='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)';
-    const entRows=ent.map(a=>{const n=a.alumnos?.perfiles;return `<div style="${rowStyle}"><span style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-size:12px">${n?.apellido||'--'}, ${n?.nombre||'--'}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></div>`;}).join('');
-    const salRows=sal.map(a=>{const n=a.alumnos?.perfiles;return `<div style="${rowStyle}"><span style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-size:12px">${n?.apellido||'--'}, ${n?.nombre||'--'}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge" style="background:var(--blue);color:var(--white)">salida</span></div>`;}).join('');
+      ?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted)">CERRADO</span>'
+      :'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green)">ABIERTO</span>';
+    const rs='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)';
+    const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return p?`${p.apellido||''}, ${p.nombre||''}`:'--';};
+    const entRows=ent.map(a=>`<div style="${rs}"><span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:12px">${nombre(a.alumno_id)}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></div>`).join('');
+    const salRows=sal.map(a=>`<div style="${rs}"><span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:12px">${nombre(a.alumno_id)}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge" style="background:var(--blue);color:var(--white)">salida</span></div>`).join('');
     return `<div style="background:var(--navy2);border:1px solid var(--border);padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold)">${b.materias?.nombre||'--'} — ${b.aulas?.nombre||'--'}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold)">${matNombre} — ${aulaNombre}</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''} &nbsp; ${stBadge}</div>
         </div>
-        <button class="btn btn-outline" style="font-size:10px;padding:4px 10px" onclick="generarReporteBloquePDF('${b.id}')"> PDF</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-outline" style="font-size:10px;padding:4px 10px" onclick="generarReporteBloquePDF('${b.id}')"> PDF</button>
+          <button class="btn btn-red" style="font-size:10px;padding:4px 10px" onclick="deleteBloque('${b.id}','${matNombre} — ${aulaNombre}')"> Borrar</button>
+        </div>
       </div>
       ${ent.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--green);margin-bottom:4px">ENTRADA (${ent.length})</div>${entRows}`:''}
       ${sal.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--blue);margin-top:8px;margin-bottom:4px">SALIDA (${sal.length})</div>${salRows}`:''}
@@ -2345,25 +2354,44 @@ async function loadRegistrosDia(){
   document.getElementById('f-log').innerHTML=html;
 }
 
+async function deleteBloque(bloqueId,label){
+  if(!await myConfirm(`¿Borrar el bloque "${label}" y TODOS sus registros de asistencia?\n\nEsta acción no se puede deshacer.`))return;
+  // Si es el bloque de la sesión activa, cerrarla
+  if(sesionActual?.bloque_id===bloqueId){
+    sesionActual=null;
+    document.getElementById('btn-abrir-sesion').style.display='';
+    document.getElementById('btn-cerrar-sesion').style.display='none';
+    document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
+    document.getElementById('f-sesion-estado').style.color='var(--muted)';
+  }
+  // Borrar asistencias del bloque primero (no hay CASCADE en la FK)
+  const {error:ea}=await sb.from('asistencias').delete().eq('bloque_id',bloqueId);
+  if(ea){await myAlert('Error borrando registros: '+ea.message);return;}
+  const {error:eb}=await sb.from('bloques_asistencia').delete().eq('id',bloqueId);
+  if(eb){await myAlert('Error borrando bloque: '+eb.message);return;}
+  loadRegistrosDia();
+}
+
 async function generarReporteBloquePDF(bloqueId){
   const {data:b}=await sb.from('bloques_asistencia')
-    .select('id,fecha,hora_apertura,hora_cierre,cerrado,materias(nombre),aulas(nombre)')
+    .select('id,materia_id,aula_id,fecha,hora_apertura,hora_cierre,cerrado')
     .eq('id',bloqueId).single();
   const {data:asists}=await sb.from('asistencias')
-    .select('alumno_id,tipo,estado,hora_ingreso,alumnos(codigo,perfiles(nombre,apellido,dni))')
+    .select('alumno_id,tipo,estado,hora_ingreso')
     .eq('bloque_id',bloqueId).order('tipo').order('hora_ingreso');
   if(!b)return;
+  const matNombre=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
+  const aulaNombre=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+  const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--',cod:a?.codigo||'--'};};
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,PL=14,PR=14;
   const GOLD=[201,168,76],DARK=[9,14,10],DARK2=[14,26,16],DARK3=[19,40,21],WHITE=[240,244,240],MUTED=[122,144,128];
-  // Header
   doc.setFillColor(...DARK);doc.rect(0,0,W,30,'F');
   doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('CHARLY TÁCTICO',PL,12);
   doc.setFontSize(10);doc.text('REPORTE DE ASISTENCIA — BLOQUE',PL,19);
   doc.setTextColor(...WHITE);doc.setFontSize(9);
-  doc.text(`Materia: ${b.materias?.nombre||'--'}   Aula: ${b.aulas?.nombre||'--'}`,PL,26);
-  // Info bar
+  doc.text(`Materia: ${matNombre}   Aula: ${aulaNombre}`,PL,26);
   doc.setFillColor(...DARK2);doc.rect(0,30,W,12,'F');
   doc.setTextColor(...MUTED);doc.setFontSize(8);
   doc.text(`Fecha: ${b.fecha||'--'}   Apertura: ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?'   Cierre: '+(b.hora_cierre||'').slice(0,5):'   (abierto)'}   Estado: ${b.cerrado?'Cerrado':'Abierto'}`,PL,38);
@@ -2376,7 +2404,7 @@ async function generarReporteBloquePDF(bloqueId){
     doc.text(`ENTRADA — ${ent.length} registro(s)`,PL,y);y+=4;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},
       head:[['#','Apellido','Nombre','DNI','Código','Hora','Estado']],
-      body:ent.map((a,i)=>[i+1,a.alumnos?.perfiles?.apellido||'--',a.alumnos?.perfiles?.nombre||'--',a.alumnos?.perfiles?.dni||'--',a.alumnos?.codigo||'--',(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()]),
+      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()];}),
       styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
       headStyles:{fillColor:DARK2,textColor:GOLD,fontStyle:'bold'},
       alternateRowStyles:{fillColor:DARK3},
@@ -2389,7 +2417,7 @@ async function generarReporteBloquePDF(bloqueId){
     doc.text(`SALIDA — ${sal.length} registro(s)`,PL,y);y+=4;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},
       head:[['#','Apellido','Nombre','DNI','Código','Hora']],
-      body:sal.map((a,i)=>[i+1,a.alumnos?.perfiles?.apellido||'--',a.alumnos?.perfiles?.nombre||'--',a.alumnos?.perfiles?.dni||'--',a.alumnos?.codigo||'--',(a.hora_ingreso||'').slice(0,5)]),
+      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5)];}),
       styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
       headStyles:{fillColor:DARK2,textColor:[106,176,232],fontStyle:'bold'},
       alternateRowStyles:{fillColor:DARK3},
@@ -2399,7 +2427,7 @@ async function generarReporteBloquePDF(bloqueId){
   doc.setTextColor(...MUTED);doc.setFontSize(7);
   doc.text(`Generado: ${new Date().toLocaleString('es-PE')}`,PL,H-8);
   doc.text('CHARLY TÁCTICO — SISTEMA INTRANET',W/2,H-8,{align:'center'});
-  doc.save(`asistencia_${b.materias?.nombre||'bloque'}_${b.fecha||todayISO()}.pdf`);
+  doc.save(`asistencia_${matNombre}_${b.fecha||todayISO()}.pdf`);
 }
 
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
@@ -4969,7 +4997,12 @@ async function saveManual(){
   document.getElementById('man-alumno').value='';
   document.getElementById('man-search-inp').value='';
   document.getElementById('man-selected').style.display='none';
-  showFacialTab('registros');
+  // Mostrar confirmación inline sin cambiar de pestaña
+  const btn=document.getElementById('btn-save-manual');
+  const orig=btn.textContent;
+  btn.textContent=' Registrado correctamente';
+  btn.disabled=true;
+  setTimeout(()=>{btn.textContent=orig;btn.disabled=false;},2500);
   loadDashboard();
 }
 
