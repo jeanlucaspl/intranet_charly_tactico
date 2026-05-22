@@ -342,6 +342,27 @@
       text-transform: uppercase;
     }
 
+    /* ── LOGO ── */
+    .hero-logo {
+      width: 110px;
+      height: auto;
+      margin-bottom: 32px;
+      position: relative; z-index: 1;
+      animation: fadeUp 0.8s ease both, lpulse 2.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 18px rgba(201,168,76,0.35));
+    }
+
+    .footer-logo {
+      height: 36px;
+      width: auto;
+      filter: drop-shadow(0 0 6px rgba(201,168,76,0.25));
+    }
+
+    @keyframes lpulse {
+      0%,100% { filter: drop-shadow(0 0 18px rgba(201,168,76,0.35)); }
+      50%      { filter: drop-shadow(0 0 30px rgba(201,168,76,0.65)); }
+    }
+
     /* ── ANIMATIONS ── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(24px); }
@@ -474,6 +495,7 @@
 
   <!-- HERO -->
   <section class="hero">
+    <img src="./logo_charly.png" alt="Charly Táctico TEDAX" class="hero-logo">
     <div class="hero-eyebrow">Academia Pre-Cadetes · Sistema de Gestión Institucional</div>
     <h1 class="hero-title">
       <span class="line-white">CHARLY TÁCTICO</span>
@@ -518,7 +540,7 @@
 
   <!-- FOOTER -->
   <footer>
-    <div class="footer-brand">Charly Táctico Tedax</div>
+    <img src="./logo_charly.png" alt="Charly Táctico TEDAX" class="footer-logo">
     <div class="footer-copy">© 2026 · Academia Pre-Cadetes · Todos los derechos reservados</div>
   </footer>
 
