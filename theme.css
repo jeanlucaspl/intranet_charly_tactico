@@ -1,0 +1,33 @@
+/* ══════════════════════════════════════════════════
+   CHARLY TÁCTICO TEDAX — Tema institucional central
+   Para cambiar colores de toda la intranet, editar
+   solo este archivo.
+   ══════════════════════════════════════════════════ */
+:root {
+  /* Fondos — verde militar oscuro (PNP Perú) */
+  --navy:   #090e0a;
+  --navy2:  #0e1a10;
+  --navy3:  #132815;
+
+  /* Dorado institucional */
+  --gold:   #c9a84c;
+  --gold2:  #e8c96a;
+  --gold3:  #f5e199;
+
+  /* Texto */
+  --white:  #f0f4f0;
+  --muted:  #7a9080;
+
+  /* Bordes y glow */
+  --border: rgba(201,168,76,0.22);
+  --glow:   rgba(201,168,76,0.12);
+
+  /* Topbar semitransparente */
+  --topbar-bg: rgba(9,14,10,0.97);
+
+  /* Estados / badges */
+  --green:  #4caf7d;
+  --red:    #e05555;
+  --yellow: #e8c96a;
+  --blue:   #6ab0e8;
+}
