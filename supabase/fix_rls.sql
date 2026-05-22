@@ -34,6 +34,17 @@ AS $$
   )
 $$;
 
+CREATE OR REPLACE FUNCTION es_profesor()
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM perfiles
+    WHERE id = auth.uid()
+    AND rol = 'profesor'
+  )
+$$;
+
 
 -- ================================================================
 -- PASO 2: PERFILES
@@ -70,13 +81,12 @@ CREATE POLICY "perfiles_admin_all" ON perfiles
   USING (es_admin());
 
 -- profesor: puede leer perfiles de alumnos (para joins en notas/prácticas)
+-- NOTA: usa es_profesor() SECURITY DEFINER para evitar recursión infinita en perfiles
 CREATE POLICY "perfiles_profesor_alumnos" ON perfiles
   FOR SELECT TO authenticated
   USING (
     rol = 'alumno'
-    AND EXISTS (
-      SELECT 1 FROM perfiles p WHERE p.id = auth.uid() AND p.rol = 'profesor'
-    )
+    AND es_profesor()
   );
 
 
@@ -114,11 +124,7 @@ CREATE POLICY "alumnos_admin_all" ON alumnos
 -- profesor: puede leer todos los alumnos (autocomplete y joins en notas)
 CREATE POLICY "alumnos_profesor_select" ON alumnos
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'profesor'
-    )
-  );
+  USING (es_profesor());
 
 
 -- ================================================================
@@ -371,6 +377,30 @@ CREATE POLICY "notas_profesor_write" ON notas
 DROP POLICY IF EXISTS "notas_profesor_update" ON notas;
 CREATE POLICY "notas_profesor_update" ON notas
   FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'profesor'
+    )
+    AND materia_id IN (
+      SELECT mp.materia_id FROM materia_profesor mp
+      JOIN profesores pr ON pr.id = mp.profesor_id
+      WHERE pr.perfil_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'profesor'
+    )
+    AND materia_id IN (
+      SELECT mp.materia_id FROM materia_profesor mp
+      JOIN profesores pr ON pr.id = mp.profesor_id
+      WHERE pr.perfil_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "notas_profesor_delete" ON notas;
+CREATE POLICY "notas_profesor_delete" ON notas
+  FOR DELETE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol = 'profesor'

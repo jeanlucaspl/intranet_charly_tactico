@@ -2021,14 +2021,26 @@ async function generarNotasFiltradosPDF(){
     nFilt.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',rows:[]};byMat[k].rows.push(n);});
     Object.values(byMat).forEach(md=>{
       drawSubTitle(md.nombre);
-      const body=md.rows.map(n=>{
-        const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
-        const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
-        return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
-      });
-      doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Período','Nota 1','Nota 2','Nota 3','Prom.']],body,
-        didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
-      });
+      const tieneMultiples=md.rows.some(n=>n.nota_2!=null||n.nota_3!=null);
+      if(tieneMultiples){
+        const body=md.rows.map(n=>{
+          const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
+          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
+        });
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota 1','Nota 2','Nota 3','Prom.']],body,
+          didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
+        });
+      }else{
+        const body=md.rows.map(n=>{
+          const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
+          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
+        });
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota']],body,
+          didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
+        });
+      }
       curY=doc.lastAutoTable.finalY+6;
     });
   }
