@@ -634,12 +634,6 @@
 
   <!-- TAB 3: Registros del Día -->
   <div id="ftab-content-registros" style="display:none;padding-top:16px">
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)" id="f-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Cadetes</div></div>
-      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)" id="f-completo-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Completos</div></div>
-      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--yellow)" id="f-tard-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
-      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)" id="f-salio-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Salió antes</div></div>
-    </div>
     <div id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
@@ -2306,7 +2300,6 @@ async function loadRegistrosDia(){
   if(be)console.error('loadRegistrosDia bloques:',be);
   if(!bloques?.length){
     document.getElementById('f-log').innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin bloques hoy</div></div>';
-    ['f-cnt','f-completo-cnt','f-tard-cnt','f-salio-cnt'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='0';});
     return;
   }
   const bloqueIds=bloques.map(b=>b.id);
@@ -2315,12 +2308,6 @@ async function loadRegistrosDia(){
     .in('bloque_id',bloqueIds);
   if(ae)console.error('loadRegistrosDia asists:',ae);
   const all=asists||[];
-  const entSet=new Set(all.filter(a=>a.tipo==='entrada').map(a=>a.alumno_id));
-  const salSet=new Set(all.filter(a=>a.tipo==='salida').map(a=>a.alumno_id));
-  document.getElementById('f-cnt').textContent=entSet.size;
-  document.getElementById('f-completo-cnt').textContent=[...entSet].filter(id=>salSet.has(id)).length;
-  document.getElementById('f-tard-cnt').textContent=all.filter(a=>a.tipo==='entrada'&&a.estado==='tardanza').length;
-  document.getElementById('f-salio-cnt').textContent=salSet.size;
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
   const html=bloques.map(b=>{
     const matNombre=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
@@ -2386,7 +2373,8 @@ async function generarReporteBloquePDF(bloqueId){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,PL=14,PR=14;
-  const GOLD=[201,168,76],DARK=[9,14,10],DARK2=[14,26,16],DARK3=[19,40,21],WHITE=[240,244,240],MUTED=[122,144,128];
+  const GOLD=[201,168,76],DARK=[9,14,10],DARK2=[14,26,16],WHITE=[240,244,240],MUTED=[122,144,128];
+  // Header con colores
   doc.setFillColor(...DARK);doc.rect(0,0,W,30,'F');
   doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('CHARLY TÁCTICO',PL,12);
   doc.setFontSize(10);doc.text('REPORTE DE ASISTENCIA — BLOQUE',PL,19);
@@ -2399,28 +2387,28 @@ async function generarReporteBloquePDF(bloqueId){
   const all=asists||[];
   const ent=all.filter(a=>a.tipo==='entrada');
   const sal=all.filter(a=>a.tipo==='salida');
+  // Tablas simples: fondo blanco, texto negro
+  const tblStyles={fontSize:9,cellPadding:3,textColor:[20,20,20],fillColor:[255,255,255]};
+  const tblHeadStyles={fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]};
+  const tblBodyStyles={lineWidth:0.2,lineColor:[210,210,210]};
   if(ent.length){
-    doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(11);
-    doc.text(`ENTRADA — ${ent.length} registro(s)`,PL,y);y+=4;
+    doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);
+    doc.text(`ENTRADA (${ent.length})`,PL,y);y+=4;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},
       head:[['#','Apellido','Nombre','DNI','Código','Hora','Estado']],
       body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()];}),
-      styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
-      headStyles:{fillColor:DARK2,textColor:GOLD,fontStyle:'bold'},
-      alternateRowStyles:{fillColor:DARK3},
+      styles:tblStyles,headStyles:tblHeadStyles,bodyStyles:tblBodyStyles,
       columnStyles:{0:{cellWidth:8},6:{cellWidth:22}}
     });
     y=doc.lastAutoTable.finalY+8;
   }
   if(sal.length){
-    doc.setTextColor(106,176,232);doc.setFont('helvetica','bold');doc.setFontSize(11);
-    doc.text(`SALIDA — ${sal.length} registro(s)`,PL,y);y+=4;
+    doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);
+    doc.text(`SALIDA (${sal.length})`,PL,y);y+=4;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},
       head:[['#','Apellido','Nombre','DNI','Código','Hora']],
       body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5)];}),
-      styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
-      headStyles:{fillColor:DARK2,textColor:[106,176,232],fontStyle:'bold'},
-      alternateRowStyles:{fillColor:DARK3},
+      styles:tblStyles,headStyles:tblHeadStyles,bodyStyles:tblBodyStyles,
       columnStyles:{0:{cellWidth:8}}
     });
   }
