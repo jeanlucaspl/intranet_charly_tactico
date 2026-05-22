@@ -556,20 +556,26 @@
 <!-- ══ TOMAR ASISTENCIA ══ -->
 <div class="panel" id="panel-facial">
   <div class="ph"><div class="ph-left"><div class="eye">Control de presencia</div><div class="ttl">TOMAR ASISTENCIA</div></div></div>
-  <!-- Selector aula + detección materia + controles sesión -->
+  <!-- Selector aula + materia + tipo + controles sesión -->
   <div style="background:var(--navy2);border:1px solid var(--border);padding:12px 16px;margin-bottom:16px">
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-      <select id="f-aula" onchange="onAulaChange()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;max-width:220px"><option value="">-- Selecciona aula --</option></select>
-      <div id="f-mat-detectada" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase">
-         <span id="f-mat-nombre" style="color:var(--gold)">--</span>
-        <span id="f-mat-horario" style="color:var(--muted);margin-left:6px"></span>
-      </div>
-      <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase"></span>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <select id="f-aula" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;flex:1;min-width:150px"><option value="">-- Aula --</option></select>
+      <select id="f-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;flex:1;min-width:150px"><option value="">-- Materia --</option></select>
+    </div>
+    <!-- Toggle ENTRADA / SALIDA -->
+    <div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--border);width:fit-content">
+      <label id="lbl-tipo-entrada" style="padding:6px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;cursor:pointer;background:var(--green);color:var(--white)">
+        <input type="radio" name="f-tipo" value="entrada" checked onchange="onTipoChange()" style="display:none"> ENTRADA
+      </label>
+      <label id="lbl-tipo-salida" style="padding:6px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;cursor:pointer;background:var(--navy);color:var(--muted)">
+        <input type="radio" name="f-tipo" value="salida" onchange="onTipoChange()" style="display:none"> SALIDA
+      </label>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div id="f-sesion-estado" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Sin sesión activa</div>
-      <button id="btn-abrir-sesion" class="btn btn-green" style="font-size:11px;padding:6px 14px" onclick="abrirSesion()">▶ Abrir Asistencia</button>
-      <button id="btn-cerrar-sesion" class="btn btn-red" style="font-size:11px;padding:6px 14px;display:none" onclick="cerrarSesion()"> Cerrar Asistencia</button>
+      <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.08em;color:var(--muted)"></span>
+      <button id="btn-abrir-sesion" class="btn btn-green" style="font-size:11px;padding:6px 14px" onclick="abrirSesion()">▶ Abrir Sesión</button>
+      <button id="btn-cerrar-sesion" class="btn btn-red" style="font-size:11px;padding:6px 14px;display:none" onclick="cerrarSesion()">■ Cerrar Sesión</button>
     </div>
   </div>
   <!-- Tabs -->
@@ -596,9 +602,9 @@
       <div class="verify-card" id="verify-card">
         <div class="verify-name" id="v-name"></div>
         <div class="verify-info" id="v-info"></div>
-        <div class="verify-btns">
+        <div class="verify-btns" id="verify-btns">
           <button class="btn btn-green" style="flex:1" onclick="confirmAtt('presente')"> Presente</button>
-          <button class="btn btn-outline" style="flex:1" onclick="confirmAtt('tardanza')"> Tardanza</button>
+          <button class="btn btn-outline" id="btn-confirm-tardanza" style="flex:1" onclick="confirmAtt('tardanza')"> Tardanza</button>
           <button class="btn btn-red" style="flex:1" onclick="rejectVerify()"> Rechazar</button>
         </div>
       </div>
@@ -616,24 +622,25 @@
       </div>
     </div>
     <div id="man-selected" style="display:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--green);text-transform:uppercase;margin-bottom:12px"> <span id="man-selected-name"></span></div>
-    <div class="fg"><label>Estado</label>
+    <div class="fg" id="man-estado-wrap"><label>Estado</label>
       <select id="man-estado">
         <option value="presente"> Presente</option>
         <option value="tardanza"> Tardanza</option>
         <option value="ausente"> Ausente</option>
       </select>
     </div>
-    <button class="btn btn-gold" style="margin-top:8px" onclick="saveManual()">REGISTRAR ASISTENCIA</button>
+    <button class="btn btn-gold" style="margin-top:8px" onclick="saveManual()" id="btn-save-manual">REGISTRAR ASISTENCIA</button>
   </div>
 
   <!-- TAB 3: Registros del Día -->
   <div id="ftab-content-registros" style="display:none;padding-top:16px">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:16px">
-      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)" id="f-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Total</div></div>
-      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--blue)" id="f-facial-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Facial</div></div>
-      <div style="background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--yellow)" id="f-man-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Manual</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)" id="f-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Cadetes</div></div>
+      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)" id="f-completo-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Completos</div></div>
+      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--yellow)" id="f-tard-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Tardanzas</div></div>
+      <div style="flex:1;background:var(--navy);border:1px solid var(--border);padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)" id="f-salio-cnt">0</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase">Salió antes</div></div>
     </div>
-    <div class="flog" id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
+    <div id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
 
@@ -2215,74 +2222,186 @@ async function loadDashboardDueno(){
 }
 
 // ── SESIÓN DE ASISTENCIA ──
-let sesionActual=null; // {id, aula_id, materia_id, aula_nombre, mat_nombre}
+// sesionActual: {bloque_id, tipo, aula_id, materia_id, aula_nombre, mat_nombre}
+let sesionActual=null;
 
-async function detectMateriaActual(aulaId){
-  if(!aulaId)return null;
-  const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  const diaHoy=dias[new Date().getDay()];
-  const hora=nowTime().slice(0,5); // HH:MM
-  const semana=weekStart();
-  const {data}=await sb.from('horario_semanal')
-    .select('materia_id,materias(nombre),hora_inicio,hora_fin')
-    .eq('aula_id',aulaId).eq('dia',diaHoy).eq('semana_inicio',semana)
-    .lte('hora_inicio',hora).gte('hora_fin',hora);
-  return data?.[0]||null;
-}
-
-async function onAulaChange(){
-  const aulaId=document.getElementById('f-aula').value;
-  if(!aulaId){
-    document.getElementById('f-mat-detectada').style.display='none';
-    return;
-  }
-  const clase=await detectMateriaActual(aulaId);
-  if(clase){
-    document.getElementById('f-mat-nombre').textContent=clase.materias?.nombre||'--';
-    document.getElementById('f-mat-horario').textContent=`${clase.hora_inicio?.slice(0,5)}–${clase.hora_fin?.slice(0,5)}`;
-    document.getElementById('f-mat-detectada').style.display='';
-  } else {
-    document.getElementById('f-mat-nombre').textContent='Sin clase en este horario';
-    document.getElementById('f-mat-horario').textContent='';
-    document.getElementById('f-mat-detectada').style.display='';
-  }
+function onTipoChange(){
+  const tipo=document.querySelector('input[name="f-tipo"]:checked')?.value||'entrada';
+  document.getElementById('lbl-tipo-entrada').style.background=tipo==='entrada'?'var(--green)':'var(--navy)';
+  document.getElementById('lbl-tipo-entrada').style.color=tipo==='entrada'?'var(--white)':'var(--muted)';
+  document.getElementById('lbl-tipo-salida').style.background=tipo==='salida'?'var(--blue)':'var(--navy)';
+  document.getElementById('lbl-tipo-salida').style.color=tipo==='salida'?'var(--white)':'var(--muted)';
+  // En modo salida ocultar "Estado" en asistencia manual
+  const wrap=document.getElementById('man-estado-wrap');
+  if(wrap)wrap.style.display=tipo==='salida'?'none':'';
+  document.getElementById('btn-save-manual').textContent=tipo==='salida'?'REGISTRAR SALIDA':'REGISTRAR ASISTENCIA';
+  // En modo salida ocultar botón Tardanza en facial
+  const btnTard=document.getElementById('btn-confirm-tardanza');
+  if(btnTard)btnTard.style.display=tipo==='salida'?'none':'';
 }
 
 async function abrirSesion(){
   const aulaId=document.getElementById('f-aula').value;
-  if(!aulaId)return await myAlert('Seleccioná un aula primero.');
-  if(sesionActual)return await myAlert('Ya hay una sesión abierta. Cerrala primero.');
-  const clase=await detectMateriaActual(aulaId);
+  const materiaId=document.getElementById('f-materia').value;
+  const tipo=document.querySelector('input[name="f-tipo"]:checked')?.value||'entrada';
+  if(!aulaId)return myAlert('Selecciona un aula primero.');
+  if(!materiaId)return myAlert('Selecciona una materia primero.');
+  if(sesionActual)return myAlert('Ya hay una sesión abierta. Ciérrala primero.');
+
   const aulaOpt=document.getElementById('f-aula').selectedOptions[0];
-  const {data,error}=await sb.from('sesiones_asistencia').insert({
-    aula_id:aulaId,
-    materia_id:clase?.materia_id||null,
-    fecha:todayISO(),
-    hora_apertura:nowTime(),
-    creado_por:uid
-  }).select().single();
-  if(error)return await myAlert('Error al abrir sesión: '+error.message);
-  sesionActual={id:data.id,aula_id:aulaId,materia_id:clase?.materia_id||null,aula_nombre:aulaOpt?.text||'',mat_nombre:clase?.materias?.nombre||'Sin materia asignada'};
+  const matOpt=document.getElementById('f-materia').selectedOptions[0];
+  let bloqueId;
+
+  if(tipo==='entrada'){
+    const {data,error}=await sb.from('bloques_asistencia').insert({
+      materia_id:materiaId,aula_id:aulaId,fecha:todayISO(),hora_apertura:nowTime(),creado_por:uid
+    }).select().single();
+    if(error)return myAlert('Error al crear bloque: '+error.message);
+    bloqueId=data.id;
+  }else{
+    // Buscar bloque abierto de esta materia+aula del día con entrada en las últimas 2h
+    const hace2h=new Date();hace2h.setHours(hace2h.getHours()-2);
+    const h2str=hace2h.toTimeString().slice(0,8);
+    const {data,error}=await sb.from('bloques_asistencia')
+      .select('id,hora_apertura')
+      .eq('materia_id',materiaId).eq('aula_id',aulaId).eq('fecha',todayISO()).eq('cerrado',false)
+      .gte('hora_apertura',h2str)
+      .order('hora_apertura',{ascending:false}).limit(1).maybeSingle();
+    if(error)return myAlert('Error buscando bloque: '+error.message);
+    if(!data)return myAlert('No hay un bloque de ENTRADA activo en las últimas 2 horas para esta materia y aula.\n\nAbre primero un registro de ENTRADA.');
+    bloqueId=data.id;
+  }
+
+  sesionActual={bloque_id:bloqueId,tipo,aula_id:aulaId,materia_id:materiaId,aula_nombre:aulaOpt?.text||'',mat_nombre:matOpt?.text||''};
   document.getElementById('btn-abrir-sesion').style.display='none';
   document.getElementById('btn-cerrar-sesion').style.display='';
-  document.getElementById('f-sesion-estado').textContent=` Sesión abierta — ${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`;
-  document.getElementById('f-sesion-estado').style.color='var(--green)';
+  const color=tipo==='entrada'?'var(--green)':'var(--blue)';
+  document.getElementById('f-sesion-estado').textContent=`${tipo.toUpperCase()} abierta — ${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`;
+  document.getElementById('f-sesion-estado').style.color=color;
 }
 
 async function cerrarSesion(){
   if(!sesionActual)return;
-  if(!await myConfirm(`¿Cerrar la sesión de asistencia?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
-  const {error}=await sb.from('sesiones_asistencia').update({hora_cierre:nowTime(),cerrada:true}).eq('id',sesionActual.id);
-  if(error)return await myAlert('Error al cerrar sesión: '+error.message);
+  const tipo=sesionActual.tipo;
+  if(!await myConfirm(`¿Cerrar sesión de ${tipo.toUpperCase()}?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
+  // Si es salida, cerrar el bloque definitivamente
+  if(tipo==='salida'){
+    await sb.from('bloques_asistencia').update({hora_cierre:nowTime(),cerrado:true}).eq('id',sesionActual.bloque_id);
+  }
   sesionActual=null;
   document.getElementById('btn-abrir-sesion').style.display='';
   document.getElementById('btn-cerrar-sesion').style.display='none';
   document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
   document.getElementById('f-sesion-estado').style.color='var(--muted)';
-  // Refrescar registros del día y dashboard
   showFacialTab('registros');
   loadDashboard();
 }
+// ── REGISTROS DEL DÍA ──
+async function loadRegistrosDia(){
+  const hoy=todayISO();
+  const {data:bloques}=await sb.from('bloques_asistencia')
+    .select('id,fecha,hora_apertura,hora_cierre,cerrado,materias(nombre),aulas(nombre)')
+    .eq('fecha',hoy).order('hora_apertura',{ascending:true});
+  if(!bloques?.length){
+    document.getElementById('f-log').innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin bloques hoy</div></div>';
+    ['f-cnt','f-completo-cnt','f-tard-cnt','f-salio-cnt'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='0';});
+    return;
+  }
+  const bloqueIds=bloques.map(b=>b.id);
+  const {data:asists}=await sb.from('asistencias')
+    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso,alumnos(codigo,perfiles(nombre,apellido))')
+    .in('bloque_id',bloqueIds);
+  const all=asists||[];
+  const entSet=new Set(all.filter(a=>a.tipo==='entrada').map(a=>a.alumno_id));
+  const salSet=new Set(all.filter(a=>a.tipo==='salida').map(a=>a.alumno_id));
+  document.getElementById('f-cnt').textContent=entSet.size;
+  document.getElementById('f-completo-cnt').textContent=[...entSet].filter(id=>salSet.has(id)).length;
+  document.getElementById('f-tard-cnt').textContent=all.filter(a=>a.tipo==='entrada'&&a.estado==='tardanza').length;
+  document.getElementById('f-salio-cnt').textContent=salSet.size;
+  const bc={presente:'bg',tardanza:'by',ausente:'br'};
+  const html=bloques.map(b=>{
+    const ba=all.filter(a=>a.bloque_id===b.id);
+    const ent=ba.filter(a=>a.tipo==='entrada');
+    const sal=ba.filter(a=>a.tipo==='salida');
+    const stBadge=b.cerrado
+      ?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);background:var(--navy);padding:2px 8px">CERRADO</span>'
+      :'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--green);background:var(--navy);padding:2px 8px">ABIERTO</span>';
+    const rowStyle='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)';
+    const entRows=ent.map(a=>{const n=a.alumnos?.perfiles;return `<div style="${rowStyle}"><span style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-size:12px">${n?.apellido||'--'}, ${n?.nombre||'--'}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></div>`;}).join('');
+    const salRows=sal.map(a=>{const n=a.alumnos?.perfiles;return `<div style="${rowStyle}"><span style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-size:12px">${n?.apellido||'--'}, ${n?.nombre||'--'}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge" style="background:var(--blue);color:var(--white)">salida</span></div>`;}).join('');
+    return `<div style="background:var(--navy2);border:1px solid var(--border);padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold)">${b.materias?.nombre||'--'} — ${b.aulas?.nombre||'--'}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''} &nbsp; ${stBadge}</div>
+        </div>
+        <button class="btn btn-outline" style="font-size:10px;padding:4px 10px" onclick="generarReporteBloquePDF('${b.id}')"> PDF</button>
+      </div>
+      ${ent.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--green);margin-bottom:4px">ENTRADA (${ent.length})</div>${entRows}`:''}
+      ${sal.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--blue);margin-top:8px;margin-bottom:4px">SALIDA (${sal.length})</div>${salRows}`:''}
+      ${!ent.length&&!sal.length?'<div style="color:var(--muted);font-size:12px;font-family:\'Barlow Condensed\',sans-serif">Sin registros aún</div>':''}
+    </div>`;
+  }).join('');
+  document.getElementById('f-log').innerHTML=html;
+}
+
+async function generarReporteBloquePDF(bloqueId){
+  const {data:b}=await sb.from('bloques_asistencia')
+    .select('id,fecha,hora_apertura,hora_cierre,cerrado,materias(nombre),aulas(nombre)')
+    .eq('id',bloqueId).single();
+  const {data:asists}=await sb.from('asistencias')
+    .select('alumno_id,tipo,estado,hora_ingreso,alumnos(codigo,perfiles(nombre,apellido,dni))')
+    .eq('bloque_id',bloqueId).order('tipo').order('hora_ingreso');
+  if(!b)return;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297,PL=14,PR=14;
+  const GOLD=[201,168,76],DARK=[9,14,10],DARK2=[14,26,16],DARK3=[19,40,21],WHITE=[240,244,240],MUTED=[122,144,128];
+  // Header
+  doc.setFillColor(...DARK);doc.rect(0,0,W,30,'F');
+  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('CHARLY TÁCTICO',PL,12);
+  doc.setFontSize(10);doc.text('REPORTE DE ASISTENCIA — BLOQUE',PL,19);
+  doc.setTextColor(...WHITE);doc.setFontSize(9);
+  doc.text(`Materia: ${b.materias?.nombre||'--'}   Aula: ${b.aulas?.nombre||'--'}`,PL,26);
+  // Info bar
+  doc.setFillColor(...DARK2);doc.rect(0,30,W,12,'F');
+  doc.setTextColor(...MUTED);doc.setFontSize(8);
+  doc.text(`Fecha: ${b.fecha||'--'}   Apertura: ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?'   Cierre: '+(b.hora_cierre||'').slice(0,5):'   (abierto)'}   Estado: ${b.cerrado?'Cerrado':'Abierto'}`,PL,38);
+  let y=48;
+  const all=asists||[];
+  const ent=all.filter(a=>a.tipo==='entrada');
+  const sal=all.filter(a=>a.tipo==='salida');
+  if(ent.length){
+    doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(11);
+    doc.text(`ENTRADA — ${ent.length} registro(s)`,PL,y);y+=4;
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},
+      head:[['#','Apellido','Nombre','DNI','Código','Hora','Estado']],
+      body:ent.map((a,i)=>[i+1,a.alumnos?.perfiles?.apellido||'--',a.alumnos?.perfiles?.nombre||'--',a.alumnos?.perfiles?.dni||'--',a.alumnos?.codigo||'--',(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()]),
+      styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
+      headStyles:{fillColor:DARK2,textColor:GOLD,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:DARK3},
+      columnStyles:{0:{cellWidth:8},6:{cellWidth:22}}
+    });
+    y=doc.lastAutoTable.finalY+8;
+  }
+  if(sal.length){
+    doc.setTextColor(106,176,232);doc.setFont('helvetica','bold');doc.setFontSize(11);
+    doc.text(`SALIDA — ${sal.length} registro(s)`,PL,y);y+=4;
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},
+      head:[['#','Apellido','Nombre','DNI','Código','Hora']],
+      body:sal.map((a,i)=>[i+1,a.alumnos?.perfiles?.apellido||'--',a.alumnos?.perfiles?.nombre||'--',a.alumnos?.perfiles?.dni||'--',a.alumnos?.codigo||'--',(a.hora_ingreso||'').slice(0,5)]),
+      styles:{fontSize:8,cellPadding:2,textColor:WHITE,fillColor:DARK},
+      headStyles:{fillColor:DARK2,textColor:[106,176,232],fontStyle:'bold'},
+      alternateRowStyles:{fillColor:DARK3},
+      columnStyles:{0:{cellWidth:8}}
+    });
+  }
+  doc.setTextColor(...MUTED);doc.setFontSize(7);
+  doc.text(`Generado: ${new Date().toLocaleString('es-PE')}`,PL,H-8);
+  doc.text('CHARLY TÁCTICO — SISTEMA INTRANET',W/2,H-8,{align:'center'});
+  doc.save(`asistencia_${b.materias?.nombre||'bloque'}_${b.fecha||todayISO()}.pdf`);
+}
+
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
 function _renderGenStat(){
   const el=document.getElementById('rep-gen-stat');
@@ -4652,6 +4771,8 @@ function showFacialTab(tab){
     document.getElementById('ftab-content-'+t).style.display=t===tab?'block':'none';
     document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
   });
+  if(tab==='registros')loadRegistrosDia();
+  if(tab!=='facial'&&facialStream){stopCam();}
 }
 
 // ── FACIAL ──
@@ -4682,15 +4803,7 @@ function stopCam(){
   facialStream=null;document.getElementById('f-video').srcObject=null;
   const c=document.getElementById('f-canvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
   setCamSt('Cámara detenida','cs-idle');document.getElementById('verify-card').style.display='none';
-  // Cerrar la sesión automáticamente al detener la cámara
-  if(sesionActual){
-    sb.from('sesiones_asistencia').update({hora_cierre:nowTime(),cerrada:true}).eq('id',sesionActual.id).then(()=>{});
-    sesionActual=null;
-    document.getElementById('btn-abrir-sesion').style.display='';
-    document.getElementById('btn-cerrar-sesion').style.display='none';
-    document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
-    document.getElementById('f-sesion-estado').style.color='var(--muted)';
-  }
+  // La sesión (bloque) sigue abierta — el admin la cierra manualmente con "Cerrar Sesión"
 }
 async function flipCam(){
   facingMode=facingMode==='environment'?'user':'environment';
@@ -4771,15 +4884,24 @@ async function scanFrameFacial(){
 }
 async function confirmAtt(estado){
   if(!verifyAlumno)return;
-  const mid=sesionActual?.materia_id||null;
-  const aulaId=sesionActual?.aula_id||null;
-  await sb.from('asistencias').upsert({alumno_id:verifyAlumno.id,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},{onConflict:'alumno_id,fecha,materia_id'});
-  const _cAlumno=verifyAlumno,_cEstado=estado,_cMat=sesionActual?.mat_nombre||'clase',_cHora=nowTime();
-  if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],' Asistencia registrada',`Tu asistencia a ${_cMat} fue marcada como "${_cEstado}" a las ${_cHora}.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,`${_cAlumno.perfiles?.nombre||'Tu hijo'} se presentó a ${_cMat} a las ${_cHora} (${_cEstado}).`);});
-  addFacialLog(verifyAlumno,estado,true);
+  if(!sesionActual)return myAlert('Abre una sesión primero antes de registrar asistencia.');
+  const mid=sesionActual.materia_id;
+  const aulaId=sesionActual.aula_id;
+  const tipo=sesionActual.tipo;
+  const bloqueId=sesionActual.bloque_id;
+  const estadoFinal=tipo==='salida'?'presente':estado;
+  const {error}=await sb.from('asistencias').upsert(
+    {alumno_id:verifyAlumno.id,bloque_id:bloqueId,tipo,estado:estadoFinal,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},
+    {onConflict:'alumno_id,bloque_id,tipo'}
+  );
+  if(error){setCamSt(' Error: '+error.message,'cs-fail');return;}
+  const _cAlumno=verifyAlumno,_cMat=sesionActual.mat_nombre,_cHora=nowTime();
+  const _msg=tipo==='salida'?`Salida de ${_cMat} a las ${_cHora}.`:`Asistencia a ${_cMat} marcada como "${estadoFinal}" a las ${_cHora}.`;
+  if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],' Asistencia registrada',_msg);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),` ${tipo==='salida'?'Salida':'Asistencia'} de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,_msg);});
+  addFacialLog(verifyAlumno,estadoFinal,true,tipo);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
-  setCamSt(' Registrado — Siguiente cadete','cs-ok');loadDashboard();
+  setCamSt(tipo==='salida'?' Salida registrada — Siguiente':'  Presente — Siguiente cadete','cs-ok');loadDashboard();
   if(facialStream)iniciarFacialScan();
 }
 function rejectVerify(){
@@ -4788,14 +4910,16 @@ function rejectVerify(){
   setCamSt(' Rechazado — Buscando siguiente...','cs-scan');
   if(facialStream)iniciarFacialScan();
 }
-function addFacialLog(alumno,estado,facial){
-  facialLog.push({id:alumno.id,nombre:`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`,estado,facial,hora:new Date().toTimeString().slice(0,5)});
-  const f=facialLog.filter(l=>l.facial).length,m=facialLog.filter(l=>!l.facial).length;
-  document.getElementById('f-cnt').textContent=facialLog.length;
-  document.getElementById('f-facial-cnt').textContent=f;
-  document.getElementById('f-man-cnt').textContent=m;
+function addFacialLog(alumno,estado,facial,tipo='entrada'){
+  facialLog.push({id:alumno.id,nombre:`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`,estado,facial,tipo,hora:new Date().toTimeString().slice(0,5)});
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
-  document.getElementById('f-log').innerHTML=[...facialLog].reverse().map(l=>`<div class="flog-item ${l.facial?'':'man'}"><span style="font-size:16px">${l.facial?'':''}</span><span style="flex:1">${l.nombre}</span><span style="color:var(--muted);font-size:10px">${l.hora}</span><span class="badge ${bc[l.estado]}">${l.estado}</span></div>`).join('');
+  const tipoColor={entrada:'var(--green)',salida:'var(--blue)'};
+  // Sólo actualizar el log en tiempo real — los stats se calculan al abrir la pestaña Registros
+  const logEl=document.getElementById('f-log');
+  if(logEl&&!document.getElementById('ftab-content-registros').style.display.includes('none')){
+    // pestaña registros visible → refrescar desde DB en bg
+    loadRegistrosDia();
+  }
 }
 // ── BÚSQUEDA MANUAL POR APELLIDO / DNI ──
 function manSuggest(inp){
@@ -4824,17 +4948,24 @@ function selectManAlumno(id,nombre){
 function hideSug(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 async function saveManual(){
   const alumnoId=document.getElementById('man-alumno').value;
-  const estado=document.getElementById('man-estado').value;
   if(!alumnoId)return await myAlert('Selecciona un alumno primero buscando por apellido o DNI');
-  const mid=sesionActual?.materia_id||null;
-  const aulaId=sesionActual?.aula_id||null;
-  const {error}=await sb.from('asistencias').upsert({alumno_id:alumnoId,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},{onConflict:'alumno_id,fecha,materia_id'});
-  if(error){await myAlert('Error al guardar asistencia: '+error.message);return;}
+  if(!sesionActual)return await myAlert('Abre una sesión primero antes de registrar asistencia.');
+  const tipo=sesionActual.tipo;
+  const estado=tipo==='salida'?'presente':document.getElementById('man-estado').value;
+  const mid=sesionActual.materia_id;
+  const aulaId=sesionActual.aula_id;
+  const bloqueId=sesionActual.bloque_id;
+  const {error}=await sb.from('asistencias').upsert(
+    {alumno_id:alumnoId,bloque_id:bloqueId,tipo,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},
+    {onConflict:'alumno_id,bloque_id,tipo'}
+  );
+  if(error){await myAlert('Error al guardar: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
-  const _mMat=sesionActual?.mat_nombre||'clase',_mHora=nowTime();
-  if(a?.perfil_id)sendFcmToUsers([a.perfil_id],' Asistencia registrada',`Tu asistencia a ${_mMat} fue marcada como "${estado}" a las ${_mHora}.`);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,`${a.perfiles?.nombre||'Tu hijo'} se presentó a ${_mMat} a las ${_mHora} (${estado}).`);});
-  if(a)addFacialLog(a,estado,false);
+  const _mMat=sesionActual.mat_nombre,_mHora=nowTime();
+  const _msg=tipo==='salida'?`Salida de ${_mMat} a las ${_mHora}.`:`Asistencia a ${_mMat} marcada como "${estado}" a las ${_mHora}.`;
+  if(a?.perfil_id)sendFcmToUsers([a.perfil_id],' Asistencia registrada',_msg);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),` ${tipo==='salida'?'Salida':'Asistencia'} de ${a.perfiles?.nombre||'tu hijo'}`,_msg);});
+  if(a)addFacialLog(a,estado,false,tipo);
   document.getElementById('man-alumno').value='';
   document.getElementById('man-search-inp').value='';
   document.getElementById('man-selected').style.display='none';
@@ -5127,7 +5258,7 @@ function populateSelects(){
   const alOpts=allAlumnos.map(a=>`<option value="${a.id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
   ['hor-aula','edit-hor-aula'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Sin aula --</option>'+aulaOpts});
   const fAula=document.getElementById('f-aula');if(fAula)fAula.innerHTML='<option value="">-- Selecciona aula --</option>'+aulaOpts;
-  ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
+  ['a-materia','hor-materia','edit-hor-materia','p-materia','n-materia','pr-materia','f-materia'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-- Materia --</option>'+matOpts});
   // man-alumno is now a hidden input populated via search — no select to fill
   const nDest=document.getElementById('n-dest');if(nDest)nDest.innerHTML='<option value="global"> Todos</option>'+allAlumnos.map(a=>`<option value="${a.perfil_id}">${a.perfiles?.nombre} ${a.perfiles?.apellido}</option>`).join('');
 }
