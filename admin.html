@@ -2404,17 +2404,14 @@ const _PDF={
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
-function _pdfHeader(doc,logoUrl,subtitulo){
-  const {W,PL,GOLD,DARK,DARK2,WHITE,MUTED}=_PDF;
+function _pdfHeader(doc,_logoUrl,subtitulo){
+  const {W,PL,GOLD,DARK,WHITE}=_PDF;
   // Franja oscura fina: 20mm
   doc.setFillColor(...DARK);doc.rect(0,0,W,20,'F');
-  // Logo izquierda, pequeño y contenido
-  if(logoUrl)doc.addImage(logoUrl,'PNG',PL,3,22,14);
-  // Textos a la derecha del logo
-  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(14);
-  doc.text('CHARLY TÁCTICO',PL+26,10);
+  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(15);
+  doc.text('Charly Táctico TEDAX',PL,11);
   doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(...WHITE);
-  doc.text(subtitulo.toUpperCase(),PL+26,16);
+  doc.text(subtitulo.toUpperCase(),PL,17);
   // Línea separadora dorada muy fina
   doc.setDrawColor(...GOLD);doc.setLineWidth(0.4);doc.line(0,20,W,20);
   return 20; // y de inicio del contenido
