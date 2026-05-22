@@ -1650,19 +1650,35 @@ async function verificarUbicacionAdmin(){
   }
   return new Promise(resolve=>{
     if(!navigator.geolocation)return resolve({ok:false,msg:'Tu dispositivo no soporta geolocalización'});
-    navigator.geolocation.getCurrentPosition(
-      pos=>{
-        const dist=Math.round(calcDistanciaMetros(pos.coords.latitude,pos.coords.longitude,academiaLoc.latitud,academiaLoc.longitud));
-        console.log(`GPS: tuPos=(${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}) academia=(${academiaLoc.latitud},${academiaLoc.longitud}) dist=${dist}m radio=${academiaLoc.radio_metros||200}m`);
-        if(dist>(academiaLoc.radio_metros||200)){
-          resolve({ok:false,msg:`Estás a ${dist}m de la academia (límite: ${academiaLoc.radio_metros||200}m). Debes estar físicamente en la academia para tomar asistencia.`});
-        }else{
-          resolve({ok:true,lat:pos.coords.latitude,lng:pos.coords.longitude,dist});
-        }
-      },
-      err=>resolve({ok:false,msg:'No se pudo obtener tu ubicación: '+err.message}),
-      {timeout:10000,enableHighAccuracy:true,maximumAge:0}
-    );
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    const onSuccess=pos=>{
+      const dist=Math.round(calcDistanciaMetros(pos.coords.latitude,pos.coords.longitude,academiaLoc.latitud,academiaLoc.longitud));
+      console.log(`GPS: tuPos=(${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}) academia=(${academiaLoc.latitud},${academiaLoc.longitud}) dist=${dist}m radio=${academiaLoc.radio_metros||200}m`);
+      if(dist>(academiaLoc.radio_metros||200)){
+        resolve({ok:false,msg:`Estás a ${dist}m de la academia (límite: ${academiaLoc.radio_metros||200}m). Debes estar físicamente en la academia para tomar asistencia.`});
+      }else{
+        resolve({ok:true,lat:pos.coords.latitude,lng:pos.coords.longitude,dist});
+      }
+    };
+    const onError=(err,esFallback=false)=>{
+      if(err.code===1){
+        // Permiso denegado — instrucciones específicas por plataforma
+        const msg=isIOS
+          ?'Ubicación bloqueada.\n\niPhone: Configuración → Privacidad → Localización → Safari → "Al usar la app".\nSi usas la app instalada: Configuración → Charly Táctico → Localización.'
+          :'Ubicación bloqueada. Habilitá el permiso de ubicación para este sitio en la configuración de tu navegador.';
+        return resolve({ok:false,msg});
+      }
+      if(!esFallback){
+        // Reintentar con baja precisión (funciona mejor en interiores en iOS)
+        navigator.geolocation.getCurrentPosition(onSuccess,err2=>resolve({ok:false,msg:'No se pudo obtener tu ubicación: '+err2.message}),
+          {timeout:15000,enableHighAccuracy:false,maximumAge:60000});
+      }else{
+        resolve({ok:false,msg:'No se pudo obtener tu ubicación: '+err.message});
+      }
+    };
+    // Primer intento: alta precisión, 8s
+    navigator.geolocation.getCurrentPosition(onSuccess,err=>onError(err,false),
+      {timeout:8000,enableHighAccuracy:true,maximumAge:0});
   });
 }
 
