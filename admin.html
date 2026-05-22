@@ -2369,47 +2369,55 @@ async function generarReporteBloquePDF(bloqueId){
   if(!b)return;
   const matNombre=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
   const aulaNombre=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
-  const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--',cod:a?.codigo||'--'};};
+  const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
+  // Cargar logo como dataURL
+  const logoUrl=await new Promise(res=>{
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);res(c.toDataURL('image/png'));};
+    img.onerror=()=>res(null);
+    img.src='./logo_charly.png';
+  });
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,H=297,PL=14,PR=14;
   const GOLD=[201,168,76],DARK=[9,14,10],DARK2=[14,26,16],WHITE=[240,244,240],MUTED=[122,144,128];
-  // Header con colores
-  doc.setFillColor(...DARK);doc.rect(0,0,W,30,'F');
-  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('CHARLY TÁCTICO',PL,12);
-  doc.setFontSize(10);doc.text('REPORTE DE ASISTENCIA — BLOQUE',PL,19);
+  // Header con colores + logo
+  doc.setFillColor(...DARK);doc.rect(0,0,W,32,'F');
+  if(logoUrl)doc.addImage(logoUrl,'PNG',W-46,3,38,26);
+  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('CHARLY TÁCTICO',PL,13);
+  doc.setFontSize(10);doc.text('REPORTE DE ASISTENCIA — BLOQUE',PL,20);
   doc.setTextColor(...WHITE);doc.setFontSize(9);
-  doc.text(`Materia: ${matNombre}   Aula: ${aulaNombre}`,PL,26);
-  doc.setFillColor(...DARK2);doc.rect(0,30,W,12,'F');
+  doc.text(`Materia: ${matNombre}   Aula: ${aulaNombre}`,PL,28);
+  doc.setFillColor(...DARK2);doc.rect(0,32,W,12,'F');
   doc.setTextColor(...MUTED);doc.setFontSize(8);
-  doc.text(`Fecha: ${b.fecha||'--'}   Apertura: ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?'   Cierre: '+(b.hora_cierre||'').slice(0,5):'   (abierto)'}   Estado: ${b.cerrado?'Cerrado':'Abierto'}`,PL,38);
-  let y=48;
+  doc.text(`Fecha: ${b.fecha||'--'}   Apertura: ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?'   Cierre: '+(b.hora_cierre||'').slice(0,5):'   (abierto)'}   Estado: ${b.cerrado?'Cerrado':'Abierto'}`,PL,40);
+  let y=50;
   const all=asists||[];
   const ent=all.filter(a=>a.tipo==='entrada');
   const sal=all.filter(a=>a.tipo==='salida');
-  // Tablas simples: fondo blanco, texto negro
-  const tblStyles={fontSize:9,cellPadding:3,textColor:[20,20,20],fillColor:[255,255,255]};
+  // Tablas simples sin colores de relleno, columnas auto-ajustadas
+  const tblStyles={fontSize:9,cellPadding:3,textColor:[20,20,20],fillColor:[255,255,255],overflow:'linebreak'};
   const tblHeadStyles={fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]};
   const tblBodyStyles={lineWidth:0.2,lineColor:[210,210,210]};
   if(ent.length){
     doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);
     doc.text(`ENTRADA (${ent.length})`,PL,y);y+=4;
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},
-      head:[['#','Apellido','Nombre','DNI','Código','Hora','Estado']],
-      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()];}),
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
+      head:[['#','Apellido','Nombre','DNI','Hora','Estado']],
+      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()];}),
       styles:tblStyles,headStyles:tblHeadStyles,bodyStyles:tblBodyStyles,
-      columnStyles:{0:{cellWidth:8},6:{cellWidth:22}}
+      columnStyles:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:24}}
     });
     y=doc.lastAutoTable.finalY+8;
   }
   if(sal.length){
     doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);
     doc.text(`SALIDA (${sal.length})`,PL,y);y+=4;
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},
-      head:[['#','Apellido','Nombre','DNI','Código','Hora']],
-      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,n.cod,(a.hora_ingreso||'').slice(0,5)];}),
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
+      head:[['#','Apellido','Nombre','DNI','Hora']],
+      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5)];}),
       styles:tblStyles,headStyles:tblHeadStyles,bodyStyles:tblBodyStyles,
-      columnStyles:{0:{cellWidth:8}}
+      columnStyles:{0:{cellWidth:8},4:{cellWidth:16}}
     });
   }
   doc.setTextColor(...MUTED);doc.setFontSize(7);
