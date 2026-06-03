@@ -2486,26 +2486,23 @@ function _pdfFooter(doc){
 }
 
 // Guarda el PDF según plataforma:
-// 1. File System Access API (showSaveFilePicker) — sin permiso de almacenamiento, abre selector nativo
-// 2. Fallback: <a download>.click() para desktop
-// 3. Último recurso: window.location.href para ver el PDF en el navegador
-async function _pdfSave(doc,filename){
-  const blob=doc.output('blob');
-  // File System Access API: Chrome 86+ Android/Desktop, no necesita permiso de almacenamiento
-  if(window.showSaveFilePicker){
-    try{
-      const fh=await window.showSaveFilePicker({
-        suggestedName:filename,
-        types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]
-      });
-      const w=await fh.createWritable();
-      await w.write(blob);
-      await w.close();
-      return;
-    }catch(e){if(e.name==='AbortError')return;/* usuario canceló */}
+// - Android app (WebView): pasa base64 al método nativo AndroidNative.savePdfBase64
+// - Desktop: <a download>.click()
+// - iOS / otro mobile: window.location.href al bloburl
+function _pdfSave(doc,filename){
+  const base64=doc.output('datauristring').split(',')[1];
+  // Android WebView con interfaz nativa
+  if(window.AndroidNative&&typeof window.AndroidNative.savePdfBase64==='function'){
+    window.AndroidNative.savePdfBase64(base64,filename);
+    return;
   }
-  // Fallback: descarga directa (desktop Chrome/Firefox)
+  const blob=doc.output('blob');
   const url=URL.createObjectURL(blob);
+  // iOS / mobile sin interfaz nativa: abrir en visor del navegador
+  if(/iPad|iPhone|iPod|Android/i.test(navigator.userAgent)){
+    window.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),8000);return;
+  }
+  // Desktop
   const a=document.createElement('a');a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),3000);
