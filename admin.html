@@ -2486,13 +2486,26 @@ function _pdfFooter(doc){
 }
 
 // Guarda el PDF según plataforma:
-// - Mobile (iOS/Android): navega el tab actual al bloburl → visor PDF nativo del navegador
-// - Desktop: <a download>.click()
-function _pdfSave(doc,filename){
-  const isMobile=/iPad|iPhone|iPod|Android/i.test(navigator.userAgent);
+// 1. File System Access API (showSaveFilePicker) — sin permiso de almacenamiento, abre selector nativo
+// 2. Fallback: <a download>.click() para desktop
+// 3. Último recurso: window.location.href para ver el PDF en el navegador
+async function _pdfSave(doc,filename){
   const blob=doc.output('blob');
+  // File System Access API: Chrome 86+ Android/Desktop, no necesita permiso de almacenamiento
+  if(window.showSaveFilePicker){
+    try{
+      const fh=await window.showSaveFilePicker({
+        suggestedName:filename,
+        types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]
+      });
+      const w=await fh.createWritable();
+      await w.write(blob);
+      await w.close();
+      return;
+    }catch(e){if(e.name==='AbortError')return;/* usuario canceló */}
+  }
+  // Fallback: descarga directa (desktop Chrome/Firefox)
   const url=URL.createObjectURL(blob);
-  if(isMobile){window.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),8000);return;}
   const a=document.createElement('a');a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),3000);
