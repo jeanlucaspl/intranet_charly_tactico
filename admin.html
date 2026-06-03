@@ -2486,36 +2486,27 @@ function _pdfFooter(doc){
 }
 
 // Guarda el PDF según plataforma:
-// - iOS: navega ventana pre-abierta al bloburl
-// - Android: muestra overlay con <a download> real que el usuario toca directamente
-// - Desktop: <a download>.click() estándar
-function _pdfSave(doc,filename,preWin){
+// - Android: Web Share API nativa (panel de compartir del sistema)
+// - iOS: ventana pre-abierta con bloburl
+// - Desktop: <a download>.click()
+async function _pdfSave(doc,filename,preWin){
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   const isAndroid=/Android/i.test(navigator.userAgent);
   const blob=doc.output('blob');
+  if(isAndroid&&navigator.canShare){
+    const file=new File([blob],filename,{type:'application/pdf'});
+    if(navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:filename});}
+      catch(e){if(e.name!=='AbortError')console.warn('share:',e);}
+      return;
+    }
+  }
   const url=URL.createObjectURL(blob);
   if(isIOS&&preWin&&!preWin.closed){preWin.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),5000);return;}
   if(preWin&&!preWin.closed)preWin.close();
-  if(isAndroid){_pdfOverlay(url,filename);return;}
   const a=document.createElement('a');a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),3000);
-}
-function _pdfOverlay(url,filename){
-  const ex=document.getElementById('_pdf_ov');if(ex)ex.remove();
-  const ov=document.createElement('div');ov.id='_pdf_ov';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(9,14,10,.94);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:28px';
-  ov.innerHTML=`
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.1em;color:#c9a84c">PDF LISTO</div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.12em;color:rgba(240,244,240,.5);text-align:center;max-width:280px">${filename}</div>
-    <a id="_pdf_dl" href="${url}" download="${filename}"
-       style="display:block;width:100%;max-width:300px;text-align:center;background:#c9a84c;color:#09140a;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:18px 0;text-decoration:none">
-      ⬇ DESCARGAR PDF
-    </a>
-    <button id="_pdf_cancel" style="background:none;border:1px solid rgba(240,244,240,.2);color:rgba(240,244,240,.45);font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.15em;padding:10px 28px;cursor:pointer">CANCELAR</button>`;
-  document.body.appendChild(ov);
-  document.getElementById('_pdf_dl').addEventListener('click',()=>setTimeout(()=>{ov.remove();URL.revokeObjectURL(url);},600));
-  document.getElementById('_pdf_cancel').addEventListener('click',()=>{ov.remove();URL.revokeObjectURL(url);});
 }
 
 // Dibuja las tablas de ENTRADA y SALIDA. Retorna la y final.
@@ -2571,7 +2562,7 @@ async function generarReporteBloquePDF(bloqueId){
   y+=8;
   _pdfBloqueTablas(doc,y,asists,nombre);
   _pdfFooter(doc);
-  _pdfSave(doc,`asistencia_${matN}_${b.fecha||todayISO()}.pdf`,_pdfWin);
+  await _pdfSave(doc,`asistencia_${matN}_${b.fecha||todayISO()}.pdf`,_pdfWin);
 }
 
 async function generarReporteGlobalPDF(){
@@ -2613,7 +2604,7 @@ async function generarReporteGlobalPDF(){
     }
   });
   _pdfFooter(doc);
-  _pdfSave(doc,`reporte_global_${hoy}.pdf`,_pdfWin);
+  await _pdfSave(doc,`reporte_global_${hoy}.pdf`,_pdfWin);
 }
 
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
