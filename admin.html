@@ -2532,8 +2532,9 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
 }
 
 async function generarReporteBloquePDF(bloqueId){
-  // Abrir ventana sincrónicamente (gesto de usuario) para que iOS no la bloquee
-  const _pdfWin=window.open('','_blank');
+  // Solo en iOS: abrir ventana ahora (gesto sincrónico) para que Safari no la bloquee
+  const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const _pdfWin=_isIOS?window.open('','_blank'):null;
   const {data:b}=await sb.from('bloques_asistencia')
     .select('id,materia_id,aula_id,fecha,hora_apertura,hora_cierre,cerrado')
     .eq('id',bloqueId).single();
@@ -2556,8 +2557,9 @@ async function generarReporteBloquePDF(bloqueId){
 }
 
 async function generarReporteGlobalPDF(){
-  // Abrir ventana sincrónicamente (gesto de usuario) para que iOS no la bloquee
-  const _pdfWin=window.open('','_blank');
+  // Solo en iOS: abrir ventana ahora (gesto sincrónico) para que Safari no la bloquee
+  const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const _pdfWin=_isIOS?window.open('','_blank'):null;
   const hoy=todayISO();
   const ahora=nowTime();
   const {data:bloques}=await sb.from('bloques_asistencia')
