@@ -1744,9 +1744,9 @@ async function saveFcmToken(){
 }
 
 // helpers
-function todayISO(){return new Date().toISOString().split('T')[0]}
+function todayISO(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function nowTime(){return new Date().toTimeString().slice(0,8)}
-function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return x.toISOString().split('T')[0]}
+function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setDate(x.getDate()+(day===0?-6:1-day));return`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`}
 function fmtDate(d){return d?new Date(d).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--'}
 
 // ── LOADERS ──
@@ -2261,25 +2261,42 @@ async function abrirSesion(){
 
   const aulaOpt=document.getElementById('f-aula').selectedOptions[0];
   const matOpt=document.getElementById('f-materia').selectedOptions[0];
+  // Auto-cierre preventivo antes de abrir sesión
+  const _ahora2=new Date(),_hace2h2=new Date(_ahora2.getTime()-2*60*60*1000);
+  const _h2str2=`${String(_hace2h2.getHours()).padStart(2,'0')}:${String(_hace2h2.getMinutes()).padStart(2,'0')}:${String(_hace2h2.getSeconds()).padStart(2,'0')}`;
+  const {data:_vcds}=await sb.from('bloques_asistencia').select('id').eq('fecha',todayISO()).eq('cerrado',false).lte('hora_apertura',_h2str2);
+  if(_vcds?.length){await sb.from('bloques_asistencia').update({cerrado:true,hora_cierre:_h2str2}).in('id',_vcds.map(b=>b.id));}
+
   let bloqueId;
 
   if(tipo==='entrada'){
-    const {data,error}=await sb.from('bloques_asistencia').insert({
-      materia_id:materiaId,aula_id:aulaId,fecha:todayISO(),hora_apertura:nowTime(),creado_por:uid
-    }).select().single();
-    if(error)return myAlert('Error al crear bloque: '+error.message);
-    bloqueId=data.id;
+    // Solo una sesión por materia+aula por día
+    const {data:existente}=await sb.from('bloques_asistencia')
+      .select('id,cerrado').eq('materia_id',materiaId).eq('aula_id',aulaId)
+      .eq('fecha',todayISO()).maybeSingle();
+    if(existente){
+      if(!existente.cerrado){
+        // Recuperar sesión abierta sin crear un duplicado
+        bloqueId=existente.id;
+        document.getElementById('f-sesion-estado').textContent='Sesión recuperada';
+      } else {
+        return myAlert('La asistencia para esta clase ya fue tomada y cerrada hoy. No se puede abrir otra sesión.');
+      }
+    } else {
+      const {data,error}=await sb.from('bloques_asistencia').insert({
+        materia_id:materiaId,aula_id:aulaId,fecha:todayISO(),hora_apertura:nowTime(),creado_por:uid
+      }).select().single();
+      if(error)return myAlert('Error al crear bloque: '+error.message);
+      bloqueId=data.id;
+    }
   }else{
-    // Buscar bloque abierto de esta materia+aula del día con entrada en las últimas 2h
-    const hace2h=new Date();hace2h.setHours(hace2h.getHours()-2);
-    const h2str=hace2h.toTimeString().slice(0,8);
+    // Buscar bloque abierto de esta materia+aula hoy (sin restricción de 2h)
     const {data,error}=await sb.from('bloques_asistencia')
       .select('id,hora_apertura')
       .eq('materia_id',materiaId).eq('aula_id',aulaId).eq('fecha',todayISO()).eq('cerrado',false)
-      .gte('hora_apertura',h2str)
       .order('hora_apertura',{ascending:false}).limit(1).maybeSingle();
     if(error)return myAlert('Error buscando bloque: '+error.message);
-    if(!data)return myAlert('No hay un bloque de ENTRADA activo en las últimas 2 horas para esta materia y aula.\n\nAbre primero un registro de ENTRADA.');
+    if(!data)return myAlert('No hay un bloque de ENTRADA activo para esta materia y aula hoy.\n\nAbre primero un registro de ENTRADA.');
     bloqueId=data.id;
   }
 
@@ -2310,6 +2327,24 @@ async function cerrarSesion(){
 // ── REGISTROS DEL DÍA ──
 async function loadRegistrosDia(){
   const hoy=todayISO();
+  // Auto-cierre: cerrar bloques abiertos que superaron 2h sin cerrarse
+  const ahora=new Date();
+  const hace2h=new Date(ahora.getTime()-2*60*60*1000);
+  const h2str=`${String(hace2h.getHours()).padStart(2,'0')}:${String(hace2h.getMinutes()).padStart(2,'0')}:${String(hace2h.getSeconds()).padStart(2,'0')}`;
+  const {data:vencidos}=await sb.from('bloques_asistencia')
+    .select('id').eq('fecha',hoy).eq('cerrado',false).lte('hora_apertura',h2str);
+  if(vencidos?.length){
+    const ids=vencidos.map(b=>b.id);
+    await sb.from('bloques_asistencia').update({cerrado:true,hora_cierre:h2str}).in('id',ids);
+    // Si la sesión activa en memoria es uno de ellos, resetearla
+    if(sesionActual&&ids.includes(sesionActual.bloque_id)){
+      sesionActual=null;
+      document.getElementById('btn-abrir-sesion').style.display='';
+      document.getElementById('btn-cerrar-sesion').style.display='none';
+      document.getElementById('f-sesion-estado').textContent='Sin sesión activa';
+      document.getElementById('f-sesion-estado').style.color='var(--muted)';
+    }
+  }
   // Sin joins anidados — usamos allAulas/allMaterias/allAlumnos ya cargados
   const {data:bloques,error:be}=await sb.from('bloques_asistencia')
     .select('id,materia_id,aula_id,hora_apertura,hora_cierre,cerrado')
@@ -2415,8 +2450,8 @@ const _PDF={
   tbl:{fontSize:9,cellPadding:3,textColor:[20,20,20],fillColor:[255,255,255],overflow:'linebreak'},
   head:{fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]},
   body:{lineWidth:0.2,lineColor:[210,210,210]},
-  colE:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:24}},
-  colS:{0:{cellWidth:8},4:{cellWidth:16}}
+  colE:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:20},6:{cellWidth:16}},
+  colS:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:16}}
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
@@ -2459,8 +2494,8 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
     doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
     doc.text(`Entrada  (${ent.length} registro${ent.length!==1?'s':''})`,PL,y);y+=3;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
-      head:[['#','Apellido','Nombre','DNI','Hora','Estado']],
-      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase()];}),
+      head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
+      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
     });
     y=doc.lastAutoTable.finalY+8;
@@ -2469,8 +2504,8 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
     doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
     doc.text(`Salida  (${sal.length} registro${sal.length!==1?'s':''})`,PL,y);y+=3;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
-      head:[['#','Apellido','Nombre','DNI','Hora']],
-      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5)];}),
+      head:[['#','Apellido','Nombre','DNI','Hora','Método']],
+      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),a.verificado_facial?'Facial':'Manual'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colS
     });
     y=doc.lastAutoTable.finalY+8;
@@ -2483,11 +2518,13 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
 }
 
 async function generarReporteBloquePDF(bloqueId){
+  // Abrir ventana sincrónicamente (gesto de usuario) para que iOS no la bloquee
+  const _pdfWin=window.open('','_blank');
   const {data:b}=await sb.from('bloques_asistencia')
     .select('id,materia_id,aula_id,fecha,hora_apertura,hora_cierre,cerrado')
     .eq('id',bloqueId).single();
   const {data:asists}=await sb.from('asistencias')
-    .select('alumno_id,tipo,estado,hora_ingreso')
+    .select('alumno_id,tipo,estado,hora_ingreso,verificado_facial')
     .eq('bloque_id',bloqueId).order('tipo').order('hora_ingreso');
   if(!b)return;
   const matN=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
@@ -2501,10 +2538,13 @@ async function generarReporteBloquePDF(bloqueId){
   y+=8;
   _pdfBloqueTablas(doc,y,asists,nombre);
   _pdfFooter(doc);
-  doc.save(`asistencia_${matN}_${b.fecha||todayISO()}.pdf`);
+  const _fname=`asistencia_${matN}_${b.fecha||todayISO()}.pdf`;
+  if(_pdfWin){_pdfWin.location.href=doc.output('bloburl');}else{doc.save(_fname);}
 }
 
 async function generarReporteGlobalPDF(){
+  // Abrir ventana sincrónicamente (gesto de usuario) para que iOS no la bloquee
+  const _pdfWin=window.open('','_blank');
   const hoy=todayISO();
   const ahora=nowTime();
   const {data:bloques}=await sb.from('bloques_asistencia')
@@ -2513,7 +2553,7 @@ async function generarReporteGlobalPDF(){
   if(!bloques?.length){await myAlert('No hay bloques registrados hoy.');return;}
   const bloqueIds=bloques.map(b=>b.id);
   const {data:asists}=await sb.from('asistencias')
-    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso')
+    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso,verificado_facial')
     .in('bloque_id',bloqueIds).order('hora_ingreso');
   const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
   const logoUrl=await _getLogoUrl();
@@ -2541,7 +2581,7 @@ async function generarReporteGlobalPDF(){
     }
   });
   _pdfFooter(doc);
-  doc.save(`reporte_global_${hoy}.pdf`);
+  if(_pdfWin){_pdfWin.location.href=doc.output('bloburl');}else{doc.save(`reporte_global_${hoy}.pdf`);}
 }
 
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
