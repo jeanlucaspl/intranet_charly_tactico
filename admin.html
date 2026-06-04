@@ -565,15 +565,6 @@
       <select id="f-aula" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;flex:1;min-width:150px"><option value="">-- Aula --</option></select>
       <select id="f-materia" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:8px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none;flex:1;min-width:150px"><option value="">-- Materia --</option></select>
     </div>
-    <!-- Toggle ENTRADA / SALIDA -->
-    <div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--border);width:fit-content">
-      <label id="lbl-tipo-entrada" style="padding:6px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;cursor:pointer;background:var(--green);color:var(--white)">
-        <input type="radio" name="f-tipo" value="entrada" checked onchange="onTipoChange()" style="display:none"> ENTRADA
-      </label>
-      <label id="lbl-tipo-salida" style="padding:6px 18px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;cursor:pointer;background:var(--navy);color:var(--muted)">
-        <input type="radio" name="f-tipo" value="salida" onchange="onTipoChange()" style="display:none"> SALIDA
-      </label>
-    </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div id="f-sesion-estado" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Sin sesión activa</div>
       <span id="f-status-top" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.08em;color:var(--muted)"></span>
@@ -671,6 +662,25 @@
   </div>
   <!-- Resultados -->
   <div id="hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
+
+  <!-- ── Consulta por alumno: ¿quién asistió? ── -->
+  <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);letter-spacing:.08em;margin-bottom:12px">Alumnos por fecha y curso</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="fg" style="flex:1;min-width:130px;margin:0">
+        <label>Fecha</label>
+        <input type="date" id="hq-fecha" style="width:100%"/>
+      </div>
+      <div class="fg" style="flex:2;min-width:160px;margin:0">
+        <label>Curso</label>
+        <select id="hq-materia" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:9px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none">
+          <option value="">-- Selecciona un curso --</option>
+        </select>
+      </div>
+      <button class="btn btn-gold" onclick="hqConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
+    </div>
+    <div id="hq-results"><div class="empty"><div class="et" style="font-size:12px">Selecciona fecha y curso</div></div></div>
+  </div>
 </div>
 
 <!-- ══ REPORTES ══ -->
@@ -2269,20 +2279,6 @@ async function loadDashboardDueno(){
 // sesionActual: {bloque_id, tipo, aula_id, materia_id, aula_nombre, mat_nombre}
 let sesionActual=null;
 
-function onTipoChange(){
-  const tipo=document.querySelector('input[name="f-tipo"]:checked')?.value||'entrada';
-  document.getElementById('lbl-tipo-entrada').style.background=tipo==='entrada'?'var(--green)':'var(--navy)';
-  document.getElementById('lbl-tipo-entrada').style.color=tipo==='entrada'?'var(--white)':'var(--muted)';
-  document.getElementById('lbl-tipo-salida').style.background=tipo==='salida'?'var(--blue)':'var(--navy)';
-  document.getElementById('lbl-tipo-salida').style.color=tipo==='salida'?'var(--white)':'var(--muted)';
-  // En modo salida ocultar "Estado" en asistencia manual
-  const wrap=document.getElementById('man-estado-wrap');
-  if(wrap)wrap.style.display=tipo==='salida'?'none':'';
-  document.getElementById('btn-save-manual').textContent=tipo==='salida'?'REGISTRAR SALIDA':'REGISTRAR ASISTENCIA';
-  // En modo salida ocultar botón Tardanza en facial
-  const btnTard=document.getElementById('btn-confirm-tardanza');
-  if(btnTard)btnTard.style.display=tipo==='salida'?'none':'';
-}
 
 async function abrirSesion(){
   const aulaId=document.getElementById('f-aula').value;
@@ -2343,12 +2339,7 @@ async function abrirSesion(){
 
 async function cerrarSesion(){
   if(!sesionActual)return;
-  const tipo=sesionActual.tipo;
-  if(!await myConfirm(`¿Cerrar sesión de ${tipo.toUpperCase()}?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
-  // Si es salida, cerrar el bloque definitivamente
-  if(tipo==='salida'){
-    await sb.from('bloques_asistencia').update({hora_cierre:nowTime(),cerrado:true}).eq('id',sesionActual.bloque_id);
-  }
+  if(!await myConfirm(`¿Cerrar sesión?\n${sesionActual.aula_nombre} · ${sesionActual.mat_nombre}`))return;
   sesionActual=null;
   document.getElementById('btn-abrir-sesion').style.display='';
   document.getElementById('btn-cerrar-sesion').style.display='none';
@@ -2400,19 +2391,14 @@ async function loadRegistrosDia(){
     const mat=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
     const aula=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
     const bid=b.id;
-    const ba=all.filter(a=>a.bloque_id===bid);
-    const ent=ba.filter(a=>a.tipo==='entrada');
-    const sal=ba.filter(a=>a.tipo==='salida');
+    const ent=all.filter(a=>a.bloque_id===bid&&a.tipo==='entrada');
     const stColor=b.cerrado?'var(--muted)':'var(--green)';
     const stTxt=b.cerrado?'CERRADO':'ABIERTO';
     const horaAp=(b.hora_apertura||'').slice(0,5);
-    const horaCi=b.hora_cierre?(b.hora_cierre||'').slice(0,5):'';
-    const meta=`${horaAp}${horaCi?' → '+horaCi:''} · <span style="color:${stColor}">${stTxt}</span> · ${ent.length}E / ${sal.length}S`;
+    const meta=`${horaAp} · <span style="color:${stColor}">${stTxt}</span> · ${ent.length} alumno${ent.length!==1?'s':''}`;
     const entRows=ent.map(a=>`<div style="${rs}"><span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:12px">${nombre(a.alumno_id)}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></div>`).join('');
-    const salRows=sal.map(a=>`<div style="${rs}"><span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:12px">${nombre(a.alumno_id)}</span><span style="color:var(--muted);font-size:10px">${(a.hora_ingreso||'').slice(0,5)}</span><span class="badge" style="background:var(--blue);color:var(--white)">salida</span></div>`).join('');
     const lbl=`${mat} — ${aula}`;
     return `<div style="background:var(--navy2);border:1px solid var(--border);margin-bottom:8px;overflow:hidden">
-      <!-- Header solo toggle, sin botones de acción adentro -->
       <div onclick="toggleBloque('${bid}')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px;user-select:none;min-width:0">
         <span id="bloque-arrow-${bid}" style="color:var(--muted);font-size:10px;flex-shrink:0">▶</span>
         <div style="min-width:0">
@@ -2420,15 +2406,12 @@ async function loadRegistrosDia(){
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">${meta}</div>
         </div>
       </div>
-      <!-- Botones de acción: fila separada, fuera del toggle -->
       <div style="display:flex;gap:8px;padding:0 12px 10px">
         <button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em;justify-content:center" onclick="generarReporteBloquePDF('${bid}')">⬇ PDF</button>
         <button class="btn btn-red" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em;justify-content:center" onclick="deleteBloque('${bid}','${lbl.replace(/'/g,'&#39;')}')">Borrar</button>
       </div>
       <div id="bloque-content-${bid}" style="display:none;padding:0 12px 12px;border-top:1px solid var(--border)">
-        ${ent.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--green);padding-top:10px;margin-bottom:4px">ENTRADA (${ent.length})</div>${entRows}`:''}
-        ${sal.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--blue);padding-top:10px;margin-bottom:4px">SALIDA (${sal.length})</div>${salRows}`:''}
-        ${!ent.length&&!sal.length?'<div style="color:var(--muted);font-size:12px;font-family:\'Barlow Condensed\',sans-serif;padding-top:10px">Sin registros aún</div>':''}
+        ${ent.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--green);padding-top:10px;margin-bottom:4px">ASISTENCIA (${ent.length})</div>${entRows}`:'<div style="color:var(--muted);font-size:12px;font-family:\'Barlow Condensed\',sans-serif;padding-top:10px">Sin registros aún</div>'}
       </div>
     </div>`;
   }).join('');
@@ -2483,8 +2466,7 @@ const _PDF={
   tbl:{fontSize:8,cellPadding:2,textColor:[20,20,20],fillColor:[255,255,255],overflow:'ellipsize'},
   head:{fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]},
   body:{lineWidth:0.2,lineColor:[210,210,210]},
-  colE:{0:{cellWidth:7},1:{cellWidth:53},2:{cellWidth:50},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:20},6:{cellWidth:16}},
-  colS:{0:{cellWidth:7},1:{cellWidth:62},2:{cellWidth:61},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:16}}
+  colE:{0:{cellWidth:7},1:{cellWidth:55},2:{cellWidth:52},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:20},6:{cellWidth:12}}
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
@@ -2543,30 +2525,16 @@ function _pdfSave(doc,filename){
 
 // Dibuja las tablas de ENTRADA y SALIDA. Retorna la y final.
 function _pdfBloqueTablas(doc,y,asists,nombre){
-  const {PL,PR,BLACK,tbl,head,body,colE,colS}=_PDF;
+  const {PL,PR,BLACK,tbl,head,body,colE}=_PDF;
   const ent=(asists||[]).filter(a=>a.tipo==='entrada');
-  const sal=(asists||[]).filter(a=>a.tipo==='salida');
   if(ent.length){
-    doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
-    doc.text(`Entrada  (${ent.length} registro${ent.length!==1?'s':''})`,PL,y);y+=3;
     doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
       head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
       body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
     });
     y=doc.lastAutoTable.finalY+8;
-  }
-  if(sal.length){
-    doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
-    doc.text(`Salida  (${sal.length} registro${sal.length!==1?'s':''})`,PL,y);y+=3;
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
-      head:[['#','Apellido','Nombre','DNI','Hora','Método']],
-      body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),a.verificado_facial?'Facial':'Manual'];}),
-      styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colS
-    });
-    y=doc.lastAutoTable.finalY+8;
-  }
-  if(!ent.length&&!sal.length){
+  }else{
     doc.setTextColor(160,160,160);doc.setFont('helvetica','italic');doc.setFontSize(9);
     doc.text('Sin registros',PL,y);y+=8;
   }
@@ -2592,7 +2560,7 @@ async function generarReporteBloquePDF(bloqueId){
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     let y=_pdfHeader(doc,logoUrl,'Reporte de asistencia — bloque');
-    y=_pdfMeta(doc,y,`${matN}  ·  ${aulaN}  ·  ${b.fecha||'--'}  ·  ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ·  ${b.cerrado?'Cerrado':'Abierto'}`);
+    y=_pdfMeta(doc,y,`${matN}  ·  ${aulaN}  ·  ${b.fecha||'--'}  ·  ${(b.hora_apertura||'').slice(0,5)}`);
     y+=8;
     _pdfBloqueTablas(doc,y,asists,nombre);
     _pdfFooter(doc);
@@ -2633,7 +2601,7 @@ async function generarReporteGlobalPDF(){
       doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(11);
       doc.text(`${idx+1}. ${matN} — ${aulaN}`,PL,y);
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,100,100);
-      doc.text(`${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ${b.cerrado?'Cerrado':'Abierto'}`,PL,y+5);
+      doc.text(`${(b.hora_apertura||'').slice(0,5)}`,PL,y+5);
       y+=12;
       y=_pdfBloqueTablas(doc,y,bAsists,nombre);
       if(idx<bloques.length-1){doc.setDrawColor(210,210,210);doc.setLineWidth(0.3);doc.line(PL,y-4,_PDF.W-_PDF.PR,y-4);}
@@ -2652,10 +2620,115 @@ function histInitFechas(){
   const hh=document.getElementById('hist-hasta');
   if(!hd.value||!hh.value){
     const hoy=todayISO();
-    // default: mes actual
     hh.value=hoy;
     hd.value=hoy.slice(0,7)+'-01';
   }
+  // Poblar select de cursos para la consulta puntual
+  const sel=document.getElementById('hq-materia');
+  if(sel&&sel.options.length<=1){
+    allMaterias.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).forEach(m=>{
+      const o=document.createElement('option');o.value=m.id;o.textContent=m.nombre;sel.appendChild(o);
+    });
+  }
+  if(!document.getElementById('hq-fecha').value)document.getElementById('hq-fecha').value=todayISO();
+}
+
+async function hqConsultar(){
+  const fecha=document.getElementById('hq-fecha').value;
+  const materiaId=document.getElementById('hq-materia').value;
+  const resEl=document.getElementById('hq-results');
+  if(!fecha||!materiaId){resEl.innerHTML='<div class="empty"><div class="et" style="font-size:12px">Selecciona fecha y curso</div></div>';return;}
+  resEl.innerHTML='<div class="empty"><div class="et" style="font-size:12px">Consultando...</div></div>';
+  // Buscar el bloque de esa fecha y materia
+  const {data:bloques}=await sb.from('bloques_asistencia')
+    .select('id,aula_id,hora_apertura').eq('fecha',fecha).eq('materia_id',materiaId);
+  if(!bloques?.length){resEl.innerHTML='<div class="empty"><div class="ei"></div><div class="et" style="font-size:12px">Sin clases registradas para esa fecha y curso</div></div>';return;}
+  const ids=bloques.map(b=>b.id);
+  const {data:asists}=await sb.from('asistencias')
+    .select('alumno_id,estado,hora_ingreso,verificado_facial,bloque_id')
+    .in('bloque_id',ids).eq('tipo','entrada').order('hora_ingreso');
+  const matNom=allMaterias.find(m=>m.id===materiaId)?.nombre||'--';
+  if(!asists?.length){resEl.innerHTML=`<div class="empty"><div class="ei"></div><div class="et" style="font-size:12px">Sin asistentes registrados en ${matNom} el ${fecha}</div></div>`;return;}
+  const bc={presente:'bg',tardanza:'by',ausente:'br'};
+  let html=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">${asists.length} alumno${asists.length!==1?'s':''} — ${matNom} · ${fecha}</div>`;
+  // Si hay varios bloques (varias aulas), agrupar
+  bloques.forEach(b=>{
+    const aulaNom=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+    const bAsists=asists.filter(a=>a.bloque_id===b.id);
+    if(!bAsists.length)return;
+    if(bloques.length>1)html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);margin:8px 0 4px">${aulaNom} · ${(b.hora_apertura||'').slice(0,5)}</div>`;
+    html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">
+        <th style="text-align:left;padding:4px 6px;font-weight:600">#</th>
+        <th style="text-align:left;padding:4px 6px;font-weight:600">Apellido</th>
+        <th style="text-align:left;padding:4px 6px;font-weight:600">Nombre</th>
+        <th style="text-align:left;padding:4px 6px;font-weight:600">DNI</th>
+        <th style="text-align:center;padding:4px 6px;font-weight:600">Hora</th>
+        <th style="text-align:center;padding:4px 6px;font-weight:600">Estado</th>
+        <th style="text-align:center;padding:4px 6px;font-weight:600">Método</th>
+      </tr></thead>
+      <tbody>${bAsists.map((a,i)=>{
+        const al=allAlumnos.find(x=>x.id===a.alumno_id);
+        const p=al?.perfiles;
+        return`<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px;color:var(--muted);font-size:11px">${i+1}</td>
+          <td style="padding:6px;font-family:'Barlow Condensed',sans-serif">${p?.apellido||'--'}</td>
+          <td style="padding:6px;font-family:'Barlow Condensed',sans-serif">${p?.nombre||'--'}</td>
+          <td style="padding:6px;color:var(--muted);font-size:11px">${p?.dni||'--'}</td>
+          <td style="padding:6px;text-align:center;color:var(--muted);font-size:11px">${(a.hora_ingreso||'').slice(0,5)}</td>
+          <td style="padding:6px;text-align:center"><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></td>
+          <td style="padding:6px;text-align:center;font-size:11px;color:var(--muted)">${a.verificado_facial?'Facial':'Manual'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  });
+  html+=`<div style="margin-top:10px">
+    <button class="btn btn-outline" onclick="hqPDF('${fecha}','${materiaId}')" style="font-size:11px;justify-content:center">⬇ Exportar PDF</button>
+  </div>`;
+  resEl.innerHTML=html;
+}
+
+async function hqPDF(fecha,materiaId){
+  const btn=event?.currentTarget||event?.target;
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='Generando...';btn.disabled=true;}
+  try{
+    const {data:bloques}=await sb.from('bloques_asistencia')
+      .select('id,aula_id,hora_apertura').eq('fecha',fecha).eq('materia_id',materiaId);
+    if(!bloques?.length)return;
+    const ids=bloques.map(b=>b.id);
+    const {data:asists}=await sb.from('asistencias')
+      .select('alumno_id,estado,hora_ingreso,verificado_facial,bloque_id')
+      .in('bloque_id',ids).eq('tipo','entrada').order('hora_ingreso');
+    const matNom=allMaterias.find(m=>m.id===materiaId)?.nombre||'--';
+    const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
+    const logoUrl=await _getLogoUrl();
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const {PL,PR,tbl,head,body,colE,BLACK}=_PDF;
+    let y=_pdfHeader(doc,logoUrl,'Lista de asistentes');
+    y=_pdfMeta(doc,y,`${matNom}  ·  ${fecha}`);
+    y+=8;
+    bloques.forEach((b,bi)=>{
+      const aulaNom=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+      const bAsists=(asists||[]).filter(a=>a.bloque_id===b.id);
+      if(!bAsists.length)return;
+      if(bi>0){if(y>245){doc.addPage();y=16;}doc.setDrawColor(210,210,210);doc.setLineWidth(0.3);doc.line(PL,y,_PDF.W-PR,y);y+=6;}
+      if(bloques.length>1){
+        doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(9);
+        doc.text(`${aulaNom} · ${(b.hora_apertura||'').slice(0,5)}`,PL,y);y+=5;
+      }
+      doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
+        head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
+        body:bAsists.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
+        styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
+      });
+      y=doc.lastAutoTable.finalY+8;
+    });
+    _pdfFooter(doc);
+    _pdfSave(doc,`asistentes_${matNom}_${fecha}.pdf`);
+  }catch(e){await myAlert('Error: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
 }
 
 async function histConsultar(){
@@ -2728,36 +2801,32 @@ function histRenderResults(){
   Object.keys(byDate).sort().reverse().forEach(fecha=>{
     const bloqs=byDate[fecha];
     const totEnt=bloqs.reduce((s,b)=>s+_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length,0);
-    const totSal=bloqs.reduce((s,b)=>s+_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='salida').length,0);
     html+=`<div style="margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);margin-bottom:6px">
         <span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);letter-spacing:.1em">${fecha}</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);letter-spacing:.08em">${bloqs.length} bloque${bloqs.length!==1?'s':''} · ${totEnt} entradas · ${totSal} salidas</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);letter-spacing:.08em">${bloqs.length} bloque${bloqs.length!==1?'s':''} · ${totEnt} alumnos</span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">
           <th style="text-align:left;padding:4px 6px;font-weight:600">Curso</th>
           <th style="text-align:left;padding:4px 6px;font-weight:600">Aula</th>
-          <th style="text-align:center;padding:4px 6px;font-weight:600">Ent.</th>
-          <th style="text-align:center;padding:4px 6px;font-weight:600">Sal.</th>
-          <th style="text-align:left;padding:4px 6px;font-weight:600">Horario</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600">Alumnos</th>
+          <th style="text-align:left;padding:4px 6px;font-weight:600">Hora</th>
           <th style="text-align:center;padding:4px 6px;font-weight:600">Estado</th>
           <th style="text-align:center;padding:4px 6px;font-weight:600"></th>
         </tr></thead>
         <tbody>${bloqs.map(b=>{
           const mat=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
           const aul=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
-          const ent=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length;
-          const sal=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='salida').length;
-          const hora=`${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}`;
+          const cnt=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length;
+          const hora=(b.hora_apertura||'').slice(0,5);
           const badge=b.cerrado
             ?`<span class="badge" style="background:rgba(180,80,80,.15);color:#c96060;border-color:#c96060">Cerrado</span>`
             :`<span class="badge" style="background:rgba(76,175,130,.12);color:var(--green);border-color:var(--green)">Abierto</span>`;
           return`<tr style="border-bottom:1px solid var(--border)">
             <td style="padding:7px 6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.04em">${mat}</td>
             <td style="padding:7px 6px;color:var(--muted);font-size:11px">${aul}</td>
-            <td style="padding:7px 6px;text-align:center;color:var(--green);font-weight:600">${ent||'—'}</td>
-            <td style="padding:7px 6px;text-align:center;color:var(--blue);font-weight:600">${sal||'—'}</td>
+            <td style="padding:7px 6px;text-align:center;color:var(--green);font-weight:600">${cnt||'—'}</td>
             <td style="padding:7px 6px;font-size:11px;color:var(--muted)">${hora}</td>
             <td style="padding:7px 6px;text-align:center">${badge}</td>
             <td style="padding:7px 6px;text-align:center">
@@ -2785,7 +2854,7 @@ async function histBloquePDF(bloqueId){
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     let y=_pdfHeader(doc,logoUrl,'Reporte de asistencia — bloque');
-    y=_pdfMeta(doc,y,`${matN}  ·  ${aulaN}  ·  ${b.fecha||'--'}  ·  ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ·  ${b.cerrado?'Cerrado':'Abierto'}`);
+    y=_pdfMeta(doc,y,`${matN}  ·  ${aulaN}  ·  ${b.fecha||'--'}  ·  ${(b.hora_apertura||'').slice(0,5)}`);
     y+=8;
     _pdfBloqueTablas(doc,y,asists,nombre);
     _pdfFooter(doc);
@@ -2829,7 +2898,7 @@ async function histGenerarPDF(){
       doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
       doc.text(`${matN} — ${aulaN}`,PL,y);
       doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,100,100);
-      doc.text(`${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ${b.cerrado?'Cerrado':'Abierto'}`,PL,y+5);
+      doc.text(`${(b.hora_apertura||'').slice(0,5)}`,PL,y+5);
       y+=12;
       if(y>245){doc.addPage();y=16;}
       y=_pdfBloqueTablas(doc,y,bAsists,nombre);
@@ -5328,19 +5397,18 @@ async function confirmAtt(estado){
   const aulaId=sesionActual.aula_id;
   const tipo=sesionActual.tipo;
   const bloqueId=sesionActual.bloque_id;
-  const estadoFinal=tipo==='salida'?'presente':estado;
   const {error}=await sb.from('asistencias').upsert(
-    {alumno_id:verifyAlumno.id,bloque_id:bloqueId,tipo,estado:estadoFinal,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},
+    {alumno_id:verifyAlumno.id,bloque_id:bloqueId,tipo:'entrada',estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:true},
     {onConflict:'alumno_id,bloque_id,tipo'}
   );
   if(error){setCamSt(' Error: '+error.message,'cs-fail');return;}
   const _cAlumno=verifyAlumno,_cMat=sesionActual.mat_nombre,_cHora=nowTime();
-  const _msg=tipo==='salida'?`Salida de ${_cMat} a las ${_cHora}.`:`Asistencia a ${_cMat} marcada como "${estadoFinal}" a las ${_cHora}.`;
+  const _msg=`Asistencia a ${_cMat} marcada como "${estado}" a las ${_cHora}.`;
   if(_cAlumno.perfil_id)sendFcmToUsers([_cAlumno.perfil_id],' Asistencia registrada',_msg);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),` ${tipo==='salida'?'Salida':'Asistencia'} de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,_msg);});
-  addFacialLog(verifyAlumno,estadoFinal,true,tipo);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',_cAlumno.id).then(({data})=>{if(data?.length)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${_cAlumno.perfiles?.nombre||'tu hijo'}`,_msg);});
+  addFacialLog(verifyAlumno,estado,true);
   document.getElementById('verify-card').style.display='none';verifyAlumno=null;
-  setCamSt(tipo==='salida'?' Salida registrada — Siguiente':'  Presente — Siguiente cadete','cs-ok');loadDashboard();
+  setCamSt('  Presente — Siguiente cadete','cs-ok');loadDashboard();
   if(facialStream)iniciarFacialScan();
 }
 function rejectVerify(){
@@ -5349,10 +5417,9 @@ function rejectVerify(){
   setCamSt(' Rechazado — Buscando siguiente...','cs-scan');
   if(facialStream)iniciarFacialScan();
 }
-function addFacialLog(alumno,estado,facial,tipo='entrada'){
-  facialLog.push({id:alumno.id,nombre:`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`,estado,facial,tipo,hora:new Date().toTimeString().slice(0,5)});
+function addFacialLog(alumno,estado,facial){
+  facialLog.push({id:alumno.id,nombre:`${alumno.perfiles?.nombre} ${alumno.perfiles?.apellido}`,estado,facial,hora:new Date().toTimeString().slice(0,5)});
   const bc={presente:'bg',tardanza:'by',ausente:'br'};
-  const tipoColor={entrada:'var(--green)',salida:'var(--blue)'};
   // Sólo actualizar el log en tiempo real — los stats se calculan al abrir la pestaña Registros
   const logEl=document.getElementById('f-log');
   if(logEl&&!document.getElementById('ftab-content-registros').style.display.includes('none')){
@@ -5389,22 +5456,21 @@ async function saveManual(){
   const alumnoId=document.getElementById('man-alumno').value;
   if(!alumnoId)return await myAlert('Selecciona un alumno primero buscando por apellido o DNI');
   if(!sesionActual)return await myAlert('Abre una sesión primero antes de registrar asistencia.');
-  const tipo=sesionActual.tipo;
-  const estado=tipo==='salida'?'presente':document.getElementById('man-estado').value;
+  const estado=document.getElementById('man-estado').value;
   const mid=sesionActual.materia_id;
   const aulaId=sesionActual.aula_id;
   const bloqueId=sesionActual.bloque_id;
   const {error}=await sb.from('asistencias').upsert(
-    {alumno_id:alumnoId,bloque_id:bloqueId,tipo,estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},
+    {alumno_id:alumnoId,bloque_id:bloqueId,tipo:'entrada',estado,fecha:todayISO(),hora_ingreso:nowTime(),materia_id:mid,aula_id:aulaId,verificado_facial:false},
     {onConflict:'alumno_id,bloque_id,tipo'}
   );
   if(error){await myAlert('Error al guardar: '+error.message);return;}
   const a=allAlumnos.find(x=>x.id===alumnoId);
   const _mMat=sesionActual.mat_nombre,_mHora=nowTime();
-  const _msg=tipo==='salida'?`Salida de ${_mMat} a las ${_mHora}.`:`Asistencia a ${_mMat} marcada como "${estado}" a las ${_mHora}.`;
+  const _msg=`Asistencia a ${_mMat} marcada como "${estado}" a las ${_mHora}.`;
   if(a?.perfil_id)sendFcmToUsers([a.perfil_id],' Asistencia registrada',_msg);
-  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),` ${tipo==='salida'?'Salida':'Asistencia'} de ${a.perfiles?.nombre||'tu hijo'}`,_msg);});
-  if(a)addFacialLog(a,estado,false,tipo);
+  sb.from('padres_alumnos').select('padre_id').eq('alumno_id',alumnoId).then(({data})=>{if(data?.length&&a)sendFcmToUsers(data.map(l=>l.padre_id),` Asistencia de ${a.perfiles?.nombre||'tu hijo'}`,_msg);});
+  if(a)addFacialLog(a,estado,false);
   document.getElementById('man-alumno').value='';
   document.getElementById('man-search-inp').value='';
   document.getElementById('man-selected').style.display='none';
