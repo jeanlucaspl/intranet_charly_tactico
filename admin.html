@@ -2622,6 +2622,13 @@ async function histConsultar(){
     .order('fecha',{ascending:false}).order('hora_apertura',{ascending:true});
   if(error){resEl.innerHTML='<div class="empty"><div class="et">Error: '+error.message+'</div></div>';return;}
   if(!bloques?.length){resEl.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin registros en ese rango de fechas</div></div>';return;}
+  // Cerrar automáticamente bloques de fechas pasadas que quedaron abiertos
+  const hoy=todayISO();
+  const abiertosViejos=bloques.filter(b=>!b.cerrado&&b.fecha<hoy).map(b=>b.id);
+  if(abiertosViejos.length){
+    await sb.from('bloques_asistencia').update({cerrado:true}).in('id',abiertosViejos);
+    bloques.forEach(b=>{if(abiertosViejos.includes(b.id))b.cerrado=true;});
+  }
   const ids=bloques.map(b=>b.id);
   const {data:asists}=await sb.from('asistencias')
     .select('alumno_id,bloque_id,tipo,estado,hora_ingreso,verificado_facial')
@@ -2688,7 +2695,6 @@ function histRenderResults(){
           <th style="text-align:left;padding:4px 6px;font-weight:600">Aula</th>
           <th style="text-align:center;padding:4px 6px;font-weight:600">Alumnos</th>
           <th style="text-align:left;padding:4px 6px;font-weight:600">Hora</th>
-          <th style="text-align:center;padding:4px 6px;font-weight:600">Estado</th>
           <th style="text-align:center;padding:4px 6px;font-weight:600"></th>
         </tr></thead>
         <tbody>${bloqs.map(b=>{
@@ -2696,15 +2702,11 @@ function histRenderResults(){
           const aul=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
           const cnt=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length;
           const hora=(b.hora_apertura||'').slice(0,5);
-          const badge=b.cerrado
-            ?`<span class="badge" style="background:rgba(180,80,80,.15);color:#c96060;border-color:#c96060">Cerrado</span>`
-            :`<span class="badge" style="background:rgba(76,175,130,.12);color:var(--green);border-color:var(--green)">Abierto</span>`;
           return`<tr style="border-bottom:1px solid var(--border)">
             <td style="padding:7px 6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.04em">${mat}</td>
             <td style="padding:7px 6px;color:var(--muted);font-size:11px">${aul}</td>
             <td style="padding:7px 6px;text-align:center;color:var(--green);font-weight:600">${cnt||'—'}</td>
             <td style="padding:7px 6px;font-size:11px;color:var(--muted)">${hora}</td>
-            <td style="padding:7px 6px;text-align:center">${badge}</td>
             <td style="padding:7px 6px;text-align:center">
               <button class="btn btn-outline" style="font-size:10px;padding:4px 10px;justify-content:center" onclick="histBloquePDF('${b.id}')">⬇ PDF</button>
             </td>
