@@ -313,6 +313,8 @@
     .aula-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:0}
     .aula-tab{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;background:var(--navy2);border:1px solid var(--border);border-bottom:none;color:var(--muted);cursor:pointer;transition:all .2s}
     .aula-tab.active{background:var(--navy3);color:var(--gold);border-color:var(--gold)}
+    .hist-chip{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;background:var(--navy2);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s;border-radius:2px}
+    .hist-chip.active{background:rgba(201,168,76,.12);color:var(--gold);border-color:var(--gold)}
     .hor-sug-item{padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;border-bottom:1px solid rgba(201,168,76,.1);color:var(--white)}
     .hor-sug-item:hover{background:var(--navy3);color:var(--gold)}
 
@@ -583,6 +585,7 @@
     <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')"> Verificación Facial</div>
     <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')"> Asistencia Manual</div>
     <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')"> Registros del Día</div>
+    <div class="aula-tab" id="ftab-historico" onclick="showFacialTab('historico')"> Histórico</div>
   </div>
 
   <!-- TAB 1: Verificación Facial -->
@@ -636,6 +639,33 @@
   <div id="ftab-content-registros" style="display:none;padding-top:16px">
     <button class="btn btn-gold" onclick="generarReporteGlobalPDF()" style="width:100%;margin-bottom:14px;font-size:11px;letter-spacing:.12em;justify-content:center">Reporte Global del Día</button>
     <div id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
+  </div>
+
+  <!-- TAB 4: Histórico -->
+  <div id="ftab-content-historico" style="display:none;padding-top:16px">
+    <!-- Filtro de fechas -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="fg" style="flex:1;min-width:130px;margin:0">
+        <label>Desde</label>
+        <input type="date" id="hist-desde" style="width:100%"/>
+      </div>
+      <div class="fg" style="flex:1;min-width:130px;margin:0">
+        <label>Hasta</label>
+        <input type="date" id="hist-hasta" style="width:100%"/>
+      </div>
+      <button class="btn btn-gold" onclick="histConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
+    </div>
+    <!-- Filtro de cursos (aparece tras consultar) -->
+    <div id="hist-materias-wrap" style="display:none;margin-bottom:12px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:6px">FILTRAR POR CURSO</div>
+      <div id="hist-materias-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <!-- Botón PDF global -->
+    <div id="hist-pdf-wrap" style="display:none;margin-bottom:12px">
+      <button class="btn btn-gold" onclick="histGenerarPDF()" style="width:100%;justify-content:center;font-size:11px;letter-spacing:.12em">⬇ Generar PDF del Histórico</button>
+    </div>
+    <!-- Resultados -->
+    <div id="hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
   </div>
 </div>
 
@@ -2607,6 +2637,203 @@ async function generarReporteGlobalPDF(){
     });
     _pdfFooter(doc);
     _pdfSave(doc,`reporte_global_${hoy}.pdf`);
+  }catch(e){await myAlert('Error generando PDF: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
+}
+
+// ── HISTÓRICO DE ASISTENCIA ──
+let _histBloques=[],_histAsists=[],_histSelMats=new Set(['_all']);
+
+function histInitFechas(){
+  const hd=document.getElementById('hist-desde');
+  const hh=document.getElementById('hist-hasta');
+  if(!hd.value||!hh.value){
+    const hoy=todayISO();
+    // default: mes actual
+    hh.value=hoy;
+    hd.value=hoy.slice(0,7)+'-01';
+  }
+}
+
+async function histConsultar(){
+  const desde=document.getElementById('hist-desde').value;
+  const hasta=document.getElementById('hist-hasta').value;
+  if(!desde||!hasta){await myAlert('Selecciona el rango de fechas.');return;}
+  if(desde>hasta){await myAlert('La fecha inicial no puede ser posterior a la final.');return;}
+  const resEl=document.getElementById('hist-results');
+  resEl.innerHTML='<div class="empty"><div class="et">Consultando...</div></div>';
+  document.getElementById('hist-materias-wrap').style.display='none';
+  document.getElementById('hist-pdf-wrap').style.display='none';
+  const {data:bloques,error}=await sb.from('bloques_asistencia')
+    .select('id,materia_id,aula_id,fecha,hora_apertura,hora_cierre,cerrado')
+    .gte('fecha',desde).lte('fecha',hasta)
+    .order('fecha',{ascending:false}).order('hora_apertura',{ascending:true});
+  if(error){resEl.innerHTML='<div class="empty"><div class="et">Error: '+error.message+'</div></div>';return;}
+  if(!bloques?.length){resEl.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin registros en ese rango de fechas</div></div>';return;}
+  const ids=bloques.map(b=>b.id);
+  const {data:asists}=await sb.from('asistencias')
+    .select('alumno_id,bloque_id,tipo,estado,hora_ingreso,verificado_facial')
+    .in('bloque_id',ids).order('hora_ingreso');
+  _histBloques=bloques;
+  _histAsists=asists||[];
+  _histSelMats=new Set(['_all']);
+  // Chips de cursos
+  const matIds=[...new Set(bloques.map(b=>b.materia_id))].sort((a,b)=>{
+    const na=allMaterias.find(m=>m.id===a)?.nombre||'';
+    const nb=allMaterias.find(m=>m.id===b)?.nombre||'';
+    return na.localeCompare(nb);
+  });
+  const chipsEl=document.getElementById('hist-materias-chips');
+  chipsEl.innerHTML=`<div class="hist-chip active" id="hchip-_all" onclick="histToggleMat('_all')">Todos (${bloques.length})</div>`
+    +matIds.map(id=>{
+      const nom=allMaterias.find(m=>m.id===id)?.nombre||id;
+      const cnt=bloques.filter(b=>b.materia_id===id).length;
+      return`<div class="hist-chip" id="hchip-${id}" onclick="histToggleMat('${id}')">${nom} (${cnt})</div>`;
+    }).join('');
+  document.getElementById('hist-materias-wrap').style.display='block';
+  document.getElementById('hist-pdf-wrap').style.display='block';
+  histRenderResults();
+}
+
+function histToggleMat(id){
+  if(id==='_all'){
+    _histSelMats=new Set(['_all']);
+    document.querySelectorAll('.hist-chip').forEach(c=>c.classList.remove('active'));
+    document.getElementById('hchip-_all')?.classList.add('active');
+  }else{
+    _histSelMats.delete('_all');
+    document.getElementById('hchip-_all')?.classList.remove('active');
+    if(_histSelMats.has(id)){
+      _histSelMats.delete(id);
+      document.getElementById(`hchip-${id}`)?.classList.remove('active');
+      if(!_histSelMats.size){_histSelMats.add('_all');document.getElementById('hchip-_all')?.classList.add('active');}
+    }else{
+      _histSelMats.add(id);
+      document.getElementById(`hchip-${id}`)?.classList.add('active');
+    }
+  }
+  histRenderResults();
+}
+
+function histRenderResults(){
+  const filtered=_histSelMats.has('_all')?_histBloques:_histBloques.filter(b=>_histSelMats.has(b.materia_id));
+  const el=document.getElementById('hist-results');
+  if(!filtered.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin resultados</div></div>';return;}
+  const byDate={};
+  filtered.forEach(b=>{if(!byDate[b.fecha])byDate[b.fecha]=[];byDate[b.fecha].push(b);});
+  let html='';
+  Object.keys(byDate).sort().reverse().forEach(fecha=>{
+    const bloqs=byDate[fecha];
+    const totEnt=bloqs.reduce((s,b)=>s+_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length,0);
+    const totSal=bloqs.reduce((s,b)=>s+_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='salida').length,0);
+    html+=`<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);margin-bottom:6px">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);letter-spacing:.1em">${fecha}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);letter-spacing:.08em">${bloqs.length} bloque${bloqs.length!==1?'s':''} · ${totEnt} entradas · ${totSal} salidas</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">
+          <th style="text-align:left;padding:4px 6px;font-weight:600">Curso</th>
+          <th style="text-align:left;padding:4px 6px;font-weight:600">Aula</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600">Ent.</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600">Sal.</th>
+          <th style="text-align:left;padding:4px 6px;font-weight:600">Horario</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600">Estado</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600"></th>
+        </tr></thead>
+        <tbody>${bloqs.map(b=>{
+          const mat=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
+          const aul=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+          const ent=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='entrada').length;
+          const sal=_histAsists.filter(a=>a.bloque_id===b.id&&a.tipo==='salida').length;
+          const hora=`${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}`;
+          const badge=b.cerrado
+            ?`<span class="badge" style="background:rgba(180,80,80,.15);color:#c96060;border-color:#c96060">Cerrado</span>`
+            :`<span class="badge" style="background:rgba(76,175,130,.12);color:var(--green);border-color:var(--green)">Abierto</span>`;
+          return`<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:7px 6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.04em">${mat}</td>
+            <td style="padding:7px 6px;color:var(--muted);font-size:11px">${aul}</td>
+            <td style="padding:7px 6px;text-align:center;color:var(--green);font-weight:600">${ent||'—'}</td>
+            <td style="padding:7px 6px;text-align:center;color:var(--blue);font-weight:600">${sal||'—'}</td>
+            <td style="padding:7px 6px;font-size:11px;color:var(--muted)">${hora}</td>
+            <td style="padding:7px 6px;text-align:center">${badge}</td>
+            <td style="padding:7px 6px;text-align:center">
+              <button class="btn btn-outline" style="font-size:10px;padding:4px 10px;justify-content:center" onclick="histBloquePDF('${b.id}')">⬇ PDF</button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+async function histBloquePDF(bloqueId){
+  const btn=event?.currentTarget||event?.target;
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='...';btn.disabled=true;}
+  try{
+    const b=_histBloques.find(x=>x.id===bloqueId);if(!b)return;
+    const asists=_histAsists.filter(a=>a.bloque_id===bloqueId);
+    const matN=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
+    const aulaN=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+    const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
+    const logoUrl=await _getLogoUrl();
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    let y=_pdfHeader(doc,logoUrl,'Reporte de asistencia — bloque');
+    y=_pdfMeta(doc,y,`${matN}  ·  ${aulaN}  ·  ${b.fecha||'--'}  ·  ${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ·  ${b.cerrado?'Cerrado':'Abierto'}`);
+    y+=8;
+    _pdfBloqueTablas(doc,y,asists,nombre);
+    _pdfFooter(doc);
+    _pdfSave(doc,`asistencia_${matN}_${b.fecha||''}.pdf`);
+  }catch(e){await myAlert('Error: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
+}
+
+async function histGenerarPDF(){
+  const btn=event?.currentTarget||event?.target;
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='Generando...';btn.disabled=true;}
+  try{
+    const filtered=_histSelMats.has('_all')?_histBloques:_histBloques.filter(b=>_histSelMats.has(b.materia_id));
+    if(!filtered.length){await myAlert('Sin bloques para exportar.');return;}
+    const desde=document.getElementById('hist-desde').value;
+    const hasta=document.getElementById('hist-hasta').value;
+    const logoUrl=await _getLogoUrl();
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const {PL,BLACK}=_PDF;
+    const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
+    const cursosStr=_histSelMats.has('_all')?'Todos los cursos':[..._histSelMats].map(id=>allMaterias.find(m=>m.id===id)?.nombre||id).join(', ');
+    let y=_pdfHeader(doc,logoUrl,'Histórico de Asistencia');
+    y=_pdfMeta(doc,y,`${desde} → ${hasta}  ·  ${cursosStr}  ·  ${filtered.length} bloque${filtered.length!==1?'s':''}`);
+    y+=8;
+    const sorted=[...filtered].sort((a,b)=>a.fecha<b.fecha?-1:a.fecha>b.fecha?1:(a.hora_apertura||'')<(b.hora_apertura||'')?-1:1);
+    let lastFecha='';
+    sorted.forEach((b,idx)=>{
+      if(y>245){doc.addPage();y=16;lastFecha='';}
+      if(b.fecha!==lastFecha){
+        doc.setFillColor(..._PDF.DARK2);doc.rect(PL-2,y-5,_PDF.W-_PDF.PL-_PDF.PR+4,8,'F');
+        doc.setTextColor(..._PDF.GOLD);doc.setFont('helvetica','bold');doc.setFontSize(11);
+        doc.text(b.fecha,PL,y);
+        y+=8;lastFecha=b.fecha;
+      }
+      const matN=allMaterias.find(m=>m.id===b.materia_id)?.nombre||'--';
+      const aulaN=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
+      const bAsists=_histAsists.filter(a=>a.bloque_id===b.id);
+      doc.setFillColor(240,244,240);doc.rect(PL-2,y-4,_PDF.W-_PDF.PL-_PDF.PR+4,8,'F');
+      doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
+      doc.text(`${matN} — ${aulaN}`,PL,y);
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,100,100);
+      doc.text(`${(b.hora_apertura||'').slice(0,5)}${b.hora_cierre?' → '+(b.hora_cierre||'').slice(0,5):''}  ${b.cerrado?'Cerrado':'Abierto'}`,PL,y+5);
+      y+=12;
+      if(y>245){doc.addPage();y=16;}
+      y=_pdfBloqueTablas(doc,y,bAsists,nombre);
+      if(idx<sorted.length-1){doc.setDrawColor(210,210,210);doc.setLineWidth(0.3);doc.line(PL,y-4,_PDF.W-_PDF.PR,y-4);}
+    });
+    _pdfFooter(doc);
+    _pdfSave(doc,`historico_${desde}_${hasta}.pdf`);
   }catch(e){await myAlert('Error generando PDF: '+e.message);}
   finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
 }
@@ -4976,11 +5203,12 @@ async function saveAllAtt(){
 
 // ── FACIAL TABS ──
 function showFacialTab(tab){
-  ['facial','manual','registros'].forEach(t=>{
+  ['facial','manual','registros','historico'].forEach(t=>{
     document.getElementById('ftab-content-'+t).style.display=t===tab?'block':'none';
     document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='registros')loadRegistrosDia();
+  if(tab==='historico')histInitFechas();
   if(tab!=='facial'&&facialStream){stopCam();}
 }
 
