@@ -634,7 +634,7 @@
 
   <!-- TAB 3: Registros del Día -->
   <div id="ftab-content-registros" style="display:none;padding-top:16px">
-    <button class="btn btn-gold" onclick="generarReporteGlobalPDF()" style="width:100%;margin-bottom:14px;font-size:11px;letter-spacing:.12em"> Reporte Global del Día</button>
+    <button class="btn btn-gold" onclick="generarReporteGlobalPDF()" style="width:100%;margin-bottom:14px;font-size:11px;letter-spacing:.12em;justify-content:center">Reporte Global del Día</button>
     <div id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
   </div>
 </div>
@@ -2389,8 +2389,8 @@ async function loadRegistrosDia(){
       </div>
       <!-- Botones de acción: fila separada, fuera del toggle -->
       <div style="display:flex;gap:8px;padding:0 12px 10px">
-        <button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em" onclick="generarReporteBloquePDF('${bid}')">⬇ PDF</button>
-        <button class="btn btn-red" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em" onclick="deleteBloque('${bid}','${lbl.replace(/'/g,'&#39;')}')">Borrar</button>
+        <button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em;justify-content:center" onclick="generarReporteBloquePDF('${bid}')">⬇ PDF</button>
+        <button class="btn btn-red" style="flex:1;font-size:11px;padding:8px 0;letter-spacing:.08em;justify-content:center" onclick="deleteBloque('${bid}','${lbl.replace(/'/g,'&#39;')}')">Borrar</button>
       </div>
       <div id="bloque-content-${bid}" style="display:none;padding:0 12px 12px;border-top:1px solid var(--border)">
         ${ent.length?`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--green);padding-top:10px;margin-bottom:4px">ENTRADA (${ent.length})</div>${entRows}`:''}
@@ -2447,11 +2447,11 @@ const _PDF={
   W:210,H:297,PL:14,PR:14,
   GOLD:[201,168,76],DARK:[9,14,10],DARK2:[14,26,16],
   WHITE:[240,244,240],MUTED:[122,144,128],BLACK:[20,20,20],
-  tbl:{fontSize:9,cellPadding:3,textColor:[20,20,20],fillColor:[255,255,255],overflow:'linebreak'},
+  tbl:{fontSize:8,cellPadding:2,textColor:[20,20,20],fillColor:[255,255,255],overflow:'ellipsize'},
   head:{fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]},
   body:{lineWidth:0.2,lineColor:[210,210,210]},
-  colE:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:20},6:{cellWidth:16}},
-  colS:{0:{cellWidth:8},4:{cellWidth:16},5:{cellWidth:16}}
+  colE:{0:{cellWidth:7},1:{cellWidth:53},2:{cellWidth:50},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:20},6:{cellWidth:16}},
+  colS:{0:{cellWidth:7},1:{cellWidth:62},2:{cellWidth:61},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:16}}
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
@@ -2516,7 +2516,7 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
   if(ent.length){
     doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
     doc.text(`Entrada  (${ent.length} registro${ent.length!==1?'s':''})`,PL,y);y+=3;
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
       head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
       body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
@@ -2526,7 +2526,7 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
   if(sal.length){
     doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(10);
     doc.text(`Salida  (${sal.length} registro${sal.length!==1?'s':''})`,PL,y);y+=3;
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
       head:[['#','Apellido','Nombre','DNI','Hora','Método']],
       body:sal.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),a.verificado_facial?'Facial':'Manual'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colS
