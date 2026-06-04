@@ -364,6 +364,7 @@
     <div class="sb-label has-toggle" onclick="toggleSection('sec-asistencia')">Asistencia <span class="sec-arrow">&#9662;</span></div>
     <div class="sb-section-body">
       <button class="sb-link" onclick="showPanel('facial',this)">Tomar Asistencia</button>
+      <button class="sb-link" onclick="showPanel('historico',this)">Histórico</button>
     </div>
   </div>
   <div class="sb-section sb-collapsible collapsed" id="sec-academico">
@@ -585,7 +586,6 @@
     <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')"> Verificación Facial</div>
     <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')"> Asistencia Manual</div>
     <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')"> Registros del Día</div>
-    <div class="aula-tab" id="ftab-historico" onclick="showFacialTab('historico')"> Histórico</div>
   </div>
 
   <!-- TAB 1: Verificación Facial -->
@@ -640,35 +640,38 @@
     <button class="btn btn-gold" onclick="generarReporteGlobalPDF()" style="width:100%;margin-bottom:14px;font-size:11px;letter-spacing:.12em;justify-content:center">Reporte Global del Día</button>
     <div id="f-log"><div class="empty"><div class="ei"></div><div class="et">Sin registros hoy</div></div></div>
   </div>
-
-  <!-- TAB 4: Histórico -->
-  <div id="ftab-content-historico" style="display:none;padding-top:16px">
-    <!-- Filtro de fechas -->
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
-      <div class="fg" style="flex:1;min-width:130px;margin:0">
-        <label>Desde</label>
-        <input type="date" id="hist-desde" style="width:100%"/>
-      </div>
-      <div class="fg" style="flex:1;min-width:130px;margin:0">
-        <label>Hasta</label>
-        <input type="date" id="hist-hasta" style="width:100%"/>
-      </div>
-      <button class="btn btn-gold" onclick="histConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
-    </div>
-    <!-- Filtro de cursos (aparece tras consultar) -->
-    <div id="hist-materias-wrap" style="display:none;margin-bottom:12px">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:6px">FILTRAR POR CURSO</div>
-      <div id="hist-materias-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-    </div>
-    <!-- Botón PDF global -->
-    <div id="hist-pdf-wrap" style="display:none;margin-bottom:12px">
-      <button class="btn btn-gold" onclick="histGenerarPDF()" style="width:100%;justify-content:center;font-size:11px;letter-spacing:.12em">⬇ Generar PDF del Histórico</button>
-    </div>
-    <!-- Resultados -->
-    <div id="hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
-  </div>
 </div>
 
+
+<!-- ══ HISTÓRICO DE ASISTENCIA ══ -->
+<div class="panel" id="panel-historico">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Consulta por rango de fechas</div><div class="ttl">HISTÓRICO DE ASISTENCIA</div></div>
+  </div>
+  <!-- Filtro de fechas -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+    <div class="fg" style="flex:1;min-width:130px;margin:0">
+      <label>Desde</label>
+      <input type="date" id="hist-desde" style="width:100%"/>
+    </div>
+    <div class="fg" style="flex:1;min-width:130px;margin:0">
+      <label>Hasta</label>
+      <input type="date" id="hist-hasta" style="width:100%"/>
+    </div>
+    <button class="btn btn-gold" onclick="histConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
+  </div>
+  <!-- Filtro de cursos (aparece tras consultar) -->
+  <div id="hist-materias-wrap" style="display:none;margin-bottom:12px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.12em;color:var(--muted);margin-bottom:6px">FILTRAR POR CURSO</div>
+    <div id="hist-materias-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+  <!-- Botón PDF global -->
+  <div id="hist-pdf-wrap" style="display:none;margin-bottom:12px">
+    <button class="btn btn-gold" onclick="histGenerarPDF()" style="width:100%;justify-content:center;font-size:11px;letter-spacing:.12em">⬇ Generar PDF del Histórico</button>
+  </div>
+  <!-- Resultados -->
+  <div id="hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
+</div>
 
 <!-- ══ REPORTES ══ -->
 <div class="panel" id="panel-reportes">
@@ -5203,12 +5206,11 @@ async function saveAllAtt(){
 
 // ── FACIAL TABS ──
 function showFacialTab(tab){
-  ['facial','manual','registros','historico'].forEach(t=>{
+  ['facial','manual','registros'].forEach(t=>{
     document.getElementById('ftab-content-'+t).style.display=t===tab?'block':'none';
     document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='registros')loadRegistrosDia();
-  if(tab==='historico')histInitFechas();
   if(tab!=='facial'&&facialStream){stopCam();}
 }
 
@@ -5900,6 +5902,7 @@ function showPanel(id,btn){
   if(id==='ingresos')   loadIngresos();
   if(id==='armar-practica') gpIniciar();
   if(id==='banco') bpIniciar();
+  if(id==='historico') histInitFechas();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
