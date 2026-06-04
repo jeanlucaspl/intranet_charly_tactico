@@ -459,17 +459,53 @@
       <button class="btn btn-outline" onclick="openRegistrarFoto('','','')">Registrar Foto</button>
     </div>
   </div>
-  <div class="dni-wrap" style="margin-bottom:12px">
-    <input type="text" id="q-al-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-al','alumnos')" onblur="setTimeout(()=>hideSug('sug-al'),200)"/>
+  <div class="dni-wrap" style="margin-bottom:10px">
+    <input type="text" id="q-al-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-al','alumnos');aplicarFiltrosAlumnos()" onblur="setTimeout(()=>hideSug('sug-al'),200)"/>
     <div id="sug-al" class="dni-sug"></div>
   </div>
+  <!-- Filtros de alumnos -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border)">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Orden</label>
+      <select id="al-f-orden" onchange="aplicarFiltrosAlumnos()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:12px;padding:6px 10px;outline:none">
+        <option value="nuevo">Más nuevo primero</option>
+        <option value="antiguo">Más antiguo primero</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Sexo</label>
+      <div style="display:flex;gap:4px">
+        <button id="al-f-sexo-todos" class="btn" style="font-size:10px;padding:5px 12px;border:1px solid var(--gold);color:var(--gold);background:rgba(201,168,76,.15)" onclick="setAlFiltroSexo('')">Todos</button>
+        <button id="al-f-sexo-m" class="btn" style="font-size:10px;padding:5px 12px;border:1px solid var(--border);color:var(--muted);background:transparent" onclick="setAlFiltroSexo('M')">M</button>
+        <button id="al-f-sexo-f" class="btn" style="font-size:10px;padding:5px 12px;border:1px solid var(--border);color:var(--muted);background:transparent" onclick="setAlFiltroSexo('F')">F</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Talla (cm)</label>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" id="al-f-talla-min" placeholder="Mín" min="0" style="width:62px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:12px;padding:6px 8px;outline:none" oninput="aplicarFiltrosAlumnos()"/>
+        <span style="color:var(--muted);font-size:12px">–</span>
+        <input type="number" id="al-f-talla-max" placeholder="Máx" min="0" style="width:62px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:12px;padding:6px 8px;outline:none" oninput="aplicarFiltrosAlumnos()"/>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Peso (kg)</label>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" id="al-f-peso-min" placeholder="Mín" min="0" style="width:62px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:12px;padding:6px 8px;outline:none" oninput="aplicarFiltrosAlumnos()"/>
+        <span style="color:var(--muted);font-size:12px">–</span>
+        <input type="number" id="al-f-peso-max" placeholder="Máx" min="0" style="width:62px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:12px;padding:6px 8px;outline:none" oninput="aplicarFiltrosAlumnos()"/>
+      </div>
+    </div>
+  </div>
   <div class="aula-tabs">
-    <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')"> Activos</div>
-    <div class="aula-tab" id="altab-inactivos" onclick="showAlTab('inactivos')"> Inactivos</div>
+    <div class="aula-tab active" id="altab-activos" onclick="showAlTab('activos')">Activos</div>
+    <div class="aula-tab" id="altab-inactivos" onclick="showAlTab('inactivos')">Inactivos</div>
+    <div class="aula-tab" id="altab-exito" onclick="showAlTab('exito')" style="color:var(--gold)">⭐ Ingresos PNP</div>
   </div>
   <div class="tw">
     <div id="d-alumnos-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
     <div id="d-alumnos-inactivos" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+    <div id="d-alumnos-exito" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
 </div>
 
@@ -1802,13 +1838,13 @@ function weekStart(d=new Date()){const x=new Date(d);const day=x.getDay();x.setD
 function fmtDate(d){return d?new Date(d).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--'}
 
 // ── LOADERS ──
-let allAlumnosInactivos=[];
+let allAlumnosInactivos=[],allAlumnosExito=[];
 async function loadAlumnos(){
   const {data} = await sb.from('alumnos').select('*,perfiles(nombre,apellido,dni,telefono)').order('creado_en');
   allAlumnos=(data||[]).filter(a=>a.activo!==false);
-  allAlumnosInactivos=(data||[]).filter(a=>a.activo===false);
-  renderAlumnos(allAlumnos);
-  renderAlumnosInactivos(allAlumnosInactivos);
+  allAlumnosInactivos=(data||[]).filter(a=>a.activo===false&&!a.ingreso_pnp);
+  allAlumnosExito=(data||[]).filter(a=>a.activo===false&&a.ingreso_pnp===true);
+  aplicarFiltrosAlumnos();
   renderAttGrid(allAlumnos);
   construirFaceMatcher();
 }
@@ -3870,6 +3906,25 @@ function renderAlumnosInactivos(data){
     <td>${a.talla?a.talla+' cm':'--'}</td>
     <td style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="openRegistrarFoto('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''} ${a.perfiles?.apellido||''}')">${a.foto_url?'Foto':'+ Foto'}</button>
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px;border-color:var(--gold);color:var(--gold)" onclick="marcarCasoExito('${a.id}')">⭐ Ingresó PNP</button>
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
+      ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+function renderAlumnosExito(data){
+  const el=document.getElementById('d-alumnos-exito');
+  if(!el)return;
+  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">Sin casos de ingreso a la PNP registrados</div></div>`;return}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Sexo</th><th>Peso</th><th>Talla</th><th>Acciones</th></tr></thead><tbody>${data.map(a=>`<tr>
+    <td><span style="color:var(--gold);margin-right:4px">⭐</span>${a.perfiles?.nombre} ${a.perfiles?.apellido}</td>
+    <td>${a.perfiles?.dni||'--'}</td>
+    <td>${a.perfiles?.telefono||'--'}</td>
+    <td>${a.sexo||'--'}</td>
+    <td>${a.peso?a.peso+' kg':'--'}</td>
+    <td>${a.talla?a.talla+' cm':'--'}</td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="quitarCasoExito('${a.id}')">Quitar ⭐</button>
       <button class="btn btn-outline" style="font-size:10px;padding:5px 8px" onclick="reactivarAlumno('${a.id}')">Reactivar</button>
       ${esDueno?`<button class="btn btn-red" style="font-size:10px;padding:5px 8px" onclick="confirmarEliminarAlumno('${a.id}','${a.perfil_id}','${a.perfiles?.nombre||''}','${a.perfiles?.apellido||''}')">Eliminar</button>`:''}
     </td>
@@ -5867,14 +5922,67 @@ function filterAlumnos(){
   renderAlumnos(filtered);
 }
 function showAlTab(tab){
-  const actEl=document.getElementById('d-alumnos-activos');
-  const inEl=document.getElementById('d-alumnos-inactivos');
-  const tabAct=document.getElementById('altab-activos');
-  const tabIn=document.getElementById('altab-inactivos');
-  if(actEl)actEl.style.display=tab==='activos'?'block':'none';
-  if(inEl)inEl.style.display=tab==='inactivos'?'block':'none';
-  if(tabAct)tabAct.classList.toggle('active',tab==='activos');
-  if(tabIn)tabIn.classList.toggle('active',tab==='inactivos');
+  ['activos','inactivos','exito'].forEach(t=>{
+    const el=document.getElementById('d-alumnos-'+t);
+    const tb=document.getElementById('altab-'+t);
+    if(el)el.style.display=t===tab?'block':'none';
+    if(tb)tb.classList.toggle('active',t===tab);
+  });
+}
+let _alSexoActual='';
+function setAlFiltroSexo(val){
+  _alSexoActual=val;
+  const map={'':'al-f-sexo-todos','M':'al-f-sexo-m','F':'al-f-sexo-f'};
+  Object.entries(map).forEach(([v,id])=>{
+    const btn=document.getElementById(id);
+    if(!btn)return;
+    const active=v===val;
+    btn.style.borderColor=active?'var(--gold)':'var(--border)';
+    btn.style.color=active?'var(--gold)':'var(--muted)';
+    btn.style.background=active?'rgba(201,168,76,.15)':'transparent';
+  });
+  aplicarFiltrosAlumnos();
+}
+function aplicarFiltrosAlumnos(){
+  const orden=document.getElementById('al-f-orden')?.value||'nuevo';
+  const tallaMin=parseFloat(document.getElementById('al-f-talla-min')?.value)||null;
+  const tallaMax=parseFloat(document.getElementById('al-f-talla-max')?.value)||null;
+  const pesoMin=parseFloat(document.getElementById('al-f-peso-min')?.value)||null;
+  const pesoMax=parseFloat(document.getElementById('al-f-peso-max')?.value)||null;
+  const q=(document.getElementById('q-al-search')?.value||'').toLowerCase().trim();
+  function filtrar(arr){
+    let r=arr.filter(a=>{
+      if(q){
+        const nombre=`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase();
+        const dni=(a.perfiles?.dni||'').toLowerCase();
+        if(!nombre.includes(q)&&!dni.includes(q))return false;
+      }
+      if(_alSexoActual&&a.sexo!==_alSexoActual)return false;
+      if(tallaMin!==null&&(a.talla==null||a.talla<tallaMin))return false;
+      if(tallaMax!==null&&(a.talla==null||a.talla>tallaMax))return false;
+      if(pesoMin!==null&&(a.peso==null||a.peso<pesoMin))return false;
+      if(pesoMax!==null&&(a.peso==null||a.peso>pesoMax))return false;
+      return true;
+    });
+    r.sort((a,b)=>orden==='nuevo'?new Date(b.creado_en||0)-new Date(a.creado_en||0):new Date(a.creado_en||0)-new Date(b.creado_en||0));
+    return r;
+  }
+  renderAlumnos(filtrar(allAlumnos));
+  renderAlumnosInactivos(filtrar(allAlumnosInactivos));
+  renderAlumnosExito(filtrar(allAlumnosExito));
+}
+async function marcarCasoExito(id){
+  if(!await myConfirm('¿Marcar a este alumno como caso de ingreso a la PNP?'))return;
+  const {error}=await sb.from('alumnos').update({ingreso_pnp:true}).eq('id',id);
+  if(error){await myAlert('Error: '+error.message);return;}
+  await loadAlumnos();
+  showAlTab('exito');
+}
+async function quitarCasoExito(id){
+  if(!await myConfirm('¿Quitar la marca de ingreso PNP de este alumno?'))return;
+  const {error}=await sb.from('alumnos').update({ingreso_pnp:false}).eq('id',id);
+  if(error){await myAlert('Error: '+error.message);return;}
+  await loadAlumnos();
 }
 
 // ── DNI AUTOCOMPLETE ──
