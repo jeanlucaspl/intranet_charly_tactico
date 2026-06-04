@@ -479,12 +479,39 @@
     <div class="ph-left"><div class="eye">Finanzas</div><div class="ttl">INGRESOS</div></div>
     <button class="btn btn-gold" onclick="openMd('md-pago')">+ Registrar Pago</button>
   </div>
-  <div style="margin-bottom:14px">
-    <input type="text" id="q-pago-search" placeholder="Buscar por apellido o DNI..." autocomplete="off"
-      style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"
-      oninput="filtrarPagos(this.value)"/>
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="ingtab-registros" onclick="showIngTab('registros')">Registros</div>
+    <div class="aula-tab" id="ingtab-historico" onclick="showIngTab('historico')">Histórico</div>
   </div>
-  <div class="tw" id="d-ingresos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+
+  <!-- TAB: Registros -->
+  <div id="ingtab-content-registros" style="padding-top:14px">
+    <div style="margin-bottom:14px">
+      <input type="text" id="q-pago-search" placeholder="Buscar por apellido o DNI..." autocomplete="off"
+        style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"
+        oninput="filtrarPagos(this.value)"/>
+    </div>
+    <div class="tw" id="d-ingresos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
+  </div>
+
+  <!-- TAB: Histórico -->
+  <div id="ingtab-content-historico" style="display:none;padding-top:14px">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="fg" style="flex:1;min-width:130px;margin:0">
+        <label>Desde</label>
+        <input type="date" id="ing-hist-desde" style="width:100%"/>
+      </div>
+      <div class="fg" style="flex:1;min-width:130px;margin:0">
+        <label>Hasta</label>
+        <input type="date" id="ing-hist-hasta" style="width:100%"/>
+      </div>
+      <button class="btn btn-gold" onclick="ingHistConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
+    </div>
+    <div id="ing-hist-pdf-wrap" style="display:none;margin-bottom:12px">
+      <button class="btn btn-gold" onclick="ingHistPDF()" style="width:100%;justify-content:center;font-size:11px;letter-spacing:.12em">⬇ Generar PDF del Histórico</button>
+    </div>
+    <div id="ing-hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
+  </div>
 </div>
 
 <!-- ══ MATERIAS ══ -->
@@ -4364,6 +4391,188 @@ function filtrarPagos(q){
     const pf=p.alumnos?.perfiles;
     return (pf?.apellido||'').toLowerCase().includes(s)||(pf?.dni||'').toLowerCase().includes(s);
   }));
+}
+
+function showIngTab(tab){
+  ['registros','historico'].forEach(t=>{
+    document.getElementById('ingtab-content-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('ingtab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='historico')ingHistInitFechas();
+}
+
+function ingHistInitFechas(){
+  const hd=document.getElementById('ing-hist-desde');
+  const hh=document.getElementById('ing-hist-hasta');
+  if(!hd.value||!hh.value){
+    const hoy=todayISO();
+    hh.value=hoy;
+    hd.value=hoy.slice(0,4)+'-01-01'; // default: año actual completo
+  }
+}
+
+let _ingHistData=[];
+
+async function ingHistConsultar(){
+  const desde=document.getElementById('ing-hist-desde').value;
+  const hasta=document.getElementById('ing-hist-hasta').value;
+  if(!desde||!hasta){await myAlert('Selecciona el rango de fechas.');return;}
+  if(desde>hasta){await myAlert('La fecha inicial no puede ser posterior a la final.');return;}
+  const resEl=document.getElementById('ing-hist-results');
+  document.getElementById('ing-hist-pdf-wrap').style.display='none';
+  resEl.innerHTML='<div class="empty"><div class="et">Consultando...</div></div>';
+  const {data,error}=await sb.from('pagos')
+    .select('*,alumnos(perfiles(nombre,apellido,dni))')
+    .gte('fecha',desde).lte('fecha',hasta)
+    .order('fecha',{ascending:true});
+  if(error){resEl.innerHTML='<div class="empty"><div class="et">Error: '+error.message+'</div></div>';return;}
+  if(!data?.length){resEl.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin pagos en ese rango</div></div>';return;}
+  _ingHistData=data;
+  document.getElementById('ing-hist-pdf-wrap').style.display='block';
+  ingHistRender(data);
+}
+
+const _MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function _ingAgrupar(data){
+  // Detectar si hay múltiples años
+  const años=[...new Set(data.map(p=>p.fecha.slice(0,4)))].sort();
+  const multiAnio=años.length>1;
+  // Estructura: [{año, meses:[{mes, label, pagos, subtotal}]}]
+  const result=[];
+  años.forEach(anio=>{
+    const pAnio=data.filter(p=>p.fecha.slice(0,4)===anio);
+    const meses=[...new Set(pAnio.map(p=>p.fecha.slice(0,7)))].sort();
+    result.push({anio,multiAnio,meses:meses.map(ym=>{
+      const [y,m]=ym.split('-');
+      const pagos=pAnio.filter(p=>p.fecha.slice(0,7)===ym);
+      return{ym,label:`${_MESES[+m-1]} ${multiAnio?y:''}`.trim(),pagos,subtotal:pagos.reduce((s,p)=>s+parseFloat(p.monto||0),0)};
+    })});
+  });
+  return result;
+}
+
+function ingHistRender(data){
+  const grupos=_ingAgrupar(data);
+  const total=data.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+  let html='';
+  grupos.forEach(({anio,multiAnio,meses})=>{
+    if(multiAnio){
+      const anioTotal=meses.reduce((s,m)=>s+m.subtotal,0);
+      html+=`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:2px solid var(--gold);margin-bottom:10px;margin-top:${html?'20px':'0'}">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.1em">${anio}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">S/ ${anioTotal.toFixed(2)} · ${meses.reduce((s,m)=>s+m.pagos.length,0)} pagos</span>
+      </div>`;
+    }
+    meses.forEach(({ym,label,pagos,subtotal})=>{
+      html+=`<div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);margin-bottom:6px">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);letter-spacing:.08em">${label}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted);letter-spacing:.08em">${pagos.length} pago${pagos.length!==1?'s':''}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--white);margin-left:auto">S/ ${subtotal.toFixed(2)}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">
+            <th style="text-align:left;padding:4px 6px;font-weight:600">Alumno</th>
+            <th style="text-align:left;padding:4px 6px;font-weight:600">Concepto</th>
+            <th style="text-align:left;padding:4px 6px;font-weight:600">Método</th>
+            <th style="text-align:right;padding:4px 6px;font-weight:600">Monto</th>
+            <th style="text-align:center;padding:4px 6px;font-weight:600">Fecha</th>
+          </tr></thead>
+          <tbody>${pagos.map(p=>{
+            const pf=p.alumnos?.perfiles;
+            const nombre=pf?`${pf.apellido||''}, ${pf.nombre||''}`:'--';
+            return`<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.03em">${nombre}</td>
+              <td style="padding:6px;font-size:11px"><span class="badge br" style="font-size:9px">${p.concepto||'--'}</span></td>
+              <td style="padding:6px;font-size:11px;color:var(--muted)">${p.metodo_pago||'--'}</td>
+              <td style="padding:6px;text-align:right;color:var(--gold);font-weight:700">S/ ${parseFloat(p.monto||0).toFixed(2)}</td>
+              <td style="padding:6px;text-align:center;font-size:11px;color:var(--muted)">${p.fecha||'--'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`;
+    });
+  });
+  html+=`<div style="display:flex;justify-content:flex-end;padding:12px 0;border-top:2px solid var(--gold);margin-top:8px">
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.1em">TOTAL&nbsp;&nbsp;S/ ${total.toFixed(2)}</span>
+  </div>`;
+  document.getElementById('ing-hist-results').innerHTML=html;
+}
+
+async function ingHistPDF(){
+  const btn=event?.currentTarget||event?.target;
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='Generando...';btn.disabled=true;}
+  try{
+    if(!_ingHistData.length){await myAlert('Primero realiza una consulta.');return;}
+    const desde=document.getElementById('ing-hist-desde').value;
+    const hasta=document.getElementById('ing-hist-hasta').value;
+    const grupos=_ingAgrupar(_ingHistData);
+    const totalGeneral=_ingHistData.reduce((s,p)=>s+parseFloat(p.monto||0),0);
+    const logoUrl=await _getLogoUrl();
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const {PL,PR,GOLD,BLACK,DARK2,tbl,head,body,WHITE}=_PDF;
+    const TW=_PDF.W-PL-PR;
+    let y=_pdfHeader(doc,logoUrl,'Histórico de Ingresos');
+    y=_pdfMeta(doc,y,`${desde} → ${hasta}  ·  ${_ingHistData.length} pago${_ingHistData.length!==1?'s':''}`);
+    y+=8;
+    grupos.forEach(({anio,multiAnio,meses})=>{
+      if(multiAnio){
+        if(y>250){doc.addPage();y=16;}
+        const anioTotal=meses.reduce((s,m)=>s+m.subtotal,0);
+        doc.setFillColor(...GOLD);doc.rect(PL-2,y-5,TW+4,9,'F');
+        doc.setTextColor(..._PDF.DARK);doc.setFont('helvetica','bold');doc.setFontSize(12);
+        doc.text(anio,PL,y);
+        doc.setFont('helvetica','normal');doc.setFontSize(9);
+        doc.text(`S/ ${anioTotal.toFixed(2)}`,PL+TW,y,{align:'right'});
+        y+=10;
+      }
+      meses.forEach(({label,pagos,subtotal})=>{
+        if(y>250){doc.addPage();y=16;}
+        // Cabecera de mes
+        doc.setFillColor(...DARK2);doc.rect(PL-2,y-5,TW+4,8,'F');
+        doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(10);
+        doc.text(label,PL,y);
+        doc.setTextColor(...WHITE);doc.setFont('helvetica','normal');doc.setFontSize(9);
+        doc.text(`${pagos.length} pago${pagos.length!==1?'s':''}  ·  S/ ${subtotal.toFixed(2)}`,PL+TW,y,{align:'right'});
+        y+=6;
+        if(y>250){doc.addPage();y=16;}
+        doc.autoTable({
+          startY:y,margin:{left:PL,right:PR},tableWidth:TW,
+          head:[['Alumno','DNI','Concepto','Método','Monto','Fecha']],
+          body:pagos.map(p=>{
+            const pf=p.alumnos?.perfiles;
+            return[
+              pf?`${pf.apellido||''}, ${pf.nombre||''}`:'--',
+              pf?.dni||'--',
+              p.concepto||'--',
+              p.metodo_pago||'--',
+              `S/ ${parseFloat(p.monto||0).toFixed(2)}`,
+              p.fecha||'--'
+            ];
+          }),
+          styles:{...tbl,fontSize:7.5,cellPadding:2},
+          headStyles:head,bodyStyles:body,
+          columnStyles:{0:{cellWidth:42},1:{cellWidth:20},2:{cellWidth:30},3:{cellWidth:22},4:{cellWidth:22,halign:'right'},5:{cellWidth:22,halign:'center'}},
+          didDrawCell:(d)=>{
+            if(d.section==='body'&&d.column.index===4)d.cell.styles.textColor=[201,168,76];
+          }
+        });
+        y=doc.lastAutoTable.finalY+6;
+      });
+    });
+    // Total general
+    if(y>260){doc.addPage();y=16;}
+    doc.setDrawColor(...GOLD);doc.setLineWidth(0.5);doc.line(PL,y,PL+TW,y);y+=6;
+    doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(12);
+    doc.text('TOTAL GENERAL',PL,y);
+    doc.text(`S/ ${totalGeneral.toFixed(2)}`,PL+TW,y,{align:'right'});
+    _pdfFooter(doc);
+    _pdfSave(doc,`ingresos_${desde}_${hasta}.pdf`);
+  }catch(e){await myAlert('Error generando PDF: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
 }
 
 // Buscador dentro del modal de nuevo pago
