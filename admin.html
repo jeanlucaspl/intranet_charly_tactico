@@ -816,7 +816,7 @@
     <button class="btn btn-gold" onclick="openMd('md-padre')">+ Nuevo Padre</button>
   </div>
   <div class="dni-wrap" style="margin-bottom:12px">
-    <input type="text" id="q-pad-search" placeholder="Buscar por apellido o DNI..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-pad','padres')" onblur="setTimeout(()=>hideSug('sug-pad'),200)"/>
+    <input type="text" id="q-pad-search" placeholder="Buscar por apellido o DNI del alumno..." autocomplete="off" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none" oninput="panelSuggest(this,'sug-pad','padres')" onblur="setTimeout(()=>hideSug('sug-pad'),200)"/>
     <div id="sug-pad" class="dni-sug"></div>
   </div>
   <div class="aula-tabs">
@@ -5553,8 +5553,16 @@ function panelSuggest(input,sugId,tipo){
     ).slice(0,8);
     box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-al','alumnos','${a.perfiles?.dni}')"><span class="dni-sug-dni">${a.perfiles?.dni||'--'}</span><span class="dni-sug-nom">${a.perfiles?.nombre} ${a.perfiles?.apellido}</span></div>`).join('');
   }else if(tipo==='padres'){
-    fuente=allPadresData.filter(p=>`${p.apellido||''} ${p.nombre||''}`.toLowerCase().includes(q)||(p.dni||'').startsWith(q)).slice(0,8);
-    box.innerHTML=fuente.map(p=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-pad','padres','${p.dni}')"><span class="dni-sug-dni">${p.dni||'--'}</span><span class="dni-sug-nom">${p.nombre} ${p.apellido}</span></div>`).join('');
+    // Buscar por datos del alumno, no del padre
+    const padresConAlumno=[];
+    allPadresData.forEach(p=>(p._hijos||[]).forEach(l=>{
+      const al=l.alumnos?.perfiles;
+      if(!al)return;
+      if(`${al.apellido||''} ${al.nombre||''}`.toLowerCase().includes(q)||(al.dni||'').startsWith(q))
+        padresConAlumno.push({padre:p,alumno:al});
+    }));
+    fuente=padresConAlumno.slice(0,8);
+    box.innerHTML=fuente.map(({padre:p,alumno:al})=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-pad','padres','${p.dni}')"><span class="dni-sug-dni">${al.dni||'--'}</span><span class="dni-sug-nom">${al.nombre} ${al.apellido} <span style="color:var(--muted);font-size:10px">→ ${p.nombre} ${p.apellido}</span></span></div>`).join('');
   }else if(tipo==='admins'){
     fuente=allAdminsData.filter(a=>`${a.apellido||''} ${a.nombre||''}`.toLowerCase().includes(q)||(a.dni||'').startsWith(q)).slice(0,8);
     box.innerHTML=fuente.map(a=>`<div class="dni-sug-item" onmousedown="selectPanelSug('sug-adm','admins','${a.dni}')"><span class="dni-sug-dni">${a.dni||'--'}</span><span class="dni-sug-nom">${a.nombre} ${a.apellido} <span style="color:var(--muted);font-size:10px">${a.rol}</span></span></div>`).join('');
@@ -5578,7 +5586,13 @@ function selectPanelSug(sugId,tipo,dni){
     renderAlumnosInactivos(allAlumnosInactivos.filter(a=>a.perfiles?.dni===dni));
   }else if(tipo==='padres'){
     const match=allPadresData.filter(p=>p.dni===dni);
-    const p=match[0];if(p)document.getElementById('q-pad-search').value=`${p.nombre} ${p.apellido}`;
+    const p=match[0];
+    if(p){
+      // Mostrar en el input el alumno que originó la búsqueda
+      const al=(p._hijos||[]).find(l=>{const a=l.alumnos?.perfiles;return a&&(`${a.apellido||''} ${a.nombre||''}`.toLowerCase().includes(document.getElementById('q-pad-search').value.toLowerCase().trim())||(a.dni||'').startsWith(document.getElementById('q-pad-search').value.trim()));});
+      const alPer=al?.alumnos?.perfiles;
+      document.getElementById('q-pad-search').value=alPer?`${alPer.nombre} ${alPer.apellido}`:`${p.nombre} ${p.apellido}`;
+    }
     renderPadresActivos(match.filter(p=>p.activo!==false));
     renderPadresDeshabilitados(match.filter(p=>p.activo===false));
   }else if(tipo==='admins'){
