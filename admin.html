@@ -663,24 +663,6 @@
   <!-- Resultados -->
   <div id="hist-results"><div class="empty"><div class="ei"></div><div class="et">Selecciona un rango de fechas y presiona Consultar</div></div></div>
 
-  <!-- ── Consulta por alumno: ¿quién asistió? ── -->
-  <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border)">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);letter-spacing:.08em;margin-bottom:12px">Alumnos por fecha y curso</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end">
-      <div class="fg" style="flex:1;min-width:130px;margin:0">
-        <label>Fecha</label>
-        <input type="date" id="hq-fecha" style="width:100%"/>
-      </div>
-      <div class="fg" style="flex:2;min-width:160px;margin:0">
-        <label>Curso</label>
-        <select id="hq-materia" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:9px 12px;font-family:'Barlow',sans-serif;font-size:13px;outline:none">
-          <option value="">-- Selecciona un curso --</option>
-        </select>
-      </div>
-      <button class="btn btn-gold" onclick="hqConsultar()" style="justify-content:center;padding:9px 20px">Consultar</button>
-    </div>
-    <div id="hq-results"><div class="empty"><div class="et" style="font-size:12px">Selecciona fecha y curso</div></div></div>
-  </div>
 </div>
 
 <!-- ══ REPORTES ══ -->
@@ -2623,112 +2605,6 @@ function histInitFechas(){
     hh.value=hoy;
     hd.value=hoy.slice(0,7)+'-01';
   }
-  // Poblar select de cursos para la consulta puntual
-  const sel=document.getElementById('hq-materia');
-  if(sel&&sel.options.length<=1){
-    allMaterias.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).forEach(m=>{
-      const o=document.createElement('option');o.value=m.id;o.textContent=m.nombre;sel.appendChild(o);
-    });
-  }
-  if(!document.getElementById('hq-fecha').value)document.getElementById('hq-fecha').value=todayISO();
-}
-
-async function hqConsultar(){
-  const fecha=document.getElementById('hq-fecha').value;
-  const materiaId=document.getElementById('hq-materia').value;
-  const resEl=document.getElementById('hq-results');
-  if(!fecha||!materiaId){resEl.innerHTML='<div class="empty"><div class="et" style="font-size:12px">Selecciona fecha y curso</div></div>';return;}
-  resEl.innerHTML='<div class="empty"><div class="et" style="font-size:12px">Consultando...</div></div>';
-  // Buscar el bloque de esa fecha y materia
-  const {data:bloques}=await sb.from('bloques_asistencia')
-    .select('id,aula_id,hora_apertura').eq('fecha',fecha).eq('materia_id',materiaId);
-  if(!bloques?.length){resEl.innerHTML='<div class="empty"><div class="ei"></div><div class="et" style="font-size:12px">Sin clases registradas para esa fecha y curso</div></div>';return;}
-  const ids=bloques.map(b=>b.id);
-  const {data:asists}=await sb.from('asistencias')
-    .select('alumno_id,estado,hora_ingreso,verificado_facial,bloque_id')
-    .in('bloque_id',ids).eq('tipo','entrada').order('hora_ingreso');
-  const matNom=allMaterias.find(m=>m.id===materiaId)?.nombre||'--';
-  if(!asists?.length){resEl.innerHTML=`<div class="empty"><div class="ei"></div><div class="et" style="font-size:12px">Sin asistentes registrados en ${matNom} el ${fecha}</div></div>`;return;}
-  const bc={presente:'bg',tardanza:'by',ausente:'br'};
-  let html=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">${asists.length} alumno${asists.length!==1?'s':''} — ${matNom} · ${fecha}</div>`;
-  // Si hay varios bloques (varias aulas), agrupar
-  bloques.forEach(b=>{
-    const aulaNom=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
-    const bAsists=asists.filter(a=>a.bloque_id===b.id);
-    if(!bAsists.length)return;
-    if(bloques.length>1)html+=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:.1em;color:var(--muted);margin:8px 0 4px">${aulaNom} · ${(b.hora_apertura||'').slice(0,5)}</div>`;
-    html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif">
-        <th style="text-align:left;padding:4px 6px;font-weight:600">#</th>
-        <th style="text-align:left;padding:4px 6px;font-weight:600">Apellido</th>
-        <th style="text-align:left;padding:4px 6px;font-weight:600">Nombre</th>
-        <th style="text-align:left;padding:4px 6px;font-weight:600">DNI</th>
-        <th style="text-align:center;padding:4px 6px;font-weight:600">Hora</th>
-        <th style="text-align:center;padding:4px 6px;font-weight:600">Estado</th>
-        <th style="text-align:center;padding:4px 6px;font-weight:600">Método</th>
-      </tr></thead>
-      <tbody>${bAsists.map((a,i)=>{
-        const al=allAlumnos.find(x=>x.id===a.alumno_id);
-        const p=al?.perfiles;
-        return`<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:6px;color:var(--muted);font-size:11px">${i+1}</td>
-          <td style="padding:6px;font-family:'Barlow Condensed',sans-serif">${p?.apellido||'--'}</td>
-          <td style="padding:6px;font-family:'Barlow Condensed',sans-serif">${p?.nombre||'--'}</td>
-          <td style="padding:6px;color:var(--muted);font-size:11px">${p?.dni||'--'}</td>
-          <td style="padding:6px;text-align:center;color:var(--muted);font-size:11px">${(a.hora_ingreso||'').slice(0,5)}</td>
-          <td style="padding:6px;text-align:center"><span class="badge ${bc[a.estado]||'bg'}">${a.estado||''}</span></td>
-          <td style="padding:6px;text-align:center;font-size:11px;color:var(--muted)">${a.verificado_facial?'Facial':'Manual'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
-  });
-  html+=`<div style="margin-top:10px">
-    <button class="btn btn-outline" onclick="hqPDF('${fecha}','${materiaId}')" style="font-size:11px;justify-content:center">⬇ Exportar PDF</button>
-  </div>`;
-  resEl.innerHTML=html;
-}
-
-async function hqPDF(fecha,materiaId){
-  const btn=event?.currentTarget||event?.target;
-  const orig=btn?.textContent;
-  if(btn){btn.textContent='Generando...';btn.disabled=true;}
-  try{
-    const {data:bloques}=await sb.from('bloques_asistencia')
-      .select('id,aula_id,hora_apertura').eq('fecha',fecha).eq('materia_id',materiaId);
-    if(!bloques?.length)return;
-    const ids=bloques.map(b=>b.id);
-    const {data:asists}=await sb.from('asistencias')
-      .select('alumno_id,estado,hora_ingreso,verificado_facial,bloque_id')
-      .in('bloque_id',ids).eq('tipo','entrada').order('hora_ingreso');
-    const matNom=allMaterias.find(m=>m.id===materiaId)?.nombre||'--';
-    const nombre=id=>{const a=allAlumnos.find(x=>x.id===id);const p=a?.perfiles;return{ap:p?.apellido||'--',nom:p?.nombre||'--',dni:p?.dni||'--'};};
-    const logoUrl=await _getLogoUrl();
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const {PL,PR,tbl,head,body,colE,BLACK}=_PDF;
-    let y=_pdfHeader(doc,logoUrl,'Lista de asistentes');
-    y=_pdfMeta(doc,y,`${matNom}  ·  ${fecha}`);
-    y+=8;
-    bloques.forEach((b,bi)=>{
-      const aulaNom=allAulas.find(a=>a.id===b.aula_id)?.nombre||'--';
-      const bAsists=(asists||[]).filter(a=>a.bloque_id===b.id);
-      if(!bAsists.length)return;
-      if(bi>0){if(y>245){doc.addPage();y=16;}doc.setDrawColor(210,210,210);doc.setLineWidth(0.3);doc.line(PL,y,_PDF.W-PR,y);y+=6;}
-      if(bloques.length>1){
-        doc.setTextColor(...BLACK);doc.setFont('helvetica','bold');doc.setFontSize(9);
-        doc.text(`${aulaNom} · ${(b.hora_apertura||'').slice(0,5)}`,PL,y);y+=5;
-      }
-      doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
-        head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
-        body:bAsists.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
-        styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
-      });
-      y=doc.lastAutoTable.finalY+8;
-    });
-    _pdfFooter(doc);
-    _pdfSave(doc,`asistentes_${matNom}_${fecha}.pdf`);
-  }catch(e){await myAlert('Error: '+e.message);}
-  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
 }
 
 async function histConsultar(){
