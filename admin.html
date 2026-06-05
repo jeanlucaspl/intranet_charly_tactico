@@ -7137,6 +7137,18 @@ async function generarPracticaPDF(){
   }catch(err){status.textContent='Error: '+err.message;console.error(err);}
   btn.disabled=false;
 }
+// ── Toast global ─────────────────────────────────────────────────────────────
+let _toastTimer=null;
+function showToast(msg,color='var(--gold)'){
+  const t=document.getElementById('toast-global');if(!t)return;
+  if(_toastTimer)clearTimeout(_toastTimer);
+  t.textContent=msg;t.style.borderColor=color;t.style.display='block';
+  requestAnimationFrame(()=>{t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';});
+  _toastTimer=setTimeout(()=>{
+    t.style.opacity='0';t.style.transform='translateX(-50%) translateY(-16px)';
+    setTimeout(()=>{t.style.display='none';},260);
+  },4000);
+}
 // ── BANCO DE PREGUNTAS ────────────────────────────────────────────────────────
 const BP={
   init:false,tab:'gestionar',mats:[],subtemas:{},
@@ -7481,9 +7493,7 @@ async function bpGuardar(){
     const _matNom=BP.mats.find(m=>m.id===_savedMat)?.nombre||'';
     const _subInfo=_savedSub?` · ${_savedSub}`:'';
     bpNueva();BP.ed.materia_id=_savedMat;BP.ed.subtema=_savedSub;bpRenderUI();
-    const newSt=document.getElementById('bp-save-status');
-    if(newSt){newSt.textContent=`✓ Guardado → ${_matNom}${_subInfo||' (sin subtema)'}`;newSt.style.color='var(--gold)';}
-    setTimeout(()=>{const s=document.getElementById('bp-save-status');if(s){s.textContent='';s.style.color='#8aaac8';}},5000);
+    showToast(`✓ Pregunta guardada → ${_matNom}${_subInfo||' · sin subtema'}`);
   }catch(e){
     console.error(e);if(st)st.textContent='';
     await myAlert('Error al guardar: '+e.message);
@@ -7923,6 +7933,9 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
 }
 // ── FIN ARMAR PRÁCTICA ────────────────────────────────────────────────────────
 </script>
+
+<!-- Toast global -->
+<div id="toast-global" style="display:none;position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-16px);z-index:10000;background:#0d1b2e;border:1.5px solid var(--gold);color:var(--white);font-family:'Barlow',sans-serif;font-size:14px;padding:12px 22px;box-shadow:0 6px 28px rgba(0,0,0,.55);pointer-events:none;transition:opacity .25s,transform .25s;opacity:0;white-space:nowrap;max-width:90vw;text-align:center"></div>
 
 <!-- Modal preview banco de preguntas -->
 <div id="bp-prev-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9998;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.style.display='none'">
