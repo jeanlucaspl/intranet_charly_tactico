@@ -7650,7 +7650,7 @@ async function bpCargarLista(){
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
   const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();
   if(!matId){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia</div></div>';return;}
-  let q=sb.from('banco_preguntas').select('id,subtema,tipo,enunciado_texto,enunciado_imagen_url,materias(nombre)').eq('materia_id',matId).order('creado_en',{ascending:false}).limit(150);
+  let q=sb.from('banco_preguntas').select('id,subtema,tipo,enunciado_texto,enunciado_imagen_url,materias(nombre)').eq('materia_id',matId).order('creado_en',{ascending:false}).limit(500);
   if(subFilt)q=q.ilike('subtema','%'+subFilt+'%');
   const{data,error}=await q;
   if(error){el.innerHTML='<div class="empty"><div class="et">Error: '+error.message+'</div></div>';return;}
