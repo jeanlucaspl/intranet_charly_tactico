@@ -7152,7 +7152,7 @@ function showToast(msg,color='var(--gold)'){
 // ── BANCO DE PREGUNTAS ────────────────────────────────────────────────────────
 const BP={
   init:false,tab:'gestionar',mats:[],subtemas:{},
-  ed:null,fMat:'',fSub:'',lista:[],sel:new Set(),saving:false,randSubtemas:[]
+  ed:null,fMat:'',fSub:'',lista:[],listaConteo:[],sel:new Set(),saving:false,randSubtemas:[]
 };
 const BPINP=`background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:100%;box-sizing:border-box`;
 const BPLBL=`font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block`;
@@ -7650,11 +7650,18 @@ async function bpCargarLista(){
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
   const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();
   if(!matId){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia</div></div>';return;}
-  let q=sb.from('banco_preguntas').select('id,subtema,tipo,enunciado_texto,enunciado_imagen_url,materias(nombre)').eq('materia_id',matId).order('creado_en',{ascending:false}).limit(500);
-  if(subFilt)q=q.ilike('subtema','%'+subFilt+'%');
-  const{data,error}=await q;
-  if(error){el.innerHTML='<div class="empty"><div class="et">Error: '+error.message+'</div></div>';return;}
-  BP.lista=data||[];bpRenderLista();
+  // Query de conteo real (sin límite, solo id+subtema)
+  let qCount=sb.from('banco_preguntas').select('id,subtema').eq('materia_id',matId);
+  if(subFilt)qCount=qCount.ilike('subtema','%'+subFilt+'%');
+  // Query de display (con límite)
+  const DISPLAY_LIMIT=200;
+  let qDisplay=sb.from('banco_preguntas').select('id,subtema,tipo,enunciado_texto,enunciado_imagen_url,materias(nombre)').eq('materia_id',matId).order('creado_en',{ascending:false}).limit(DISPLAY_LIMIT);
+  if(subFilt)qDisplay=qDisplay.ilike('subtema','%'+subFilt+'%');
+  const[{data:countData,error:cErr},{data:displayData,error:dErr}]=await Promise.all([qCount,qDisplay]);
+  if(cErr||dErr){el.innerHTML='<div class="empty"><div class="et">Error: '+((cErr||dErr).message)+'</div></div>';return;}
+  BP.listaConteo=countData||[];
+  BP.lista=displayData||[];
+  bpRenderLista();
 }
 
 function bpFiltrar(){
@@ -7672,10 +7679,12 @@ function bpRenderLista(){
     el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin preguntas para este filtro</div></div>';
     if(selEl)selEl.textContent='0 seleccionadas';return;
   }
-  // Resumen por subtema
+  // Resumen por subtema — usa listaConteo (total real de DB)
   const resMap={};
-  for(const p of BP.lista){const s=p.subtema||'(sin subtema)';resMap[s]=(resMap[s]||0)+1;}
+  const conteoBase=BP.listaConteo.length?BP.listaConteo:BP.lista;
+  for(const p of conteoBase){const s=p.subtema||'(sin subtema)';resMap[s]=(resMap[s]||0)+1;}
   BP.randSubtemas=Object.entries(resMap).sort((a,b)=>b[1]-a[1]).map(([s])=>s);
+  const totalReal=conteoBase.length;
   const matNomR=BP.mats.find(m=>m.id===BP.fMat)?.nombre||'';
   const activeSub=BP.fSub.trim().toLowerCase();
   const resHtml=BP.randSubtemas.map(s=>{
@@ -7690,7 +7699,7 @@ function bpRenderLista(){
       <input id="bp-rand-inp-${i}" type="number" min="0" max="${resMap[s]}" value="0" style="width:60px;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:4px 8px;text-align:center">
     </div>`).join('');
   const resumenBloque=`<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);padding:10px 14px;margin-bottom:14px">
-  <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:7px">${gpEsc(matNomR).toUpperCase()} — ${BP.lista.length} PREGUNTA${BP.lista.length===1?'':'S'}${activeSub?` <span style="color:#8aaac8;font-weight:400">· filtro: ${gpEsc(BP.fSub)}</span>`:''}</div>
+  <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:7px">${gpEsc(matNomR).toUpperCase()} — ${totalReal} PREGUNTA${totalReal===1?'':'S'}${BP.lista.length<totalReal?` <span style="color:#8aaac8;font-weight:400">(mostrando ${BP.lista.length})</span>`:''}${activeSub?` <span style="color:#8aaac8;font-weight:400">· filtro: ${gpEsc(BP.fSub)}</span>`:''}</div>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${resHtml}</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <button class="btn btn-outline" style="font-size:11px;padding:4px 14px" onclick="bpSelTodos()">☑ Seleccionar todos</button>
