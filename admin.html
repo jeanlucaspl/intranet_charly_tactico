@@ -7480,9 +7480,10 @@ async function bpGuardar(){
     const _savedMat=ed.materia_id,_savedSub=ed.subtema;
     const _matNom=BP.mats.find(m=>m.id===_savedMat)?.nombre||'';
     const _subInfo=_savedSub?` · ${_savedSub}`:'';
-    if(st){st.textContent=`✓ Guardado → ${_matNom}${_subInfo}`;st.style.color='var(--gold)';}
-    setTimeout(()=>{if(st){st.textContent='';st.style.color='#8aaac8';}},5000);
     bpNueva();BP.ed.materia_id=_savedMat;BP.ed.subtema=_savedSub;bpRenderUI();
+    const newSt=document.getElementById('bp-save-status');
+    if(newSt){newSt.textContent=`✓ Guardado → ${_matNom}${_subInfo||' (sin subtema)'}`;newSt.style.color='var(--gold)';}
+    setTimeout(()=>{const s=document.getElementById('bp-save-status');if(s){s.textContent='';s.style.color='#8aaac8';}},5000);
   }catch(e){
     console.error(e);if(st)st.textContent='';
     await myAlert('Error al guardar: '+e.message);
