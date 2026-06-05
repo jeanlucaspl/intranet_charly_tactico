@@ -7276,6 +7276,7 @@ function bpRenderUI(){
 
   <div style="display:flex;gap:10px;padding-top:4px;align-items:center;flex-wrap:wrap">
     <button class="btn btn-gold" id="bp-btn-guardar" onclick="bpGuardar()">${ed.id?'ACTUALIZAR PREGUNTA':'GUARDAR PREGUNTA'}</button>
+    <button class="btn btn-outline" onclick="bpPrevisualizar()">👁 Previsualizar</button>
     <button class="btn btn-outline" onclick="bpNueva();bpRenderUI()">Limpiar / Nueva</button>
     <span id="bp-save-status" style="font-size:12px;color:#8aaac8"></span>
   </div>
@@ -7294,7 +7295,7 @@ function bpRenderUI(){
     <div style="flex:1;min-width:160px">
       <label style="${BPLBL}">Subtema</label>
       <input id="bp-filt-sub" list="bp-filt-dl" placeholder="Filtrar subtema..." style="${BPINP}" value="${gpEsc(BP.fSub)}" oninput="bpFiltrar()"/>
-      <datalist id="bp-filt-dl">${[...new Set(Object.values(BP.subtemas).flat())].map(s=>`<option value="${gpEsc(s)}">`).join('')}</datalist>
+      <datalist id="bp-filt-dl">${(BP.fMat?BP.subtemas[BP.fMat]||[]:[...new Set(Object.values(BP.subtemas).flat())]).map(s=>`<option value="${gpEsc(s)}">`).join('')}</datalist>
     </div>
     <button class="btn btn-gold" id="bp-btn-enviar" onclick="bpMandadAPractica()" style="white-space:nowrap">Mandar a Práctica →</button>
   </div>
@@ -7476,14 +7477,124 @@ async function bpGuardar(){
       if(!BP.subtemas[ed.materia_id])BP.subtemas[ed.materia_id]=[];
       BP.subtemas[ed.materia_id].push(ed.subtema);
     }
-    if(st)st.textContent='✓ Guardado correctamente';
-    setTimeout(()=>{if(st)st.textContent='';},2500);
-    bpNueva();bpRenderUI();
+    const _savedMat=ed.materia_id,_savedSub=ed.subtema;
+    const _matNom=BP.mats.find(m=>m.id===_savedMat)?.nombre||'';
+    const _subInfo=_savedSub?` · ${_savedSub}`:'';
+    if(st){st.textContent=`✓ Guardado → ${_matNom}${_subInfo}`;st.style.color='var(--gold)';}
+    setTimeout(()=>{if(st){st.textContent='';st.style.color='#8aaac8';}},5000);
+    bpNueva();BP.ed.materia_id=_savedMat;BP.ed.subtema=_savedSub;bpRenderUI();
   }catch(e){
     console.error(e);if(st)st.textContent='';
     await myAlert('Error al guardar: '+e.message);
   }
   BP.saving=false;if(btn)btn.disabled=false;
+}
+
+function bpHtmlPreviewContent(data,matNom){
+  // data: {materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,alts[],altImgs[],sol,subitems[]}
+  const LTRS=['A','B','C','D','E'];
+  let h=`<div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:6px">${gpEsc(matNom)}${data.subtema?' <span style="color:#8aaac8">·</span> '+gpEsc(data.subtema):''}</div>`;
+  if(data.enunciado_texto)h+=`<div style="font-size:14px;line-height:1.7;margin-bottom:10px">${data.enunciado_texto}</div>`;
+  if(data.enunciado_imagen_url)h+=`<img src="${data.enunciado_imagen_url}" style="max-width:100%;max-height:220px;object-fit:contain;border:1px solid var(--border);margin-bottom:8px;display:block">`;
+  if(data.enunciado_post)h+=`<div style="font-size:13px;color:#c0d0e0;margin-bottom:10px">${data.enunciado_post}</div>`;
+  if(data.tipo==='simple'){
+    h+=`<div style="margin:10px 0">`;
+    LTRS.forEach((L,i)=>{
+      const txt=(data.alts||[])[i]||'';const img=(data.altImgs||[])[i]||null;
+      if(!txt&&!img)return;
+      const ok=data.sol?.tipo==='alternativa'&&data.sol.alt===i;
+      h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;${ok?'background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.5);':''}">`
+        +`<span style="font-weight:700;color:${ok?'var(--gold)':'#8aaac8'};min-width:20px">${L})</span>`;
+      if(txt)h+=`<span style="font-size:13px;flex:1">${txt}</span>`;
+      if(img)h+=`<img src="${img}" style="height:35px;width:auto">`;
+      if(ok)h+=`<span style="font-size:10px;color:var(--gold);font-weight:700;white-space:nowrap">✓ CORRECTA</span>`;
+      h+=`</div>`;
+    });
+    h+=`</div>`;
+    if(data.sol?.tipo==='desarrollo'&&(data.sol.desarrollo||'').trim()){
+      h+=`<div style="background:rgba(201,168,76,.08);border-left:3px solid var(--gold);padding:10px 14px;margin-top:8px">`
+        +`<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:5px">DESARROLLO</div>`
+        +`<div style="font-size:13px;line-height:1.7">${data.sol.desarrollo}</div></div>`;
+    }
+    if(data.sol?.devImg)h+=`<img src="${data.sol.devImg}" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid var(--border);margin-top:8px;display:block">`;
+  }else{
+    (data.subitems||[]).forEach((si,i)=>{
+      h+=`<div style="border:1px solid var(--border);padding:12px;margin-bottom:10px">`
+        +`<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:7px">Sub-pregunta ${i+1}</div>`;
+      if(si.texto)h+=`<div style="font-size:13px;line-height:1.7;margin-bottom:8px">${si.texto}</div>`;
+      if(si.imagen_url||si.imgUrl)h+=`<img src="${si.imagen_url||si.imgUrl}" style="max-width:100%;max-height:160px;object-fit:contain;border:1px solid var(--border);margin-bottom:8px;display:block">`;
+      const siAlts=si.alts||[];
+      LTRS.forEach((L,j)=>{
+        if(!siAlts[j]?.trim())return;
+        const ok=si.sol?.alt===j;
+        h+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;padding:3px 6px;${ok?'background:rgba(201,168,76,.12);':''}">`
+          +`<span style="font-weight:700;color:${ok?'var(--gold)':'#8aaac8'};min-width:20px">${L})</span>`
+          +`<span style="font-size:13px;flex:1">${siAlts[j]}</span>`
+          +(ok?`<span style="font-size:10px;color:var(--gold);font-weight:700">✓</span>`:'')
+          +`</div>`;
+      });
+      if(si.sol?.desarrollo?.trim()){
+        h+=`<div style="background:rgba(201,168,76,.08);border-left:3px solid var(--gold);padding:8px 12px;margin-top:8px">`
+          +`<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:4px">DESARROLLO</div>`
+          +`<div style="font-size:13px;line-height:1.7">${si.sol.desarrollo}</div></div>`;
+      }
+      h+=`</div>`;
+    });
+  }
+  return h;
+}
+
+function bpPrevisualizar(){
+  bpLeerForm();
+  const ed=BP.ed;
+  const matNom=BP.mats.find(m=>m.id===ed.materia_id)?.nombre||'Sin materia';
+  const html=bpHtmlPreviewContent({
+    materia_id:ed.materia_id,subtema:ed.subtema,tipo:ed.tipo,
+    enunciado_texto:ed.enunciado_texto,enunciado_imagen_url:ed.enunciado_imagen_url,
+    enunciado_post:ed.enunciado_post,
+    alts:ed.alts,altImgs:ed.altImgs,sol:ed.sol,subitems:ed.subitems
+  },matNom);
+  const overlay=document.getElementById('bp-prev-overlay');
+  const content=document.getElementById('bp-prev-content');
+  content.innerHTML=html;
+  overlay.style.display='flex';
+  MathJax.startup.promise.then(()=>MathJax.typesetPromise([content]));
+}
+
+async function bpPrevLista(pregId){
+  const overlay=document.getElementById('bp-prev-overlay');
+  const content=document.getElementById('bp-prev-content');
+  content.innerHTML='<div style="color:#8aaac8;font-size:13px">Cargando...</div>';
+  overlay.style.display='flex';
+  const{data:preg,error}=await sb.from('banco_preguntas').select(`
+    id,materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,
+    banco_subitems(id,orden,texto,imagen_url,banco_alternativas(id,orden,texto),banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto)),
+    banco_alternativas(id,orden,texto,imagen_url),
+    banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
+  `).eq('id',pregId).single();
+  if(error||!preg){content.innerHTML='<div style="color:#e55">Error al cargar: '+(error?.message||'no encontrada')+'</div>';return;}
+  const matNom=BP.mats.find(m=>m.id===preg.materia_id)?.nombre||'';
+  const alts=(preg.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
+  const sol=preg.banco_soluciones?.[0]||null;
+  const sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
+  const data={
+    materia_id:preg.materia_id,subtema:preg.subtema||'',tipo:preg.tipo,
+    enunciado_texto:preg.enunciado_texto||'',enunciado_imagen_url:preg.enunciado_imagen_url,
+    enunciado_post:preg.enunciado_post||'',
+    alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
+    altImgs:Array.from({length:5},(_,i)=>alts[i]?.imagen_url||null),
+    sol:{tipo:sol?.tipo||'alternativa',alt:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
+      desarrollo:sol?.desarrollo_texto||'',devImg:sol?.desarrollo_imagen_url||null},
+    subitems:sis.map(si=>{
+      const sa=(si.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
+      const ss=si.banco_soluciones?.[0]||null;
+      return{texto:si.texto||'',imagen_url:si.imagen_url||null,
+        alts:Array.from({length:5},(_,j)=>sa[j]?.texto||''),
+        sol:{alt:ss?.tipo==='alternativa'?(ss.alternativa_correcta??-1):-1,desarrollo:ss?.desarrollo_texto||''}};
+    })
+  };
+  content.innerHTML=bpHtmlPreviewContent(data,matNom);
+  MathJax.startup.promise.then(()=>MathJax.typesetPromise([content]));
 }
 
 async function bpCargarLista(){
@@ -7513,7 +7624,16 @@ function bpRenderLista(){
     el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin preguntas para este filtro</div></div>';
     if(selEl)selEl.textContent='0 seleccionadas';return;
   }
-  el.innerHTML=`<div style="display:grid;gap:6px">
+  // Resumen por subtema
+  const resMap={};
+  for(const p of BP.lista){const s=p.subtema||'(sin subtema)';resMap[s]=(resMap[s]||0)+1;}
+  const matNomR=BP.mats.find(m=>m.id===BP.fMat)?.nombre||'';
+  const resHtml=Object.entries(resMap).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`<span style="font-size:11px;background:var(--navy2);border:1px solid var(--border);padding:3px 10px;white-space:nowrap"><span style="color:var(--gold);font-weight:700">${c}</span> ${gpEsc(s)}</span>`).join('');
+  const resumenBloque=`<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);padding:10px 14px;margin-bottom:14px">
+  <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:7px">${gpEsc(matNomR).toUpperCase()} — ${BP.lista.length} PREGUNTA${BP.lista.length===1?'':'S'}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px">${resHtml}</div>
+</div>`;
+  el.innerHTML=resumenBloque+`<div style="display:grid;gap:6px">
   ${BP.lista.map(p=>{
     const chk=BP.sel.has(p.id)?'checked':'';
     const preview=(p.enunciado_texto||'').slice(0,90)+(p.enunciado_texto?.length>90?'…':'');
@@ -7526,7 +7646,10 @@ function bpRenderLista(){
         <div style="font-size:13px;color:var(--white);line-height:1.4">${gpEsc(preview)||'[imagen]'}</div>
         ${p.enunciado_imagen_url?`<span style="font-size:10px;color:#6a9ac8">📷 con imagen</span>`:''}
       </div>
-      <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;flex-shrink:0;white-space:nowrap" onclick="event.stopPropagation();bpCargarParaEditar('${p.id}')">✏ Editar</button>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="event.stopPropagation();bpPrevLista('${p.id}')">👁 Ver</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="event.stopPropagation();bpCargarParaEditar('${p.id}')">✏ Editar</button>
+      </div>
     </div>`;
   }).join('')}</div>`;
   if(selEl)selEl.textContent=`${BP.sel.size} seleccionada${BP.sel.size===1?'':'s'}`;
@@ -7739,6 +7862,15 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
 }
 // ── FIN ARMAR PRÁCTICA ────────────────────────────────────────────────────────
 </script>
+
+<!-- Modal preview banco de preguntas -->
+<div id="bp-prev-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9998;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--navy2);border:1px solid var(--gold);border-radius:4px;padding:20px 22px;max-width:680px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.6);position:relative">
+    <button onclick="document.getElementById('bp-prev-overlay').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#8aaac8;font-size:20px;cursor:pointer;line-height:1">✕</button>
+    <div style="font-size:10px;color:#8aaac8;letter-spacing:.08em;font-weight:700;margin-bottom:12px;text-transform:uppercase">Vista previa</div>
+    <div id="bp-prev-content" style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--white);line-height:1.6"></div>
+  </div>
+</div>
 
 <!-- Modal de diálogo personalizado -->
 <div id="dlg-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center">
