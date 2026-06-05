@@ -7157,6 +7157,43 @@ const BP={
 const BPINP=`background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:100%;box-sizing:border-box`;
 const BPLBL=`font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block`;
 
+function bpParsearAlternativas(texto){
+  // Detecta líneas que empiezan con A. B. C. D. E. (con posible espaciado)
+  const lines=texto.split('\n');
+  const altIdx={}; // letra -> índice de línea
+  for(let i=0;i<lines.length;i++){
+    const m=lines[i].match(/^([A-E])\.\s*(.*)/);
+    if(m)altIdx[m[1]]={line:i,first:m[2]};
+  }
+  if(!altIdx['A']||!altIdx['E'])return null;
+  const letras=['A','B','C','D','E'].filter(l=>altIdx[l]);
+  // Enunciado = todo lo que está antes de la línea donde empieza A.
+  const firstLine=altIdx['A'].line;
+  const enunciado=lines.slice(0,firstLine).join('\n').trim();
+  // Extraer cada alternativa (puede ocupar varias líneas hasta la siguiente letra)
+  const alts=['','','','',''];
+  for(let k=0;k<letras.length;k++){
+    const L=letras[k];
+    const idx=L.charCodeAt(0)-65;
+    const start=altIdx[L].line;
+    const end=k<letras.length-1?altIdx[letras[k+1]].line:lines.length;
+    alts[idx]=[altIdx[L].first,...lines.slice(start+1,end)].join('\n').trim();
+  }
+  return{enunciado,alts};
+}
+
+function bpOnPaste(e){
+  const raw=e.clipboardData?.getData('text')||'';
+  const parsed=bpParsearAlternativas(raw);
+  if(!parsed)return; // sin patrón A-E → paste normal
+  e.preventDefault();
+  bpLeerForm();
+  BP.ed.enunciado_texto=parsed.enunciado;
+  parsed.alts.forEach((a,i)=>{BP.ed.alts[i]=a;});
+  bpRenderUI();
+  showToast('✓ Enunciado y alternativas A–E detectadas y distribuidas automáticamente');
+}
+
 async function bpIniciar(){
   if(!BP.init){
     if(!allMaterias.length)await loadMaterias();
@@ -7235,7 +7272,7 @@ function bpRenderUI(){
   <!-- Enunciado -->
   <div style="background:var(--navy2);border:1px solid var(--border);padding:16px;margin-bottom:14px">
     <label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>
-    <textarea id="bp-enunciado" rows="4" style="${BPINP};resize:vertical;margin-bottom:8px">${gpEsc(ed.enunciado_texto||'')}</textarea>
+    <textarea id="bp-enunciado" rows="4" style="${BPINP};resize:vertical;margin-bottom:8px" onpaste="bpOnPaste(event)">${gpEsc(ed.enunciado_texto||'')}</textarea>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
       <label class="btn btn-outline" style="cursor:pointer;font-size:11px;padding:5px 12px;margin:0">
         📷 Imagen enunciado<input type="file" accept="image/*" style="display:none" onchange="bpUploadEnunciado(this)">
