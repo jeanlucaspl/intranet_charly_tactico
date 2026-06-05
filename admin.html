@@ -7157,9 +7157,22 @@ const BP={
 const BPINP=`background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:100%;box-sizing:border-box`;
 const BPLBL=`font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block`;
 
+function bpJoinLines(lines){
+  // Une líneas: si termina en guion (corte de palabra) lo elimina y une directo,
+  // si no termina en guion agrega un espacio entre líneas.
+  return lines.reduce((acc,line,i)=>{
+    if(i===0)return line;
+    if(acc.endsWith('-'))return acc.slice(0,-1)+line;
+    return acc+' '+line;
+  },'').trim();
+}
+
 function bpParsearAlternativas(texto){
   // Detecta líneas que empiezan con A. B. C. D. E. (con posible espaciado)
-  const lines=texto.split('\n');
+  const lines=texto.split('\n').map(l=>l.trim()).filter((l,i,a)=>{
+    // Elimina líneas vacías que no sean separadores entre bloques
+    return l!==''||i===0;
+  });
   const altIdx={}; // letra -> índice de línea
   for(let i=0;i<lines.length;i++){
     const m=lines[i].match(/^([A-E])\.\s*(.*)/);
@@ -7169,15 +7182,16 @@ function bpParsearAlternativas(texto){
   const letras=['A','B','C','D','E'].filter(l=>altIdx[l]);
   // Enunciado = todo lo que está antes de la línea donde empieza A.
   const firstLine=altIdx['A'].line;
-  const enunciado=lines.slice(0,firstLine).join('\n').trim();
-  // Extraer cada alternativa (puede ocupar varias líneas hasta la siguiente letra)
+  const enunciado=bpJoinLines(lines.slice(0,firstLine).filter(l=>l!==''));
+  // Extraer cada alternativa con join inteligente
   const alts=['','','','',''];
   for(let k=0;k<letras.length;k++){
     const L=letras[k];
     const idx=L.charCodeAt(0)-65;
     const start=altIdx[L].line;
     const end=k<letras.length-1?altIdx[letras[k+1]].line:lines.length;
-    alts[idx]=[altIdx[L].first,...lines.slice(start+1,end)].join('\n').trim();
+    const altLines=[altIdx[L].first,...lines.slice(start+1,end)].filter(l=>l!=='');
+    alts[idx]=bpJoinLines(altLines);
   }
   return{enunciado,alts};
 }
