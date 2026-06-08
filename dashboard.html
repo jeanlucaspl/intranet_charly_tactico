@@ -877,7 +877,18 @@ function handleAndroidBack(){
   else{closeSb();if(window.AndroidNative)AndroidNative.requestExit();}
 }
 // Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
-(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
+// En iOS se omite el swipe-to-open desde borde izquierdo porque Safari lo interpreta como "ir atrás"
+(function(){
+  let sx=0,sy=0;
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&navigator.maxTouchPoints>0;
+  document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);
+    if(dy>60)return;
+    if(!isIOS&&dx>60&&sx<50)toggleSb();
+    else if(dx<-60)closeSb();
+  },{passive:true});
+})();
 function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 
 // ── SOLICITUD UBICACIÓN (recibida del padre) ──

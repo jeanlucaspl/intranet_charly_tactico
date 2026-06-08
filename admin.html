@@ -2545,10 +2545,22 @@ function _pdfFooter(doc){
   doc.text('CHARLY TÁCTICO — SISTEMA INTRANET',W/2,H-8,{align:'center'});
 }
 
+// Toast flotante no bloqueante (auto-cierra en ms milisegundos)
+function _toast(msg,ms=6000){
+  let t=document.getElementById('_toast-el');
+  if(!t){
+    t=document.createElement('div');t.id='_toast-el';
+    t.style.cssText='position:fixed;bottom:max(80px,env(safe-area-inset-bottom,80px));left:50%;transform:translateX(-50%);background:#0d1a0e;color:#c9a84c;border:1px solid #c9a84c55;padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;max-width:85vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.6);transition:opacity .4s;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._tid);t._tid=setTimeout(()=>{t.style.opacity='0';},ms);
+}
+
 // Guarda el PDF según plataforma:
 // - Android app (WebView): pasa base64 al método nativo AndroidNative.savePdfBase64
-// - Desktop: <a download>.click()
-// - iOS / otro mobile: window.location.href al bloburl
+// - iOS: abre en nueva pestaña (visor PDF de Safari) + toast con instrucción para guardar
+// - Android sin interfaz nativa / Desktop: <a download>.click()
 function _pdfSave(doc,filename){
   const base64=doc.output('datauristring').split(',')[1];
   // Android WebView con interfaz nativa
@@ -2558,8 +2570,16 @@ function _pdfSave(doc,filename){
   }
   const blob=doc.output('blob');
   const url=URL.createObjectURL(blob);
-  // iOS / mobile sin interfaz nativa: abrir en visor del navegador
-  if(/iPad|iPhone|iPod|Android/i.test(navigator.userAgent)){
+  // iOS: abrir en nueva pestaña; el usuario puede guardar tocando ↑ Compartir → "Guardar en Archivos"
+  if(/iPad|iPhone|iPod/i.test(navigator.userAgent)){
+    const w=window.open(url,'_blank');
+    if(!w)window.location.href=url; // fallback si popup bloqueado
+    setTimeout(()=>URL.revokeObjectURL(url),20000);
+    _toast('Toca el ícono ↑ Compartir → "Guardar en Archivos" para guardar el PDF en tu iPhone');
+    return;
+  }
+  // Android sin app nativa
+  if(/Android/i.test(navigator.userAgent)){
     window.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),8000);return;
   }
   // Desktop
@@ -6188,7 +6208,18 @@ async function handleAndroidBack(){
   else{closeSb();if(window.AndroidNative)AndroidNative.requestExit();}
 }
 // Swipe táctil: arrastrar derecha desde borde izquierdo abre sidebar, arrastrar izquierda la cierra
-(function(){let sx=0,sy=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dy>60)return;if(dx>60&&sx<50)toggleSb();else if(dx<-60)closeSb();},{passive:true});})();
+// En iOS se omite el swipe-to-open desde borde izquierdo porque Safari lo interpreta como "ir atrás"
+(function(){
+  let sx=0,sy=0;
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&navigator.maxTouchPoints>0;
+  document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);
+    if(dy>60)return;
+    if(!isIOS&&dx>60&&sx<50)toggleSb();
+    else if(dx<-60)closeSb();
+  },{passive:true});
+})();
 function showMsg(el,txt,type){el.textContent=txt;el.className=`msg ${type} show`}
 function doLogout(){ sb.auth.signOut(); location.replace('index.html'); }
 
