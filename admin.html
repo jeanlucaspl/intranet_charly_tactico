@@ -6143,6 +6143,7 @@ let _mdStack=[];
 function openMd(id){
   document.getElementById(id).classList.add('show');
   _mdStack.push(id);
+  if(id==='md-web-noticia') wn_openNew();
   // Inicializar fecha de hoy en modales con campo fecha
   if(id==='md-pago'){
     const hoy=new Date().toISOString().slice(0,10);
@@ -6199,6 +6200,7 @@ function showPanel(id,btn){
   if(id==='armar-practica') gpIniciar();
   if(id==='banco') bpIniciar();
   if(id==='historico') histInitFechas();
+  if(id==='web-noticias') wn_loadList();
 }
 function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')}
 function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show')}
@@ -8230,18 +8232,6 @@ async function wn_save() {
   }
 }
 
-// Hook al showPanel para cargar la lista al entrar
-const _origShowPanel = showPanel;
-function showPanel(id, el) {
-  _origShowPanel(id, el);
-  if (id === 'web-noticias') wn_loadList();
-}
-// Hook al openMd para inicializar el form de noticia
-const _origOpenMd = openMd;
-function openMd(id) {
-  if (id === 'md-web-noticia') wn_openNew();
-  _origOpenMd(id);
-}
 </script>
 
 <!-- Toast global -->
