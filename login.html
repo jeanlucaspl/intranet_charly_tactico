@@ -142,8 +142,8 @@ history.replaceState(null,'',location.href);
 const _params=new URLSearchParams(location.search);
 if(_params.get('from')==='web'){
   const tabAdmin=document.querySelector('.tab[data-tab="admin"]');
-  if(tabAdmin)tabAdmin.remove();
-  document.getElementById('f-admin').remove();
+  if(tabAdmin)tabAdmin.style.display='none';
+  document.getElementById('f-admin').style.display='none';
   const back=document.querySelector('.back');
   if(back)back.href='index.html?from=web';
 }
