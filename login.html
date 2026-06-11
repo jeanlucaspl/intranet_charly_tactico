@@ -138,9 +138,19 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 // dashboards nunca regrese a esta página mostrando la sesión anterior
 history.replaceState(null,'',location.href);
 
+// Ocultar tab Admin si viene de la web pública
+const _params=new URLSearchParams(location.search);
+if(_params.get('from')==='web'){
+  const tabAdmin=document.querySelector('.tab[data-tab="admin"]');
+  if(tabAdmin)tabAdmin.remove();
+  document.getElementById('f-admin').remove();
+  const back=document.querySelector('.back');
+  if(back)back.href='index.html?from=web';
+}
+
 // Lee ?rol= del URL para mostrar la pestaña correcta
-const p=new URLSearchParams(location.search).get('rol')||'alumno';
-const tabInicial=p==='admin'?'admin':p==='padre'?'padre':p==='profesor'?'profesor':'alumno';
+const p=_params.get('rol')||'alumno';
+const tabInicial=p==='admin'?'alumno':p==='padre'?'padre':p==='profesor'?'profesor':'alumno';
 
 // Verificar si ya hay sesión ANTES de mostrar cualquier cosa
 // Siempre cerrar sesión al llegar al login

@@ -543,6 +543,11 @@
       portals.style.gridTemplateColumns='repeat(3,1fr)';
       portals.style.maxWidth='720px';
     }
+    // Pasar ?from=web a los links de login
+    document.querySelectorAll('#portales a').forEach(a=>{
+      const h=a.getAttribute('href');
+      if(h&&h.startsWith('login.html'))a.setAttribute('href',h+'&from=web');
+    });
   }
 </script>
 </body>
