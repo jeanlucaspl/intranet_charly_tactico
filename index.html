@@ -538,6 +538,11 @@
   if(new URLSearchParams(location.search).get('from')==='web'){
     const card=document.querySelector('a[href="login.html?rol=admin"]');
     if(card)card.remove();
+    const portals=document.getElementById('portales');
+    if(portals){
+      portals.style.gridTemplateColumns='repeat(3,1fr)';
+      portals.style.maxWidth='720px';
+    }
   }
 </script>
 </body>
