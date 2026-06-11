@@ -140,12 +140,12 @@ history.replaceState(null,'',location.href);
 
 // Ocultar tab Admin si viene de la web pública
 const _params=new URLSearchParams(location.search);
-if(_params.get('from')==='web'){
+if(location.hostname==='portal.charlytacticotedax.com'){
   const tabAdmin=document.querySelector('.tab[data-tab="admin"]');
   if(tabAdmin)tabAdmin.style.display='none';
   document.getElementById('f-admin').style.display='none';
   const back=document.querySelector('.back');
-  if(back)back.href='index.html?from=web';
+  if(back)back.href='index.html';
 }
 
 // Lee ?rol= del URL para mostrar la pestaña correcta

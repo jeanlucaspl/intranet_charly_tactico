@@ -535,7 +535,7 @@
   </footer>
 
 <script>
-  if(new URLSearchParams(location.search).get('from')==='web'){
+  if(location.hostname==='portal.charlytacticotedax.com'){
     const card=document.querySelector('a[href="login.html?rol=admin"]');
     if(card)card.remove();
     const portals=document.getElementById('portales');
