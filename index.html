@@ -534,5 +534,11 @@
     <div class="footer-copy">© 2026 · Academia Pre-Cadetes · Todos los derechos reservados</div>
   </footer>
 
+<script>
+  if(new URLSearchParams(location.search).get('from')==='web'){
+    const card=document.querySelector('a[href="login.html?rol=admin"]');
+    if(card)card.remove();
+  }
+</script>
 </body>
 </html>
