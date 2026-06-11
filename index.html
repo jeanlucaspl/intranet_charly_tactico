@@ -406,10 +406,16 @@
       .hero-divider { margin: 28px auto; }
 
       /* portals */
-      .portals { grid-template-columns: 1fr 1fr; gap: 2px; }
-      .portal-card { padding: 24px 20px; gap: 10px; }
+      .portals { grid-template-columns: 1fr; gap: 2px; }
+      .portal-card {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 18px;
+      }
+      .portal-card > .portal-desc { display: none; }
+      .portal-card > .portal-arrow { margin-top: 0; margin-left: auto; flex-shrink: 0; }
       .portal-title { font-size: 22px; }
-      .portal-desc { font-size: 12px; }
 
       /* stats */
       .stats { flex-wrap: wrap; margin-top: 48px; }
