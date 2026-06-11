@@ -385,6 +385,12 @@
       <button class="sb-link" onclick="showPanel('contrasenas',this)">Contraseñas</button>
     </div>
   </div>
+  <div class="sb-section sb-collapsible collapsed" id="sec-web">
+    <div class="sb-label has-toggle" onclick="toggleSection('sec-web')">Web <span class="sec-arrow">&#9662;</span></div>
+    <div class="sb-section-body">
+      <button class="sb-link" onclick="showPanel('web-noticias',this)">🗞️ Noticias</button>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeSb()"></div>
@@ -1008,6 +1014,15 @@
     <div id="d-profesores-activos"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
     <div id="d-profesores-deshabilitados" style="display:none"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
   </div>
+</div>
+
+<!-- ══ WEB — NOTICIAS ══ -->
+<div class="panel" id="panel-web-noticias">
+  <div class="ph">
+    <div class="ph-left"><div class="eye">Página Web</div><div class="ttl">NOTICIAS</div></div>
+    <button class="btn btn-gold" onclick="openMd('md-web-noticia')">+ Nueva Noticia</button>
+  </div>
+  <div id="web-not-list"><div class="empty"><div class="ei">🗞️</div><div class="et">Cargando noticias…</div></div></div>
 </div>
 
 </div></div><!-- end layout -->
@@ -8023,6 +8038,210 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
   }
 }
 // ── FIN ARMAR PRÁCTICA ────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WEB — NOTICIAS
+// ══════════════════════════════════════════════════════════════════════════════
+const GH_REPO = 'jeanlucaspl/charly_tactico_web';
+const WEB_BASE = 'https://www.charlytacticotedax.com';
+let _wn_editId = null;
+let _wn_imgs_files = [];
+let _wn_vids_files = [];
+
+function wn_previewFiles(input, namesId, dropId, type) {
+  const files = Array.from(input.files);
+  if (type === 'imgs') _wn_imgs_files = files;
+  else _wn_vids_files = files;
+  document.getElementById(namesId).textContent = files.map(f => f.name).join(', ') || '';
+  document.getElementById(dropId).style.borderColor = files.length ? 'var(--gold)' : '';
+}
+
+async function wn_loadList() {
+  const el = document.getElementById('web-not-list');
+  try {
+    const {data, error} = await sb.from('noticias').select('*').order('fecha', {ascending: false});
+    if (error) throw error;
+    if (!data.length) { el.innerHTML = '<div class="empty"><div class="ei">🗞️</div><div class="et">No hay noticias publicadas todavía.</div></div>'; return; }
+    const rows = data.map(n => `
+      <tr>
+        <td style="padding:10px 12px;font-size:13px;color:var(--gold);white-space:nowrap">${n.fecha}</td>
+        <td style="padding:10px 12px;font-size:13px;font-weight:600">${n.titulo}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--muted)">${(n.imagenes||[]).length} img · ${(n.videos||[]).length} vid</td>
+        <td style="padding:10px 12px;white-space:nowrap">
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px" onclick="wn_edit(${n.id})">Editar</button>
+          <button class="btn" style="font-size:11px;padding:4px 10px;background:var(--red,#c0392b);color:#fff;margin-left:4px" onclick="wn_delete(${n.id},'${n.titulo.replace(/'/g,"\\'")}')" >Eliminar</button>
+        </td>
+      </tr>`).join('');
+    el.innerHTML = `<div class="tw"><table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border)">FECHA</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border)">TÍTULO</th>
+        <th style="text-align:left;padding:8px 12px;font-size:11px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border)">MEDIA</th>
+        <th style="border-bottom:1px solid var(--border)"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="et">Error al cargar noticias: ${e.message}</div></div>`;
+  }
+}
+
+function wn_openNew() {
+  _wn_editId = null;
+  _wn_imgs_files = []; _wn_vids_files = [];
+  document.getElementById('mdwn-ttl-lbl').textContent = 'NUEVA NOTICIA';
+  document.getElementById('wn-titulo').value = '';
+  document.getElementById('wn-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('wn-cuerpo').value = '';
+  document.getElementById('wn-imgs-names').textContent = '';
+  document.getElementById('wn-vids-names').textContent = '';
+  document.getElementById('wn-imgs').value = '';
+  document.getElementById('wn-vids').value = '';
+  document.getElementById('wn-imgs-drop').style.borderColor = '';
+  document.getElementById('wn-vids-drop').style.borderColor = '';
+  document.getElementById('msg-web-noticia').textContent = '';
+  const savedToken = localStorage.getItem('gh_web_token') || '';
+  document.getElementById('wn-token').value = savedToken;
+  document.getElementById('wn-token-wrap').style.display = savedToken ? 'none' : '';
+  document.getElementById('wn-save-btn').textContent = 'PUBLICAR NOTICIA';
+}
+
+async function wn_edit(id) {
+  const {data, error} = await sb.from('noticias').select('*').eq('id', id).single();
+  if (error || !data) { showToast('Error al cargar noticia'); return; }
+  _wn_editId = id;
+  _wn_imgs_files = []; _wn_vids_files = [];
+  document.getElementById('mdwn-ttl-lbl').textContent = 'EDITAR NOTICIA';
+  document.getElementById('wn-titulo').value = data.titulo;
+  document.getElementById('wn-fecha').value = data.fecha;
+  document.getElementById('wn-cuerpo').value = data.cuerpo || '';
+  document.getElementById('wn-imgs-names').textContent = (data.imagenes||[]).map(i=>i.nombre).join(', ') || '';
+  document.getElementById('wn-vids-names').textContent = (data.videos||[]).map(v=>v.nombre).join(', ') || '';
+  document.getElementById('wn-imgs').value = '';
+  document.getElementById('wn-vids').value = '';
+  document.getElementById('msg-web-noticia').textContent = '';
+  const savedToken = localStorage.getItem('gh_web_token') || '';
+  document.getElementById('wn-token').value = savedToken;
+  document.getElementById('wn-token-wrap').style.display = savedToken ? 'none' : '';
+  document.getElementById('wn-save-btn').textContent = 'GUARDAR CAMBIOS';
+  openMd('md-web-noticia');
+}
+
+async function wn_delete(id, titulo) {
+  customConfirm(`¿Eliminar la noticia "${titulo}"?`, async () => {
+    const {error} = await sb.from('noticias').delete().eq('id', id);
+    if (error) { showToast('Error al eliminar'); return; }
+    showToast('Noticia eliminada');
+    wn_loadList();
+  });
+}
+
+async function wn_uploadToGithub(file, path, token) {
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const resp = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: {'Authorization': `token ${token}`, 'Content-Type': 'application/json'},
+    body: JSON.stringify({message: `noticia: subir media ${path}`, content: base64})
+  });
+  if (!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.message || `Error al subir ${file.name}`);
+  }
+  const d = await resp.json();
+  // Devuelve URL del sitio web (GitHub Pages) en vez de raw GitHub
+  return WEB_BASE + '/' + d.content.path;
+}
+
+function wn_makeSlug(titulo) {
+  return titulo.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+}
+
+async function wn_save() {
+  const titulo = document.getElementById('wn-titulo').value.trim();
+  const fecha  = document.getElementById('wn-fecha').value;
+  const cuerpo = document.getElementById('wn-cuerpo').value.trim();
+  const msgEl  = document.getElementById('msg-web-noticia');
+  const btn    = document.getElementById('wn-save-btn');
+
+  if (!titulo || !fecha) { msgEl.textContent = 'Título y fecha son obligatorios.'; msgEl.className = 'msg error'; return; }
+
+  let token = document.getElementById('wn-token').value.trim() || localStorage.getItem('gh_web_token') || '';
+  const hasNewMedia = _wn_imgs_files.length || _wn_vids_files.length;
+  if (hasNewMedia && !token) { msgEl.textContent = 'Ingresa el GitHub Token para subir archivos.'; msgEl.className = 'msg error'; return; }
+  if (token) localStorage.setItem('gh_web_token', token);
+
+  btn.disabled = true; btn.textContent = 'Subiendo…';
+  msgEl.textContent = ''; msgEl.className = 'msg';
+
+  try {
+    const slug = wn_makeSlug(titulo);
+    const folder = `noticias/${fecha}-${slug}`;
+    let imagenes = [];
+    let videos   = [];
+
+    // Si es edición y no hay archivos nuevos, mantener los existentes
+    if (_wn_editId && !hasNewMedia) {
+      const {data: existing} = await sb.from('noticias').select('imagenes,videos').eq('id', _wn_editId).single();
+      imagenes = existing?.imagenes || [];
+      videos   = existing?.videos   || [];
+    }
+
+    // Subir imágenes nuevas
+    for (let i = 0; i < _wn_imgs_files.length; i++) {
+      const f = _wn_imgs_files[i];
+      btn.textContent = `Subiendo imagen ${i+1}/${_wn_imgs_files.length}…`;
+      const url = await wn_uploadToGithub(f, `${folder}/${f.name}`, token);
+      imagenes.push({url, nombre: f.name});
+    }
+    // Subir videos nuevos
+    for (let i = 0; i < _wn_vids_files.length; i++) {
+      const f = _wn_vids_files[i];
+      btn.textContent = `Subiendo video ${i+1}/${_wn_vids_files.length}…`;
+      const url = await wn_uploadToGithub(f, `${folder}/${f.name}`, token);
+      videos.push({url, nombre: f.name});
+    }
+
+    btn.textContent = 'Guardando…';
+    const payload = {titulo, fecha, cuerpo, imagenes, videos};
+    let error;
+    if (_wn_editId) {
+      ({error} = await sb.from('noticias').update(payload).eq('id', _wn_editId));
+    } else {
+      ({error} = await sb.from('noticias').insert(payload));
+    }
+    if (error) throw new Error(error.message);
+
+    showToast(_wn_editId ? 'Noticia actualizada' : 'Noticia publicada');
+    closeMd('md-web-noticia');
+    wn_loadList();
+  } catch(e) {
+    msgEl.textContent = e.message || 'Error inesperado';
+    msgEl.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = _wn_editId ? 'GUARDAR CAMBIOS' : 'PUBLICAR NOTICIA';
+  }
+}
+
+// Hook al showPanel para cargar la lista al entrar
+const _origShowPanel = showPanel;
+function showPanel(id, el) {
+  _origShowPanel(id, el);
+  if (id === 'web-noticias') wn_loadList();
+}
+// Hook al openMd para inicializar el form de noticia
+const _origOpenMd = openMd;
+function openMd(id) {
+  if (id === 'md-web-noticia') wn_openNew();
+  _origOpenMd(id);
+}
 </script>
 
 <!-- Toast global -->
@@ -8034,6 +8253,48 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
     <button onclick="document.getElementById('bp-prev-overlay').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#8aaac8;font-size:20px;cursor:pointer;line-height:1">✕</button>
     <div style="font-size:10px;color:#8aaac8;letter-spacing:.08em;font-weight:700;margin-bottom:12px;text-transform:uppercase">Vista previa</div>
     <div id="bp-prev-content" style="font-family:'Barlow',sans-serif;font-size:14px;color:var(--white);line-height:1.6"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL NUEVA NOTICIA WEB ═══ -->
+<div class="mo" id="md-web-noticia">
+  <div class="md" style="max-width:620px">
+    <div class="md-hd">
+      <div class="md-ttl" id="mdwn-ttl-lbl">NUEVA NOTICIA</div>
+      <button class="md-x" onclick="closeMd('md-web-noticia')"></button>
+    </div>
+    <div class="md-bd">
+      <div class="msg" id="msg-web-noticia"></div>
+      <div class="fgrid">
+        <div class="fg full"><label>Título</label><input type="text" id="wn-titulo" placeholder="Ej: Ceremonia de ingresantes 2026"/></div>
+        <div class="fg"><label>Fecha</label><input type="date" id="wn-fecha"/></div>
+        <div class="fg full"><label>Cuerpo / Descripción</label><textarea id="wn-cuerpo" rows="5" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:10px;resize:vertical;font-family:'Barlow',sans-serif" placeholder="Descripción completa de la noticia…"></textarea></div>
+        <div class="fg full">
+          <label>Imágenes</label>
+          <div class="file-drop" onclick="document.getElementById('wn-imgs').click()" id="wn-imgs-drop">
+            <div>📷 Haz clic o arrastra imágenes aquí</div>
+            <div id="wn-imgs-names" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+          </div>
+          <input type="file" id="wn-imgs" accept="image/*" multiple style="display:none" onchange="wn_previewFiles(this,'wn-imgs-names','wn-imgs-drop','imgs')">
+        </div>
+        <div class="fg full">
+          <label>Videos</label>
+          <div class="file-drop" onclick="document.getElementById('wn-vids').click()" id="wn-vids-drop">
+            <div>🎬 Haz clic o arrastra videos aquí</div>
+            <div id="wn-vids-names" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+          </div>
+          <input type="file" id="wn-vids" accept="video/*" multiple style="display:none" onchange="wn_previewFiles(this,'wn-vids-names','wn-vids-drop','vids')">
+        </div>
+        <div class="fg full" id="wn-token-wrap">
+          <label>GitHub Token <span style="color:var(--muted);font-size:11px;font-weight:400">(se guarda en este navegador)</span></label>
+          <input type="password" id="wn-token" placeholder="ghp_…" style="font-family:monospace"/>
+        </div>
+      </div>
+    </div>
+    <div class="md-ft">
+      <button class="btn btn-outline" onclick="closeMd('md-web-noticia')">Cancelar</button>
+      <button class="btn btn-gold" id="wn-save-btn" onclick="wn_save()">PUBLICAR NOTICIA</button>
+    </div>
   </div>
 </div>
 
