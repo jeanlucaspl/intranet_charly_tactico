@@ -103,6 +103,8 @@
     }
 
     /* ── PORTAL CARDS ── */
+    .portals-3col { grid-template-columns: repeat(3,1fr) !important; max-width:720px !important; }
+    @media(max-width:767px){ .portals-3col { grid-template-columns: 1fr !important; max-width:100% !important; } }
     .portals {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -545,10 +547,7 @@
     const card=document.querySelector('a[href="login.html?rol=admin"]');
     if(card)card.remove();
     const portals=document.getElementById('portales');
-    if(portals){
-      portals.style.gridTemplateColumns='repeat(3,1fr)';
-      portals.style.maxWidth='720px';
-    }
+    if(portals) portals.classList.add('portals-3col');
     // Pasar ?from=web a los links de login
     document.querySelectorAll('#portales a').forEach(a=>{
       const h=a.getAttribute('href');
