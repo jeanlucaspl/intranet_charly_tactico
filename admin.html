@@ -1020,7 +1020,10 @@
 <div class="panel" id="panel-web-noticias">
   <div class="ph">
     <div class="ph-left"><div class="eye">Página Web</div><div class="ttl">NOTICIAS</div></div>
-    <button class="btn btn-gold" onclick="openMd('md-web-noticia')">+ Nueva Noticia</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" id="btn-fix-not1" onclick="wn_fixNoticia1()">🔧 Reparar URLs #1</button>
+      <button class="btn btn-gold" onclick="openMd('md-web-noticia')">+ Nueva Noticia</button>
+    </div>
   </div>
   <div id="web-not-list"><div class="empty"><div class="ei">🗞️</div><div class="et">Cargando noticias…</div></div></div>
 </div>
@@ -8040,6 +8043,31 @@ async function gpGenerarSolucionario(doc,solMap,titulo,fechaHoy){
   }
 }
 // ── FIN ARMAR PRÁCTICA ────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FIX TEMPORAL — reparar URLs rotas de noticia #1
+async function wn_fixNoticia1() {
+  const btn = document.getElementById('btn-fix-not1');
+  btn.disabled = true; btn.textContent = 'Reparando…';
+  const BASE = 'https://www.charlytacticotedax.com/noticias/2026-06-11-ingresantes/';
+  const imagenes = [
+    {url: BASE+'img1.jpeg', nombre:'img1.jpeg'},
+    {url: BASE+'img2.jpeg', nombre:'img2.jpeg'},
+    {url: BASE+'img3.jpeg', nombre:'img3.jpeg'},
+    {url: BASE+'img4.jpeg', nombre:'img4.jpeg'},
+    {url: BASE+'palabras_director.png', nombre:'palabras_director.png'}
+  ];
+  const videos = [
+    {url: BASE+'vid1.mp4', nombre:'vid1.mp4'},
+    {url: BASE+'vid2.mp4', nombre:'vid2.mp4'},
+    {url: BASE+'vid3.mp4', nombre:'vid3.mp4'}
+  ];
+  const {error} = await sb.from('noticias').update({imagenes, videos}).eq('id', 1);
+  if (error) { showToast('Error: ' + error.message); btn.disabled=false; btn.textContent='🔧 Reparar URLs #1'; return; }
+  showToast('✅ URLs reparadas correctamente');
+  btn.textContent = '✅ Reparado';
+  wn_loadList();
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WEB — NOTICIAS
