@@ -6606,7 +6606,7 @@ function gpRenderUI(){
           onchange="GP.secciones[${si}].materia_id=this.value;GP.secciones[${si}].nombre=this.options[this.selectedIndex].text;gpRefreshBadge()">
           ${allMaterias.map(m=>`<option value="${m.id}" style="background:var(--navy2)" ${m.id==sec.materia_id?'selected':''}>${m.nombre}</option>`).join('')}
         </select>
-        ${GP.secciones.length>1?`<button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="gpDelSec(${si})">✕ Sección</button>`:''}
+        <button class="btn btn-red" style="padding:4px 8px;font-size:10px" onclick="gpDelSec(${si})">✕ Sección</button>
       </div>
       <div style="padding:11px 13px;display:flex;flex-direction:column;gap:9px">
         ${sec.items.map((item,ii)=>{
@@ -6820,7 +6820,11 @@ function gpAddSI(si,ii){GP.secciones[si].items[ii].si.push('');gpRenderUI();}
 function gpDelSI(si,ii,sii){GP.secciones[si].items[ii].si.splice(sii,1);gpRenderUI();}
 function gpAddSec(){GP.secciones.push({nombre:allMaterias[0]?.nombre||'Nueva Sección',materia_id:allMaterias[0]?.id||null,
   items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]});gpRenderUI();}
-function gpDelSec(si){if(GP.secciones.length===1)return;GP.secciones.splice(si,1);gpRenderUI();}
+function gpDelSec(si){
+  GP.secciones.splice(si,1);
+  if(!GP.secciones.length)GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
+  gpRenderUI();
+}
 function gpSetPages(n){GP.targetPages=n;GP.cfg.colsForzar=0;gpRenderUI();}
 function gpSetColsForzar(n){GP.cfg.colsForzar=(GP.cfg.colsForzar===n?0:n);gpRenderUI();}
 
