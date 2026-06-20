@@ -7341,6 +7341,7 @@ function bpRenderUI(){
   <!-- Enunciado -->
   <div style="background:var(--navy2);border:1px solid var(--border);padding:16px;margin-bottom:14px">
     <label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>
+    ${BP_FMT_BAR('bp-enunciado')}
     <textarea id="bp-enunciado" rows="4" style="${BPINP};resize:vertical;margin-bottom:8px" onpaste="bpOnPaste(event)">${gpEsc(ed.enunciado_texto||'')}</textarea>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
       <label class="btn btn-outline" style="cursor:pointer;font-size:11px;padding:5px 12px;margin:0">
@@ -7430,6 +7431,7 @@ function bpHtmlSubitems(){
     <span style="font-weight:700;color:var(--gold);font-size:13px">Sub-pregunta ${i+1}</span>
     <button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="bpDelSubitem(${i})">✕ Eliminar</button>
   </div>
+  ${BP_FMT_BAR(`bp-si-texto-${i}`)}
   <textarea id="bp-si-texto-${i}" rows="3" style="${BPINP};resize:vertical;margin-bottom:10px" placeholder="Texto de la sub-pregunta (LaTeX: $...$)...">${gpEsc(si.texto||'')}</textarea>
   ${['A','B','C','D','E'].map((L,j)=>`
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
@@ -7445,6 +7447,26 @@ function bpHtmlSubitems(){
     <textarea id="bp-si-dev-${i}" rows="2" style="${BPINP};resize:vertical" placeholder="Desarrollo (solo si corresponde, acepta LaTeX)...">${gpEsc(si.sol?.desarrollo||'')}</textarea>
   </div>
 </div>`).join('')||'<div style="color:#4a5a6a;font-size:13px;padding:10px 0">Agrega sub-preguntas usando el botón de abajo.</div>';
+}
+
+const BP_FMT_BTN=`display:inline-flex;align-items:center;justify-content:center;width:28px;height:24px;border:1px solid var(--border);background:transparent;color:var(--white);cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px`;
+const BP_FMT_BAR=(id)=>`<div style="display:flex;gap:4px;margin-bottom:6px">
+  <button style="${BP_FMT_BTN};font-weight:700" title="Negrita (\\textbf{})" onmousedown="event.preventDefault();bpFormatSel('bold','${id}')"><b>B</b></button>
+  <button style="${BP_FMT_BTN};font-style:italic" title="Cursiva (\\textit{})" onmousedown="event.preventDefault();bpFormatSel('italic','${id}')"><i>I</i></button>
+  <button style="${BP_FMT_BTN};text-decoration:underline" title="Subrayado (\\underline{})" onmousedown="event.preventDefault();bpFormatSel('under','${id}')"><u>S</u></button>
+</div>`;
+
+function bpFormatSel(cmd,inputId){
+  const ta=document.getElementById(inputId);
+  if(!ta)return;
+  const s=ta.selectionStart,e=ta.selectionEnd;
+  const sel=ta.value.slice(s,e);
+  if(!sel)return;
+  const cmds={bold:`\\textbf{${sel}}`,italic:`\\textit{${sel}}`,under:`\\underline{${sel}}`};
+  const wrapped=cmds[cmd];
+  ta.value=ta.value.slice(0,s)+wrapped+ta.value.slice(e);
+  ta.focus();
+  ta.setSelectionRange(s+wrapped.length,s+wrapped.length);
 }
 
 function bpOnMateriaChange(val){
