@@ -7078,34 +7078,40 @@ async function generarPracticaPDF(){
     let imgIdx=0;
 
     const drawTexto=(item)=>{
-      const tw=gpCW(nc)-8;
+      if(!item.texto?.trim())return;
+      const tw=gpCW(nc)-4;
       const lh=gpLHn(nc);
       const fs=gpFSn(nc)-0.5;
       doc.setFont('helvetica','italic');doc.setFontSize(fs);
-      const allLines=doc.splitTextToSize(item.texto||'',tw-4);
-      const labelH=item.etiqueta?5:0;
-      // Split lines across columns/pages
+      const allLines=doc.splitTextToSize(item.texto.trim(),tw);
       let remaining=[...allLines];
-      let first=true;
       while(remaining.length){
         const cx=colXs[curCol];
         const avail=gpFOOT-curY;
-        const labelNow=first&&labelH?labelH:0;
-        const maxLines=Math.max(1,Math.floor((avail-labelNow-8)/lh));
+        const maxLines=Math.max(1,Math.floor((avail-4)/lh));
         const chunk=remaining.splice(0,maxLines);
-        const boxH=chunk.length*lh+labelNow+8;
-        doc.setFillColor(245,246,248);doc.setDrawColor(150,155,165);doc.setLineWidth(.3);
-        doc.rect(cx,curY,cw,boxH,'FD');
-        if(first&&item.etiqueta){
-          doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(80,85,95);
-          doc.text((item.etiqueta).toUpperCase(),cx+4,curY+4.5);
-        }
-        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(35,40,50);
-        doc.text(chunk,cx+4,curY+labelNow+6);
-        curY+=boxH+2;
-        first=false;
+        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+        doc.text(chunk,cx+2,curY+lh);
+        curY+=chunk.length*lh+3;
         if(remaining.length)moveNext();
       }
+    };
+
+    const drawSubtema=(nombre)=>{
+      const dh=5;
+      if(curY+dh>gpFOOT)moveNext();
+      const cx=colXs[curCol];
+      const mid=curY+3;
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?7:6.5);doc.setTextColor(20,20,20);
+      const lbl=nombre.toUpperCase();
+      const tw=doc.getTextWidth(lbl)+4;
+      const lx=cx+(cw-tw)/2;
+      const rx=lx+tw;
+      doc.setDrawColor(80,80,80);doc.setLineWidth(.25);
+      doc.line(cx,mid,lx-1,mid);
+      doc.line(rx+1,mid,cx+cw,mid);
+      doc.text(lbl,cx+cw/2,mid+0.5,{align:'center'});
+      curY+=dh+1;
     };
 
     const drawQ=(item,num)=>{
@@ -7113,19 +7119,6 @@ async function generarPracticaPDF(){
       const ind=gpIND[nc],h=3+img.hMm+2;
       if(curY+h>gpFOOT)moveNext();
       const cx=colXs[curCol];
-      // Badge sinónimos/antónimos
-      const sub=(item.bpSubtema||'').toLowerCase();
-      if(sub.includes('sinón')||sub.includes('sinonim')){
-        doc.setFillColor(201,168,76);doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(20,20,20);
-        const lbl='SIN';const lw=doc.getTextWidth(lbl)+4;
-        doc.rect(cx,curY,lw,4,'F');doc.text(lbl,cx+2,curY+3);
-        curY+=4.5;
-      } else if(sub.includes('antón')||sub.includes('antonim')){
-        doc.setFillColor(180,60,60);doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(255,255,255);
-        const lbl='ANT';const lw=doc.getTextWidth(lbl)+4;
-        doc.rect(cx,curY,lw,4,'F');doc.text(lbl,cx+2,curY+3);
-        curY+=4.5;
-      }
       doc.setFont('helvetica','bold');doc.setFontSize(nc===1?10:9);doc.setTextColor(0,0,0);
       doc.text(String(num)+'.',cx+1,curY+gpFSn(nc)*0.35+1);
       if(GP.cfg.mostrarPts&&item.p){
@@ -7153,9 +7146,18 @@ async function generarPracticaPDF(){
     let gnum=1;
     GP.secciones.forEach(sec=>{
       if(multi)drawDiv(sec.nombre);
+      const isRV=/verbal|razonamiento/i.test(sec.nombre);
+      let prevSubtema=null;
       sec.items.forEach(item=>{
-        if(item.tipo==='texto') drawTexto(item);
-        else drawQ(item,gnum++);
+        if(item.tipo==='texto'){
+          drawTexto(item);
+        }else{
+          if(isRV&&!item.bpEsSubitem&&item.bpSubtema&&item.bpSubtema!==prevSubtema){
+            drawSubtema(item.bpSubtema);
+            prevSubtema=item.bpSubtema;
+          }
+          drawQ(item,gnum++);
+        }
       });
     });
 
@@ -8071,7 +8073,7 @@ function bpToGpItems(preg){
         alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
         altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
         numAlts:Math.max(alts.length,5),align:'left',
-        bpId:preg.id,bpSiId:si.id,bpSubtema:preg.subtema||'',
+        bpId:preg.id,bpSiId:si.id,bpSubtema:preg.subtema||'',bpEsSubitem:true,
         bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
         bpSolDesarrollo:sol?.desarrollo_texto||''
       });
