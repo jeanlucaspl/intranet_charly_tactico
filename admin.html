@@ -7457,6 +7457,18 @@ function bpOnTipoChange(val){
   BP.ed.tipo=val;
   document.getElementById('bp-sec-simple').style.display=val==='simple'?'':'none';
   document.getElementById('bp-sec-textobase').style.display=val==='texto_base'?'':'none';
+  if(val==='texto_base'&&!BP.ed.subitems.length){
+    const raw=prompt('¿Cuántas preguntas tiene este texto base?','4');
+    const n=parseInt(raw);
+    if(n>0&&n<=20){
+      BP.ed.subitems=Array.from({length:n},()=>({
+        texto:'',imagen_url:null,
+        alts:['','','','',''],altImgs:[null,null,null,null,null],
+        sol:{alt:-1,desarrollo:''}
+      }));
+      document.getElementById('bp-subitems-container').innerHTML=bpHtmlSubitems();
+    }
+  }
 }
 
 function bpOnSolTipo(val){
