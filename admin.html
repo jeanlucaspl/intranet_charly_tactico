@@ -7485,6 +7485,7 @@ function bpOnMateriaChange(val){
 }
 
 function bpOnTipoChange(val){
+  bpLeerForm();
   BP.ed.tipo=val;
   document.getElementById('bp-sec-simple').style.display=val==='simple'?'':'none';
   document.getElementById('bp-sec-textobase').style.display=val==='texto_base'?'':'none';
@@ -7591,7 +7592,7 @@ async function bpGuardar(){
   const st=document.getElementById('bp-save-status');
   const btn=document.getElementById('bp-btn-guardar');
   if(!ed.materia_id){await myAlert('Selecciona una materia.');return;}
-  if(!ed.enunciado_texto.trim()&&!ed.enunciado_imagen_url){await myAlert('Escribe el enunciado o sube una imagen.');return;}
+  if(ed.tipo!=='texto_base'&&!ed.enunciado_texto.trim()&&!ed.enunciado_imagen_url){await myAlert('Escribe el enunciado o sube una imagen.');return;}
   if(ed.tipo==='texto_base'&&!ed.subitems.length){await myAlert('Agrega al menos una sub-pregunta para tipo Texto Base.');return;}
   if(btn)btn.disabled=true;BP.saving=true;if(st)st.textContent='Guardando...';
   try{
