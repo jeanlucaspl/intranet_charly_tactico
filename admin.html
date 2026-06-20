@@ -7223,22 +7223,19 @@ function bpJoinLines(lines){
 }
 
 function bpParsearAlternativas(texto){
-  // Detecta líneas que empiezan con A. B. C. D. E. (con posible espaciado)
-  const lines=texto.split('\n').map(l=>l.trim()).filter((l,i,a)=>{
-    // Elimina líneas vacías que no sean separadores entre bloques
-    return l!==''||i===0;
-  });
-  const altIdx={}; // letra -> índice de línea
+  // Soporta A. B. C. D. E. y A) B) C) D) E)
+  const lines=texto.split('\n').map(l=>l.trim()).filter(l=>l!=='');
+  const altIdx={};
   for(let i=0;i<lines.length;i++){
-    const m=lines[i].match(/^([A-E])\.\s*(.*)/);
+    const m=lines[i].match(/^([A-E])[.)]\s*(.*)/);
     if(m)altIdx[m[1]]={line:i,first:m[2]};
   }
   if(!altIdx['A']||!altIdx['E'])return null;
   const letras=['A','B','C','D','E'].filter(l=>altIdx[l]);
-  // Enunciado = todo lo que está antes de la línea donde empieza A.
   const firstLine=altIdx['A'].line;
-  const enunciado=bpJoinLines(lines.slice(0,firstLine).filter(l=>l!==''));
-  // Extraer cada alternativa con join inteligente
+  // Quitar número inicial del enunciado (ej: "871 El tema..." → "El tema...")
+  const enunciadoRaw=bpJoinLines(lines.slice(0,firstLine));
+  const enunciado=enunciadoRaw.replace(/^\d+\s+/,'');
   const alts=['','','','',''];
   for(let k=0;k<letras.length;k++){
     const L=letras[k];
@@ -7254,13 +7251,25 @@ function bpParsearAlternativas(texto){
 function bpOnPaste(e){
   const raw=e.clipboardData?.getData('text')||'';
   const parsed=bpParsearAlternativas(raw);
-  if(!parsed)return; // sin patrón A-E → paste normal
+  if(!parsed)return;
   e.preventDefault();
   bpLeerForm();
   BP.ed.enunciado_texto=parsed.enunciado;
   parsed.alts.forEach((a,i)=>{BP.ed.alts[i]=a;});
   bpRenderUI();
   showToast('✓ Enunciado y alternativas A–E detectadas y distribuidas automáticamente');
+}
+
+function bpOnPasteSub(e,idx){
+  const raw=e.clipboardData?.getData('text')||'';
+  const parsed=bpParsearAlternativas(raw);
+  if(!parsed)return;
+  e.preventDefault();
+  bpLeerSubitems();
+  BP.ed.subitems[idx].texto=parsed.enunciado;
+  parsed.alts.forEach((a,j)=>{BP.ed.subitems[idx].alts[j]=a;});
+  document.getElementById('bp-subitems-container').innerHTML=bpHtmlSubitems();
+  showToast('✓ Sub-pregunta '+(idx+1)+': enunciado y alternativas distribuidas automáticamente');
 }
 
 async function bpIniciar(){
@@ -7432,7 +7441,7 @@ function bpHtmlSubitems(){
     <button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="bpDelSubitem(${i})">✕ Eliminar</button>
   </div>
   ${BP_FMT_BAR(`bp-si-texto-${i}`)}
-  <textarea id="bp-si-texto-${i}" rows="3" style="${BPINP};resize:vertical;margin-bottom:10px" placeholder="Texto de la sub-pregunta (LaTeX: $...$)...">${gpEsc(si.texto||'')}</textarea>
+  <textarea id="bp-si-texto-${i}" rows="3" style="${BPINP};resize:vertical;margin-bottom:10px" placeholder="Texto de la sub-pregunta (LaTeX: $...$)..." onpaste="bpOnPasteSub(event,${i})">${gpEsc(si.texto||'')}</textarea>
   ${['A','B','C','D','E'].map((L,j)=>`
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
     <span style="color:var(--gold);font-weight:700;min-width:22px">${L})</span>
