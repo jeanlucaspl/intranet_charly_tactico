@@ -7418,7 +7418,7 @@ async function bpIniciar(){
 async function bpRefreshSubtemas(matId){
   const targets=matId?BP.mats.filter(m=>m.id===matId):BP.mats;
   for(const m of targets){
-    const{data}=await sb.from('banco_preguntas').select('subtema').eq('materia_id',m.id).not('subtema','is',null).neq('subtema','');
+    const{data}=await sb.from('banco_preguntas').select('subtema').eq('materia_id',m.id).not('subtema','is',null).neq('subtema','').range(0,9999);
     BP.subtemas[m.id]=[...new Set((data||[]).map(r=>r.subtema).filter(Boolean))];
   }
 }
@@ -7932,8 +7932,8 @@ async function bpCargarLista(){
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
   const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();const txtFilt=BP.fTxt.trim();
   if(!matId&&!txtFilt){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia o escribe texto para buscar</div></div>';return;}
-  // Query de conteo real (sin límite)
-  let qCount=sb.from('banco_preguntas').select('id,subtema,materia_id');
+  // Query de conteo real — solo subtema, rango alto para pasar el límite default de 1000
+  let qCount=sb.from('banco_preguntas').select('subtema').range(0,9999);
   if(matId)qCount=qCount.eq('materia_id',matId);
   if(subFilt)qCount=qCount.ilike('subtema','%'+subFilt+'%');
   if(txtFilt)qCount=qCount.ilike('enunciado_texto','%'+txtFilt+'%');
