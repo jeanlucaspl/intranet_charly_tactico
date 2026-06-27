@@ -647,45 +647,76 @@ const sb = supabase.createClient(SB_URL, SB_KEY);
    STATE
 ═══════════════════════════════════════════════════════════════════════════════ */
 const S = {
-  sino: [], ant: [],   // full datasets loaded at init
-  pool: [],            // shuffled working list for session
+  sino: [], ant: [],
+  pool: [],
+  cache: {},    // pregunta_id → { alts, sol }
   idx: 0,
   mode: 'ambos',
   qty: 20,
   ok: 0, bad: 0, streak: 0, maxStreak: 0,
   answered: false,
+  loading: false,
   t0: null,
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   INIT — load all questions upfront
+   INIT — load question list only (no nested joins to avoid RLS issues)
 ═══════════════════════════════════════════════════════════════════════════════ */
 async function init() {
-  const fetchPage = (subtema, from, to) =>
+  // Only fetch id + subtema + enunciado_texto — no nesting
+  const fetchPage = (from, to) =>
     sb.from('banco_preguntas')
-      .select('id,subtema,enunciado_texto,banco_alternativas(orden,texto),banco_soluciones(alternativa_correcta)')
+      .select('id,subtema,enunciado_texto')
       .eq('materia_id', RV_ID)
-      .ilike('subtema', subtema)
+      .in('subtema', ['Sinónimos', 'Antónimos'])
       .range(from, to);
 
-  // 4 parallel requests to bypass 1000-row limit
-  const [a, b, c, d] = await Promise.all([
-    fetchPage('Sinónimos', 0,    999),
-    fetchPage('Sinónimos', 1000, 1999),
-    fetchPage('Antónimos', 0,    999),
-    fetchPage('Antónimos', 1000, 1999),
+  const [a, b] = await Promise.all([
+    fetchPage(0,    999),
+    fetchPage(1000, 1999),
   ]);
 
-  S.sino = [...(a.data||[]), ...(b.data||[])];
-  S.ant  = [...(c.data||[]), ...(d.data||[])];
+  const all = [...(a.data||[]), ...(b.data||[])];
+  S.sino = all.filter(q => /sin/i.test(q.subtema));
+  S.ant  = all.filter(q => /ant/i.test(q.subtema));
 
-  const total = S.sino.length + S.ant.length;
+  if (!all.length) throw new Error('No se encontraron preguntas (verificar sesión y RLS)');
+
   $('cnt-sino').textContent  = `${S.sino.length} preguntas`;
   $('cnt-ant').textContent   = `${S.ant.length} preguntas`;
-  $('cnt-ambos').textContent = `${total} preguntas`;
+  $('cnt-ambos').textContent = `${all.length} preguntas`;
 
   $('setup-loading').style.display = 'none';
   $('setup-form').style.display    = 'block';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FETCH ALTERNATIVES + SOLUTION for a single question (with cache)
+═══════════════════════════════════════════════════════════════════════════════ */
+async function fetchQData(id) {
+  if (S.cache[id]) return S.cache[id];
+  const [altRes, solRes] = await Promise.all([
+    sb.from('banco_alternativas')
+      .select('orden,texto')
+      .eq('pregunta_id', id)
+      .order('orden'),
+    sb.from('banco_soluciones')
+      .select('alternativa_correcta')
+      .eq('pregunta_id', id)
+      .limit(1),
+  ]);
+  const entry = {
+    alts: (altRes.data || []).sort((a, b) => a.orden - b.orden),
+    sol:  (solRes.data?.[0]?.alternativa_correcta) ?? 0,
+  };
+  S.cache[id] = entry;
+  return entry;
+}
+
+// Pre-fetch in background (no await needed)
+function prefetch(idx) {
+  const q = S.pool[idx];
+  if (q && !S.cache[q.id]) fetchQData(q.id).catch(() => {});
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -709,6 +740,11 @@ function startQuiz() {
   else if (S.mode === 'sino') src = [...S.sino];
   else src = [...S.ant];
 
+  if (!src.length) {
+    alert('No hay preguntas disponibles para este modo.');
+    return;
+  }
+
   // Fisher-Yates shuffle
   for (let i = src.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -718,7 +754,7 @@ function startQuiz() {
   S.pool = S.qty > 0 ? src.slice(0, S.qty) : src;
   S.idx = 0; S.ok = 0; S.bad = 0;
   S.streak = 0; S.maxStreak = 0;
-  S.answered = false;
+  S.answered = false; S.loading = false;
   S.t0 = Date.now();
 
   $('q-tot').textContent = S.pool.length;
@@ -728,11 +764,15 @@ function startQuiz() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   RENDER QUESTION
+   RENDER QUESTION (async — fetches alts/sol per question)
 ═══════════════════════════════════════════════════════════════════════════════ */
-function renderQ() {
+async function renderQ() {
+  if (S.loading) return;
   const q = S.pool[S.idx];
+  if (!q) { showResults(); return; }
+
   S.answered = false;
+  S.loading  = true;
   hideFb();
 
   // Progress
@@ -740,26 +780,46 @@ function renderQ() {
   $('q-fill').style.width = (S.idx / S.pool.length * 100) + '%';
 
   // Score chips
-  $('sc-ok').textContent  = S.ok;
-  $('sc-bad').textContent = S.bad;
-  $('sc-str').textContent = S.streak;
+  $('sc-ok').textContent       = S.ok;
+  $('sc-bad').textContent      = S.bad;
+  $('sc-str').textContent      = S.streak;
   $('tb-live-val').textContent = S.ok;
 
-  // Card
+  // Card content — available immediately from init() data
   const isSino = /sin/i.test(q.subtema);
   $('q-subtema').textContent = q.subtema.toUpperCase();
   $('q-label').textContent   = isSino
     ? 'Seleccione el SINÓNIMO de la palabra:'
     : 'Seleccione el ANTÓNIMO de la palabra:';
 
-  // Extract the keyword from enunciado_texto (last non-empty line)
-  const lines = q.enunciado_texto.split('\n').map(l => l.trim()).filter(Boolean);
-  $('q-word').textContent = lines[lines.length - 1] || q.enunciado_texto;
+  // Extract word: enunciado is "…texto…\n\nPALABRA"
+  const lines = (q.enunciado_texto || '').split('\n').map(l => l.trim()).filter(Boolean);
+  $('q-word').textContent = lines[lines.length - 1] || q.enunciado_texto || '';
 
-  // Alternatives (sorted by orden)
-  const alts = [...(q.banco_alternativas || [])].sort((a, b) => a.orden - b.orden);
-  const sol  = q.banco_soluciones?.[0]?.alternativa_correcta ?? 0;
+  // Show skeleton while loading alts
+  $('alts').innerHTML = LTRS.slice(0, 5).map(l =>
+    `<div style="background:var(--navy2);border:1px solid var(--border);height:52px;
+      display:flex;align-items:center;padding:0 18px;gap:14px;opacity:.4">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--gold)">${l}</span>
+      <span style="flex:1;height:14px;background:var(--border);border-radius:2px"></span>
+    </div>`
+  ).join('');
+  $('btn-next').classList.remove('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  // Fetch alternatives + solution
+  let alts = [], sol = 0;
+  try {
+    const d = await fetchQData(q.id);
+    alts = d.alts;
+    sol  = d.sol;
+  } catch(e) {
+    console.error('fetchQData error:', e);
+  }
+
+  S.loading = false;
+
+  // Render alternatives
   const list = $('alts');
   list.innerHTML = '';
   alts.forEach((alt, i) => {
@@ -768,22 +828,21 @@ function renderQ() {
     btn.dataset.i = i;
     btn.innerHTML =
       `<span class="alt-ltr">${LTRS[i]}</span>` +
-      `<span class="alt-txt">${alt.texto}</span>` +
+      `<span class="alt-txt">${alt.texto || ''}</span>` +
       `<span class="alt-ico" id="aico-${i}"></span>`;
     btn.addEventListener('click', () => answer(btn, i, sol, alt.texto, alts[sol]?.texto || ''));
     list.appendChild(btn);
   });
 
-  // Hide fallback next btn
-  $('btn-next').classList.remove('show');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Pre-fetch next question silently
+  prefetch(S.idx + 1);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    ANSWER
 ═══════════════════════════════════════════════════════════════════════════════ */
 function answer(btn, chosen, correct, chosenTxt, correctTxt) {
-  if (S.answered) return;
+  if (S.answered || S.loading) return;
   S.answered = true;
 
   document.querySelectorAll('.alt').forEach(b => { b.disabled = true; });
@@ -803,15 +862,14 @@ function answer(btn, chosen, correct, chosenTxt, correctTxt) {
     S.bad++; S.streak = 0;
   }
 
-  $('sc-ok').textContent  = S.ok;
-  $('sc-bad').textContent = S.bad;
-  $('sc-str').textContent = S.streak;
+  $('sc-ok').textContent       = S.ok;
+  $('sc-bad').textContent      = S.bad;
+  $('sc-str').textContent      = S.streak;
   $('tb-live-val').textContent = S.ok;
 
   const isLast = S.idx >= S.pool.length - 1;
   showFb(right, chosenTxt, correctTxt, isLast);
 
-  // Also show inline next button as fallback (in case toast is clipped)
   $('btn-next').textContent = isLast ? 'VER RESULTADO →' : 'SIGUIENTE →';
   $('btn-next').classList.add('show');
 }
@@ -852,7 +910,7 @@ function showResults() {
   hideFb();
   $('tb-live').style.display = 'none';
 
-  const total   = S.pool.length;
+  const total   = S.pool.length || 1;
   const pct     = Math.round(S.ok / total * 100);
   const elapsed = Math.round((Date.now() - S.t0) / 1000);
   const mins    = Math.floor(elapsed / 60);
@@ -866,14 +924,9 @@ function showResults() {
   $('r-str').textContent  = S.maxStreak;
   $('r-time').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 
-  const titles = [
-    'SIGUE\nINTENTANDO',
-    'BUEN\nINTENTO',
-    'MUY\nBIEN',
-    'DOMINIO\nTÁCTICO',
-  ];
   const ti = pct >= 90 ? 3 : pct >= 75 ? 2 : pct >= 50 ? 1 : 0;
-  $('res-title').innerHTML = titles[ti].replace('\n', '<br>');
+  const titles = ['SIGUE<br>INTENTANDO','BUEN<br>INTENTO','MUY<br>BIEN','DOMINIO<br>TÁCTICO'];
+  $('res-title').innerHTML = titles[ti];
 
   const msgs = [
     '<strong>Necesitas reforzar.</strong> No te rindas — la disciplina hace al cadete.',
@@ -902,18 +955,15 @@ function goSetup() {
    KEYBOARD SHORTCUTS
 ═══════════════════════════════════════════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
-  const screen = document.querySelector('.screen.active')?.id;
-  if (screen !== 'screen-quiz') return;
-
+  if (document.querySelector('.screen.active')?.id !== 'screen-quiz') return;
   const i = ['a','b','c','d','e'].indexOf(e.key.toLowerCase());
-  if (i >= 0 && !S.answered) {
+  if (i >= 0 && !S.answered && !S.loading) {
     const btns = document.querySelectorAll('.alt');
     if (btns[i]) btns[i].click();
     return;
   }
   if ((e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') && S.answered) {
-    e.preventDefault();
-    nextQ();
+    e.preventDefault(); nextQ();
   }
 });
 
@@ -934,8 +984,9 @@ init().catch(err => {
   console.error(err);
   $('setup-loading').innerHTML =
     `<div style="color:var(--red);font-family:'Barlow Condensed',sans-serif;
-     font-size:13px;letter-spacing:.1em;text-align:center">
-     Error al cargar preguntas.<br>Verifica tu conexión e intenta de nuevo.
+     font-size:13px;letter-spacing:.1em;text-align:center;line-height:1.6">
+     ${err.message || 'Error al cargar preguntas.'}<br>
+     <span style="color:var(--muted)">Verifica tu conexión e intenta de nuevo.</span>
      </div>`;
 });
 </script>
