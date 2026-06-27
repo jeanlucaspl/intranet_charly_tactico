@@ -7932,20 +7932,27 @@ async function bpCargarLista(){
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
   const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();const txtFilt=BP.fTxt.trim();
   if(!matId&&!txtFilt){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia o escribe texto para buscar</div></div>';return;}
-  // Query de conteo real — solo subtema, rango alto para pasar el límite default de 1000
-  let qCount=sb.from('banco_preguntas').select('subtema').range(0,9999);
-  if(matId)qCount=qCount.eq('materia_id',matId);
-  if(subFilt)qCount=qCount.ilike('subtema','%'+subFilt+'%');
-  if(txtFilt)qCount=qCount.ilike('enunciado_texto','%'+txtFilt+'%');
+  // Conteo real: 2 páginas en paralelo para superar el límite server-side de 1000 filas
+  const mkCount=()=>{
+    let q=sb.from('banco_preguntas').select('subtema');
+    if(matId)q=q.eq('materia_id',matId);
+    if(subFilt)q=q.ilike('subtema','%'+subFilt+'%');
+    if(txtFilt)q=q.ilike('enunciado_texto','%'+txtFilt+'%');
+    return q;
+  };
   // Query de display (con límite)
   const DISPLAY_LIMIT=200;
   let qDisplay=sb.from('banco_preguntas').select('id,materia_id,subtema,tipo,nivel,fuente,enunciado_texto,enunciado_imagen_url,materias(nombre),banco_subitems(id)').order('creado_en',{ascending:false}).limit(DISPLAY_LIMIT);
   if(matId)qDisplay=qDisplay.eq('materia_id',matId);
   if(subFilt)qDisplay=qDisplay.ilike('subtema','%'+subFilt+'%');
   if(txtFilt)qDisplay=qDisplay.ilike('enunciado_texto','%'+txtFilt+'%');
-  const[{data:countData,error:cErr},{data:displayData,error:dErr}]=await Promise.all([qCount,qDisplay]);
+  const[{data:cd1,error:cErr},{data:cd2},{data:displayData,error:dErr}]=await Promise.all([
+    mkCount().range(0,999),
+    mkCount().range(1000,1999),
+    qDisplay
+  ]);
   if(cErr||dErr){el.innerHTML='<div class="empty"><div class="et">Error: '+((cErr||dErr).message)+'</div></div>';return;}
-  BP.listaConteo=countData||[];
+  BP.listaConteo=[...(cd1||[]),...(cd2||[])];
   BP.lista=displayData||[];
   bpRenderLista();
 }
