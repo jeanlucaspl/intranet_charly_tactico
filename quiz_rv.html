@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Quiz Léxico · Charly Táctico</title>
+  <link rel="icon" href="./favicon.ico" sizes="any"/>
+  <link rel="icon" href="./icons/icon-32.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="./icons/icon-180.png"/>
+  <meta name="theme-color" content="#080C10"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:  #080C10;
+      --gold:   #C9A84C;
+      --gold2:  #e5c46a;
+      --lime:   #9DD900;
+      --fern:   #1A4A16;
+      --chalk:  #F0F4F8;
+      --red:    #E05555;
+      --navy2:  #0d1117;
+      --navy3:  #13191f;
+      --border: rgba(201,168,76,.15);
+      --muted:  #8892a0;
+    }
+
+    html { background: var(--black); }
+    body {
+      background: var(--black);
+      color: var(--chalk);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* tactical grid overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,.022) 1px, transparent 1px);
+      background-size: 52px 52px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TOPBAR
+    ═══════════════════════════════════════════════════════ */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: rgba(8,12,16,.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 18px; z-index: 100; gap: 10px;
+    }
+    .tb-back {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); background: none; border: none;
+      cursor: pointer; text-decoration: none;
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 10px; transition: color .2s;
+    }
+    .tb-back:hover { color: var(--gold); }
+    .tb-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 19px; letter-spacing: .05em; color: var(--gold);
+    }
+    .tb-brand span { color: var(--chalk); }
+    .tb-sep { flex: 1; }
+    .tb-live {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; letter-spacing: .1em;
+      color: var(--muted); text-transform: uppercase;
+      display: none;
+    }
+    .tb-live strong { color: var(--gold); font-size: 15px; }
+
+    /* ═══════════════════════════════════════════════════════
+       APP WRAPPER
+    ═══════════════════════════════════════════════════════ */
+    .app {
+      padding-top: 54px;
+      min-height: 100vh; min-height: 100dvh;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1;
+    }
+
+    .screen { display: none; width: 100%; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+    /* ═══════════════════════════════════════════════════════
+       SETUP SCREEN
+    ═══════════════════════════════════════════════════════ */
+    #screen-setup {
+      justify-content: center;
+      padding: 36px 18px 60px;
+      min-height: calc(100vh - 54px);
+      min-height: calc(100dvh - 54px);
+    }
+    .setup-inner { max-width: 460px; width: 100%; }
+
+    .eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .35em; color: var(--gold);
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .setup-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 12vw, 68px);
+      line-height: .92; margin-bottom: 6px;
+    }
+    .setup-title .hl { color: var(--gold); }
+    .setup-sub {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; letter-spacing: .06em; color: var(--muted);
+      margin-bottom: 36px;
+    }
+
+    .sec-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: .32em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+
+    /* Mode buttons */
+    .mode-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; margin-bottom: 28px;
+    }
+    .mode-btn {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 18px 10px; cursor: pointer;
+      transition: all .18s; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .mode-btn::after {
+      content: ''; position: absolute;
+      bottom: 0; left: 0; right: 0; height: 2px;
+      background: var(--gold); transform: scaleX(0); transition: transform .18s;
+    }
+    .mode-btn:hover { border-color: rgba(201,168,76,.4); background: var(--navy3); }
+    .mode-btn:hover::after, .mode-btn.sel::after { transform: scaleX(1); }
+    .mode-btn.sel { border-color: var(--gold); background: var(--navy3); }
+    .mode-ico { font-size: 22px; margin-bottom: 6px; display: block; }
+    .mode-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px; letter-spacing: .08em;
+      color: var(--chalk); display: block;
+    }
+    .mode-btn.sel .mode-name { color: var(--gold); }
+    .mode-cnt {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; color: var(--muted); margin-top: 3px;
+    }
+
+    /* Quantity buttons */
+    .qty-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-bottom: 32px;
+    }
+    .qty-btn {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 13px 6px; cursor: pointer; text-align: center;
+      transition: all .18s;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; color: var(--chalk); letter-spacing: .04em;
+    }
+    .qty-btn:hover { border-color: rgba(201,168,76,.4); color: var(--gold); }
+    .qty-btn.sel { border-color: var(--gold); color: var(--gold); background: var(--navy3); }
+
+    /* Start button */
+    .btn-start {
+      width: 100%; background: var(--gold); color: var(--black);
+      border: none; padding: 18px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 21px; letter-spacing: .14em;
+      cursor: pointer; transition: all .2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-start:hover { background: var(--gold2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,168,76,.25); }
+    .btn-start:active { transform: none; box-shadow: none; }
+    .btn-start:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Spinner */
+    .loading-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 20px; gap: 14px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(201,168,76,.18);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-txt {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       QUIZ SCREEN
+    ═══════════════════════════════════════════════════════ */
+    #screen-quiz {
+      padding: 20px 16px 120px;
+      max-width: 620px; margin: 0 auto; width: 100%;
+    }
+
+    /* Progress row */
+    .q-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .q-bar {
+      flex: 1; height: 3px;
+      background: rgba(201,168,76,.12); position: relative; overflow: hidden;
+    }
+    .q-bar-fill {
+      position: absolute; top: 0; left: 0; bottom: 0;
+      background: linear-gradient(90deg, var(--gold), var(--lime));
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .q-counter {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; letter-spacing: .12em;
+      color: var(--muted); text-transform: uppercase; white-space: nowrap;
+    }
+    .q-counter strong { color: var(--chalk); }
+
+    /* Score chips */
+    .score-row {
+      display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .sc-chip {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 6px 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .sc-chip .cv { font-size: 16px; font-family: 'Bebas Neue', sans-serif; letter-spacing: .04em; }
+    .sc-chip.ok .cv  { color: var(--lime); }
+    .sc-chip.bad .cv { color: var(--red); }
+    .sc-chip.str .cv { color: var(--gold); }
+
+    /* Question card */
+    .q-card {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 24px 22px; margin-bottom: 14px;
+      position: relative; overflow: hidden;
+    }
+    .q-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: var(--gold);
+    }
+    .q-subtema-tag {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .3em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .q-subtema-tag::before {
+      content: ''; display: inline-block;
+      width: 22px; height: 1px; background: var(--gold);
+    }
+    .q-label-txt {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; letter-spacing: .04em; color: var(--muted);
+      margin-bottom: 6px; line-height: 1.4;
+    }
+    .q-word {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(38px, 9vw, 58px);
+      letter-spacing: .1em; color: var(--chalk); line-height: 1;
+    }
+
+    /* Alternative buttons */
+    .alts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .alt {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 15px 18px; cursor: pointer;
+      display: flex; align-items: center; gap: 14px;
+      transition: border-color .15s, background .15s, transform .1s;
+      width: 100%; text-align: left; position: relative;
+    }
+    .alt:hover:not(:disabled) { border-color: rgba(201,168,76,.5); background: var(--navy3); }
+    .alt:active:not(:disabled) { transform: scale(.99); }
+
+    .alt-ltr {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px; letter-spacing: .05em;
+      color: var(--gold); width: 26px; text-align: center; flex-shrink: 0;
+    }
+    .alt-txt {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: var(--chalk); flex: 1;
+    }
+    .alt-ico { margin-left: auto; font-size: 15px; opacity: 0; transition: opacity .15s; }
+
+    /* States */
+    .alt.correct { border-color: var(--lime) !important; background: rgba(157,217,0,.07) !important; }
+    .alt.correct .alt-ltr { color: var(--lime); }
+    .alt.correct .alt-txt  { color: var(--lime); }
+    .alt.correct .alt-ico  { opacity: 1; color: var(--lime); }
+
+    .alt.wrong { border-color: var(--red) !important; background: rgba(224,85,85,.07) !important; }
+    .alt.wrong .alt-ltr { color: var(--red); }
+    .alt.wrong .alt-txt  { color: var(--red); }
+    .alt.wrong .alt-ico  { opacity: 1; color: var(--red); }
+
+    /* Next button */
+    .btn-next {
+      width: 100%; background: var(--gold); color: var(--black);
+      border: none; padding: 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 19px; letter-spacing: .12em;
+      cursor: pointer; transition: all .2s;
+      display: none;
+    }
+    .btn-next.show { display: block; }
+    .btn-next:hover { background: var(--gold2); }
+
+    /* ═══════════════════════════════════════════════════════
+       FEEDBACK TOAST (bottom strip)
+    ═══════════════════════════════════════════════════════ */
+    .fb-toast {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 0 16px 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 200; pointer-events: none;
+      display: flex; justify-content: center;
+      transform: translateY(110%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .fb-toast.show { transform: translateY(0); pointer-events: auto; }
+
+    .fb-inner {
+      max-width: 620px; width: 100%;
+      padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      border-left: 4px solid;
+      backdrop-filter: blur(10px);
+    }
+    .fb-inner.ok  { background: rgba(20,60,18,.95); border-color: var(--lime); }
+    .fb-inner.bad { background: rgba(70,15,15,.95);  border-color: var(--red); }
+
+    .fb-ico { font-size: 26px; flex-shrink: 0; }
+    .fb-body { flex: 1; }
+    .fb-verdict {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 19px; letter-spacing: .1em;
+    }
+    .fb-inner.ok  .fb-verdict { color: var(--lime); }
+    .fb-inner.bad .fb-verdict { color: var(--red); }
+    .fb-detail {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; letter-spacing: .04em;
+      color: rgba(240,244,248,.7); margin-top: 2px;
+    }
+    .fb-next-btn {
+      background: none; border: 1px solid rgba(240,244,248,.25);
+      color: var(--chalk); padding: 8px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+      cursor: pointer; flex-shrink: 0; white-space: nowrap;
+      transition: all .2s;
+    }
+    .fb-next-btn:hover { border-color: var(--chalk); }
+
+    /* ═══════════════════════════════════════════════════════
+       RESULTS SCREEN
+    ═══════════════════════════════════════════════════════ */
+    #screen-results {
+      justify-content: center;
+      padding: 40px 18px 60px;
+      min-height: calc(100vh - 54px);
+      min-height: calc(100dvh - 54px);
+    }
+    .res-inner { max-width: 440px; width: 100%; }
+
+    .res-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(42px, 12vw, 64px);
+      line-height: .92; margin-bottom: 28px;
+    }
+
+    .res-score-card {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 32px; margin-bottom: 16px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .res-score-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--lime));
+    }
+    .res-big {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(68px, 22vw, 100px); line-height: 1;
+      background: linear-gradient(135deg, var(--gold) 40%, var(--lime));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .res-of {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; letter-spacing: .25em;
+      color: var(--muted); text-transform: uppercase; margin-bottom: 4px;
+    }
+    .res-pct {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px; color: var(--gold);
+    }
+
+    .res-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 20px;
+    }
+    .rs {
+      background: var(--navy2); border: 1px solid var(--border);
+      padding: 16px; text-align: center;
+    }
+    .rs-v {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px; display: block;
+    }
+    .rs-v.g { color: var(--lime); }
+    .rs-v.r { color: var(--red); }
+    .rs-v.y { color: var(--gold); }
+    .rs-l {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: .28em; text-transform: uppercase; color: var(--muted);
+    }
+
+    .res-msg {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; letter-spacing: .04em; color: var(--muted);
+      text-align: center; margin-bottom: 24px; line-height: 1.6;
+    }
+    .res-msg strong { color: var(--chalk); }
+
+    .res-btns { display: flex; flex-direction: column; gap: 8px; }
+    .btn-r {
+      width: 100%; border: none; padding: 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px; letter-spacing: .1em;
+      cursor: pointer; transition: all .2s; text-align: center;
+      text-decoration: none; display: block;
+    }
+    .btn-r.primary { background: var(--gold); color: var(--black); }
+    .btn-r.primary:hover { background: var(--gold2); }
+    .btn-r.outline {
+      background: transparent;
+      border: 1px solid var(--border); color: var(--muted);
+    }
+    .btn-r.outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ═══════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════ */
+    @media (max-width: 500px) {
+      .mode-grid { grid-template-columns: 1fr; gap: 6px; }
+      .mode-btn {
+        display: flex; align-items: center;
+        gap: 14px; padding: 14px 16px; text-align: left;
+      }
+      .mode-ico { font-size: 20px; margin-bottom: 0; }
+      #screen-quiz { padding: 16px 12px 130px; }
+      .alt { padding: 13px 14px; gap: 10px; }
+      .alt-txt { font-size: 15px; }
+    }
+    @media (max-width: 360px) {
+      .qty-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a class="tb-back" href="./dashboard.html">← Inicio</a>
+  <div class="tb-brand">CHARLY <span>TÁCTICO</span></div>
+  <div class="tb-sep"></div>
+  <div class="tb-live" id="tb-live">Puntaje <strong id="tb-live-val">0</strong></div>
+</div>
+
+<div class="app">
+
+  <!-- ══════════════════════════════════════════
+       SETUP
+  ══════════════════════════════════════════ -->
+  <div class="screen active" id="screen-setup">
+    <div class="setup-inner">
+      <div class="eyebrow">Razonamiento Verbal</div>
+      <div class="setup-title">QUIZ<br><span class="hl">LÉXICO</span></div>
+      <div class="setup-sub">Sinónimos · Antónimos · Vocabulario táctico</div>
+
+      <!-- Loading -->
+      <div class="loading-state" id="setup-loading">
+        <div class="spinner"></div>
+        <div class="loading-txt">Cargando banco de preguntas…</div>
+      </div>
+
+      <!-- Form (hidden until loaded) -->
+      <div id="setup-form" style="display:none">
+        <div class="sec-label">Modalidad</div>
+        <div class="mode-grid">
+          <button class="mode-btn sel" data-mode="ambos" onclick="setMode('ambos',this)">
+            <span class="mode-ico">⚡</span>
+            <span class="mode-name">AMBOS</span>
+            <div class="mode-cnt" id="cnt-ambos">— preguntas</div>
+          </button>
+          <button class="mode-btn" data-mode="sino" onclick="setMode('sino',this)">
+            <span class="mode-ico">↔</span>
+            <span class="mode-name">SINÓNIMOS</span>
+            <div class="mode-cnt" id="cnt-sino">—</div>
+          </button>
+          <button class="mode-btn" data-mode="ant" onclick="setMode('ant',this)">
+            <span class="mode-ico">⇆</span>
+            <span class="mode-name">ANTÓNIMOS</span>
+            <div class="mode-cnt" id="cnt-ant">—</div>
+          </button>
+        </div>
+
+        <div class="sec-label">Cantidad de preguntas</div>
+        <div class="qty-grid">
+          <button class="qty-btn" data-qty="10"  onclick="setQty(10,this)">10</button>
+          <button class="qty-btn sel" data-qty="20" onclick="setQty(20,this)">20</button>
+          <button class="qty-btn" data-qty="50"  onclick="setQty(50,this)">50</button>
+          <button class="qty-btn" data-qty="0"   onclick="setQty(0,this)">TODAS</button>
+        </div>
+
+        <button class="btn-start" id="btn-start" onclick="startQuiz()">
+          COMENZAR →
+        </button>
+      </div><!-- /setup-form -->
+    </div>
+  </div><!-- /screen-setup -->
+
+
+  <!-- ══════════════════════════════════════════
+       QUIZ
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-quiz">
+    <!-- Progress header -->
+    <div class="q-header">
+      <div class="q-bar"><div class="q-bar-fill" id="q-fill"></div></div>
+      <div class="q-counter"><strong id="q-num">1</strong> / <span id="q-tot">20</span></div>
+    </div>
+
+    <!-- Score chips -->
+    <div class="score-row">
+      <div class="sc-chip ok">✓ <span class="cv" id="sc-ok">0</span></div>
+      <div class="sc-chip bad">✗ <span class="cv" id="sc-bad">0</span></div>
+      <div class="sc-chip str">🔥 <span class="cv" id="sc-str">0</span></div>
+    </div>
+
+    <!-- Question card -->
+    <div class="q-card">
+      <div class="q-subtema-tag" id="q-subtema">SINÓNIMO</div>
+      <div class="q-label-txt" id="q-label">Seleccione el SINÓNIMO de la palabra:</div>
+      <div class="q-word" id="q-word">—</div>
+    </div>
+
+    <!-- Alternatives -->
+    <div class="alts" id="alts"></div>
+
+    <!-- Next (fallback for non-toast mode) -->
+    <button class="btn-next" id="btn-next" onclick="nextQ()">SIGUIENTE →</button>
+  </div><!-- /screen-quiz -->
+
+
+  <!-- ══════════════════════════════════════════
+       RESULTS
+  ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-results">
+    <div class="res-inner">
+      <div class="eyebrow">Quiz finalizado</div>
+      <div class="res-title" id="res-title">TU<br>RESULTADO</div>
+
+      <div class="res-score-card">
+        <div class="res-big"  id="r-num">0</div>
+        <div class="res-of"  id="r-of">de 20 correctas</div>
+        <div class="res-pct" id="r-pct">0%</div>
+      </div>
+
+      <div class="res-stats">
+        <div class="rs"><span class="rs-v g" id="r-ok">0</span><span class="rs-l">Correctas</span></div>
+        <div class="rs"><span class="rs-v r" id="r-bad">0</span><span class="rs-l">Incorrectas</span></div>
+        <div class="rs"><span class="rs-v y" id="r-str">0</span><span class="rs-l">Racha máx.</span></div>
+        <div class="rs"><span class="rs-v"   id="r-time">0s</span><span class="rs-l">Tiempo total</span></div>
+      </div>
+
+      <div class="res-msg" id="r-msg"></div>
+
+      <div class="res-btns">
+        <button class="btn-r primary" onclick="playAgain()">JUGAR DE NUEVO</button>
+        <button class="btn-r outline" onclick="goSetup()">CAMBIAR CONFIGURACIÓN</button>
+        <a href="./dashboard.html" class="btn-r outline">VOLVER AL INICIO</a>
+      </div>
+    </div>
+  </div><!-- /screen-results -->
+
+</div><!-- /app -->
+
+<!-- FEEDBACK TOAST -->
+<div class="fb-toast" id="fb-toast">
+  <div class="fb-inner" id="fb-inner">
+    <div class="fb-ico" id="fb-ico"></div>
+    <div class="fb-body">
+      <div class="fb-verdict" id="fb-verdict"></div>
+      <div class="fb-detail"  id="fb-detail"></div>
+    </div>
+    <button class="fb-next-btn" id="fb-next-btn" onclick="nextQ()">SIGUIENTE →</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════════════════════════ */
+const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+             + '.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0'
+             + '.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const RV_ID  = '29f71f4b-9261-4bcd-946e-7b00d76c74eb';
+const LTRS   = ['A','B','C','D','E'];
+
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════════════════ */
+const S = {
+  sino: [], ant: [],   // full datasets loaded at init
+  pool: [],            // shuffled working list for session
+  idx: 0,
+  mode: 'ambos',
+  qty: 20,
+  ok: 0, bad: 0, streak: 0, maxStreak: 0,
+  answered: false,
+  t0: null,
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   INIT — load all questions upfront
+═══════════════════════════════════════════════════════════════════════════════ */
+async function init() {
+  const fetchPage = (subtema, from, to) =>
+    sb.from('banco_preguntas')
+      .select('id,subtema,enunciado_texto,banco_alternativas(orden,texto),banco_soluciones(alternativa_correcta)')
+      .eq('materia_id', RV_ID)
+      .ilike('subtema', subtema)
+      .range(from, to);
+
+  // 4 parallel requests to bypass 1000-row limit
+  const [a, b, c, d] = await Promise.all([
+    fetchPage('Sinónimos', 0,    999),
+    fetchPage('Sinónimos', 1000, 1999),
+    fetchPage('Antónimos', 0,    999),
+    fetchPage('Antónimos', 1000, 1999),
+  ]);
+
+  S.sino = [...(a.data||[]), ...(b.data||[])];
+  S.ant  = [...(c.data||[]), ...(d.data||[])];
+
+  const total = S.sino.length + S.ant.length;
+  $('cnt-sino').textContent  = `${S.sino.length} preguntas`;
+  $('cnt-ant').textContent   = `${S.ant.length} preguntas`;
+  $('cnt-ambos').textContent = `${total} preguntas`;
+
+  $('setup-loading').style.display = 'none';
+  $('setup-form').style.display    = 'block';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SETUP CONTROLS
+═══════════════════════════════════════════════════════════════════════════════ */
+function setMode(mode, el) {
+  S.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function setQty(qty, el) {
+  S.qty = qty;
+  document.querySelectorAll('.qty-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function startQuiz() {
+  let src = [];
+  if (S.mode === 'ambos') src = [...S.sino, ...S.ant];
+  else if (S.mode === 'sino') src = [...S.sino];
+  else src = [...S.ant];
+
+  // Fisher-Yates shuffle
+  for (let i = src.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [src[i], src[j]] = [src[j], src[i]];
+  }
+
+  S.pool = S.qty > 0 ? src.slice(0, S.qty) : src;
+  S.idx = 0; S.ok = 0; S.bad = 0;
+  S.streak = 0; S.maxStreak = 0;
+  S.answered = false;
+  S.t0 = Date.now();
+
+  $('q-tot').textContent = S.pool.length;
+  $('tb-live').style.display = '';
+  showScreen('quiz');
+  renderQ();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RENDER QUESTION
+═══════════════════════════════════════════════════════════════════════════════ */
+function renderQ() {
+  const q = S.pool[S.idx];
+  S.answered = false;
+  hideFb();
+
+  // Progress
+  $('q-num').textContent = S.idx + 1;
+  $('q-fill').style.width = (S.idx / S.pool.length * 100) + '%';
+
+  // Score chips
+  $('sc-ok').textContent  = S.ok;
+  $('sc-bad').textContent = S.bad;
+  $('sc-str').textContent = S.streak;
+  $('tb-live-val').textContent = S.ok;
+
+  // Card
+  const isSino = /sin/i.test(q.subtema);
+  $('q-subtema').textContent = q.subtema.toUpperCase();
+  $('q-label').textContent   = isSino
+    ? 'Seleccione el SINÓNIMO de la palabra:'
+    : 'Seleccione el ANTÓNIMO de la palabra:';
+
+  // Extract the keyword from enunciado_texto (last non-empty line)
+  const lines = q.enunciado_texto.split('\n').map(l => l.trim()).filter(Boolean);
+  $('q-word').textContent = lines[lines.length - 1] || q.enunciado_texto;
+
+  // Alternatives (sorted by orden)
+  const alts = [...(q.banco_alternativas || [])].sort((a, b) => a.orden - b.orden);
+  const sol  = q.banco_soluciones?.[0]?.alternativa_correcta ?? 0;
+
+  const list = $('alts');
+  list.innerHTML = '';
+  alts.forEach((alt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'alt';
+    btn.dataset.i = i;
+    btn.innerHTML =
+      `<span class="alt-ltr">${LTRS[i]}</span>` +
+      `<span class="alt-txt">${alt.texto}</span>` +
+      `<span class="alt-ico" id="aico-${i}"></span>`;
+    btn.addEventListener('click', () => answer(btn, i, sol, alt.texto, alts[sol]?.texto || ''));
+    list.appendChild(btn);
+  });
+
+  // Hide fallback next btn
+  $('btn-next').classList.remove('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ANSWER
+═══════════════════════════════════════════════════════════════════════════════ */
+function answer(btn, chosen, correct, chosenTxt, correctTxt) {
+  if (S.answered) return;
+  S.answered = true;
+
+  document.querySelectorAll('.alt').forEach(b => { b.disabled = true; });
+
+  const right = chosen === correct;
+
+  if (right) {
+    btn.classList.add('correct');
+    $(`aico-${chosen}`).textContent = '✓';
+    S.ok++; S.streak++;
+    if (S.streak > S.maxStreak) S.maxStreak = S.streak;
+  } else {
+    btn.classList.add('wrong');
+    $(`aico-${chosen}`).textContent = '✗';
+    const cBtn = document.querySelector(`.alt[data-i="${correct}"]`);
+    if (cBtn) { cBtn.classList.add('correct'); $(`aico-${correct}`).textContent = '✓'; }
+    S.bad++; S.streak = 0;
+  }
+
+  $('sc-ok').textContent  = S.ok;
+  $('sc-bad').textContent = S.bad;
+  $('sc-str').textContent = S.streak;
+  $('tb-live-val').textContent = S.ok;
+
+  const isLast = S.idx >= S.pool.length - 1;
+  showFb(right, chosenTxt, correctTxt, isLast);
+
+  // Also show inline next button as fallback (in case toast is clipped)
+  $('btn-next').textContent = isLast ? 'VER RESULTADO →' : 'SIGUIENTE →';
+  $('btn-next').classList.add('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FEEDBACK TOAST
+═══════════════════════════════════════════════════════════════════════════════ */
+function showFb(right, chosen, correct, isLast) {
+  const inner = $('fb-inner');
+  inner.className = 'fb-inner ' + (right ? 'ok' : 'bad');
+  $('fb-ico').textContent     = right ? '✓' : '✗';
+  $('fb-verdict').textContent = right ? '¡CORRECTO!' : 'INCORRECTO';
+  $('fb-detail').textContent  = right
+    ? `"${chosen}" es la respuesta correcta.`
+    : `La respuesta correcta era: "${correct}"`;
+  $('fb-next-btn').textContent = isLast ? 'RESULTADO →' : 'SIGUIENTE →';
+  $('fb-toast').classList.add('show');
+}
+
+function hideFb() {
+  $('fb-toast').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════════════════════ */
+function nextQ() {
+  if (S.idx >= S.pool.length - 1) { showResults(); return; }
+  S.idx++;
+  hideFb();
+  renderQ();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RESULTS
+═══════════════════════════════════════════════════════════════════════════════ */
+function showResults() {
+  hideFb();
+  $('tb-live').style.display = 'none';
+
+  const total   = S.pool.length;
+  const pct     = Math.round(S.ok / total * 100);
+  const elapsed = Math.round((Date.now() - S.t0) / 1000);
+  const mins    = Math.floor(elapsed / 60);
+  const secs    = elapsed % 60;
+
+  $('r-num').textContent  = S.ok;
+  $('r-of').textContent   = `de ${total} correctas`;
+  $('r-pct').textContent  = pct + '%';
+  $('r-ok').textContent   = S.ok;
+  $('r-bad').textContent  = S.bad;
+  $('r-str').textContent  = S.maxStreak;
+  $('r-time').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+  const titles = [
+    'SIGUE\nINTENTANDO',
+    'BUEN\nINTENTO',
+    'MUY\nBIEN',
+    'DOMINIO\nTÁCTICO',
+  ];
+  const ti = pct >= 90 ? 3 : pct >= 75 ? 2 : pct >= 50 ? 1 : 0;
+  $('res-title').innerHTML = titles[ti].replace('\n', '<br>');
+
+  const msgs = [
+    '<strong>Necesitas reforzar.</strong> No te rindas — la disciplina hace al cadete.',
+    '<strong>Resultado regular.</strong> Sigue practicando para mejorar tu vocabulario.',
+    '<strong>Buen resultado.</strong> Cada sesión te acerca al dominio total.',
+    '<strong>Dominio táctico.</strong> Vocabulario de élite. ¡Excelente desempeño, cadete!',
+  ];
+  $('r-msg').innerHTML = msgs[ti];
+
+  showScreen('results');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function playAgain() {
+  startQuiz();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function goSetup() {
+  $('tb-live').style.display = 'none';
+  showScreen('setup');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  const screen = document.querySelector('.screen.active')?.id;
+  if (screen !== 'screen-quiz') return;
+
+  const i = ['a','b','c','d','e'].indexOf(e.key.toLowerCase());
+  if (i >= 0 && !S.answered) {
+    const btns = document.querySelectorAll('.alt');
+    if (btns[i]) btns[i].click();
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') && S.answered) {
+    e.preventDefault();
+    nextQ();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $('screen-' + name).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════════════════════════ */
+init().catch(err => {
+  console.error(err);
+  $('setup-loading').innerHTML =
+    `<div style="color:var(--red);font-family:'Barlow Condensed',sans-serif;
+     font-size:13px;letter-spacing:.1em;text-align:center">
+     Error al cargar preguntas.<br>Verifica tu conexión e intenta de nuevo.
+     </div>`;
+});
+</script>
+</body>
+</html>
