@@ -7340,7 +7340,7 @@ function showToast(msg,color='var(--gold)'){
 // ── BANCO DE PREGUNTAS ────────────────────────────────────────────────────────
 const BP={
   init:false,tab:'gestionar',mats:[],subtemas:{},
-  ed:null,fMat:'',fSub:'',fTxt:'',lista:[],listaConteo:[],sel:new Set(),saving:false,randSubtemas:[],_txtTimer:null
+  ed:null,fMat:'',fSub:'',fTxt:'',lista:[],listaConteo:[],listaRand:[],sel:new Set(),saving:false,randSubtemas:[],_txtTimer:null
 };
 const BPINP=`background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:100%;box-sizing:border-box`;
 const BPLBL=`font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block`;
@@ -7805,7 +7805,7 @@ async function bpGuardar(){
     const _savedMat=ed.materia_id,_savedSub=ed.subtema;
     const _matNom=BP.mats.find(m=>m.id===_savedMat)?.nombre||'';
     const _subInfo=_savedSub?` · ${_savedSub}`:'';
-    BP.lista=[];BP.listaConteo=[];
+    BP.lista=[];BP.listaConteo=[];BP.listaRand=[];
     bpNueva();BP.ed.materia_id=_savedMat;BP.ed.subtema=_savedSub;bpRenderUI();
     showToast(`✓ Pregunta guardada → ${_matNom}${_subInfo||' · sin subtema'}`);
   }catch(e){
@@ -7932,27 +7932,28 @@ async function bpCargarLista(){
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
   const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();const txtFilt=BP.fTxt.trim();
   if(!matId&&!txtFilt){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia o escribe texto para buscar</div></div>';return;}
-  // Conteo real: 2 páginas en paralelo para superar el límite server-side de 1000 filas
-  const mkCount=()=>{
-    let q=sb.from('banco_preguntas').select('subtema');
+  // Pool completo para conteo Y selección aleatoria (2 páginas paralelas, supera límite 1000)
+  const mkRand=()=>{
+    let q=sb.from('banco_preguntas').select('id,subtema,tipo,banco_subitems(id)');
     if(matId)q=q.eq('materia_id',matId);
     if(subFilt)q=q.ilike('subtema','%'+subFilt+'%');
     if(txtFilt)q=q.ilike('enunciado_texto','%'+txtFilt+'%');
     return q;
   };
-  // Query de display (con límite)
+  // Query de display (solo 200 para la UI)
   const DISPLAY_LIMIT=200;
   let qDisplay=sb.from('banco_preguntas').select('id,materia_id,subtema,tipo,nivel,fuente,enunciado_texto,enunciado_imagen_url,materias(nombre),banco_subitems(id)').order('creado_en',{ascending:false}).limit(DISPLAY_LIMIT);
   if(matId)qDisplay=qDisplay.eq('materia_id',matId);
   if(subFilt)qDisplay=qDisplay.ilike('subtema','%'+subFilt+'%');
   if(txtFilt)qDisplay=qDisplay.ilike('enunciado_texto','%'+txtFilt+'%');
-  const[{data:cd1,error:cErr},{data:cd2},{data:displayData,error:dErr}]=await Promise.all([
-    mkCount().range(0,999),
-    mkCount().range(1000,1999),
+  const[{data:rd1,error:cErr},{data:rd2},{data:displayData,error:dErr}]=await Promise.all([
+    mkRand().range(0,999),
+    mkRand().range(1000,1999),
     qDisplay
   ]);
   if(cErr||dErr){el.innerHTML='<div class="empty"><div class="et">Error: '+((cErr||dErr).message)+'</div></div>';return;}
-  BP.listaConteo=[...(cd1||[]),...(cd2||[])];
+  BP.listaRand=[...(rd1||[]),...(rd2||[])];
+  BP.listaConteo=BP.listaRand;
   BP.lista=displayData||[];
   bpRenderLista();
 }
@@ -8105,7 +8106,7 @@ function bpAplicarAleatorioTotal(){
   const target=Math.max(1,parseInt(document.getElementById('bp-rand-total')?.value||'20')||20);
   BP.sel.clear();
   // Mezclar todas las preguntas disponibles (excluir texto_base sin texto ni imagen)
-  const pool=BP.lista.filter(p=>p.tipo!=='texto_base'||!!p.enunciado_texto?.trim()||!!p.enunciado_imagen_url).slice().sort(()=>Math.random()-.5);
+  const pool=(BP.listaRand.length?BP.listaRand:BP.lista).filter(p=>p.tipo!=='texto_base'||(p.banco_subitems||[]).length>0).slice().sort(()=>Math.random()-.5);
   let count=0;
   // Pasada 1: agregar lo que entra exacto o por debajo
   for(const p of pool){
@@ -8131,7 +8132,7 @@ function bpAplicarAleatorio(){
   (BP.randSubtemas||[]).forEach((sub,i)=>{
     const n=Math.max(0,parseInt(document.getElementById(`bp-rand-inp-${i}`)?.value||'0')||0);
     if(!n)return;
-    const pool=BP.lista.filter(p=>(p.subtema||'(sin subtema)')===sub&&(p.tipo!=='texto_base'||!!p.enunciado_texto?.trim()||!!p.enunciado_imagen_url));
+    const pool=(BP.listaRand.length?BP.listaRand:BP.lista).filter(p=>(p.subtema||'(sin subtema)')===sub&&(p.tipo!=='texto_base'||(p.banco_subitems||[]).length>0));
     pool.slice().sort(()=>Math.random()-.5).slice(0,n).forEach(p=>BP.sel.add(p.id));
   });
   bpRenderLista();
