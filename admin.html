@@ -6517,9 +6517,10 @@ function gpEstimarH(doc,item,nc){
   doc.setFont('helvetica','normal');doc.setFontSize(gpFSn(nc));
   if(item.tipo==='texto'){
     const lh=gpLHn(nc);
-    const lines=item.texto?.trim()?doc.splitTextToSize(item.texto.trim(),gpCW(nc)-4):[];
-    const imgH=item.bpImgUrl?gpCW(nc)*0.5:0;
-    return lines.length*lh+(lines.length?3:0)+imgH+4;
+    const tw=gpCW(nc)-4;
+    const lines=item.texto?.trim()?doc.splitTextToSize(item.texto.trim(),tw):[];
+    const imgH=item._textoImg?Math.round((tw/item._textoImg.w)*item._textoImg.h):(item.bpImgUrl?tw*0.5:0);
+    return lines.length*lh+(lines.length?3:0)+(imgH?imgH+4:0)+4;
   }
   const hE=gpEstimarHEnunciado(doc,item,nc);
   const hA=gpEstimarHAlts(doc,item,nc);
@@ -6922,6 +6923,30 @@ function gpBuildAltsHTML(item,fsPt){
   h+=`</div></div>`;
   return h;
 }
+// Carga en base64 las imágenes de bloques TEXTO BASE (enunciado como imagen)
+function _gpLoadImg(url){
+  return new Promise((res,rej)=>{
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      c.width=img.naturalWidth;c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0);
+      res({b64:c.toDataURL('image/png'),w:img.naturalWidth,h:img.naturalHeight});
+    };
+    img.onerror=rej;img.src=url;
+  });
+}
+async function gpPreloadTextoImgs(){
+  for(const sec of GP.secciones){
+    for(const it of sec.items){
+      if(it.tipo==='texto'&&it.bpImgUrl&&!it._textoImg){
+        try{it._textoImg=await _gpLoadImg(it.bpImgUrl);}
+        catch(e){console.warn('No se pudo cargar imagen texto:',e);}
+      }
+    }
+  }
+}
+
 async function gpPrerenderAll(nc){
   await MathJax.startup.promise;
   const mmToPx=3.7795,colWpx=Math.round(gpTW(nc)*mmToPx),fsPt=gpFSn(nc);
@@ -7144,28 +7169,43 @@ async function generarPracticaPDF(){
       curY=colTop;
     };
 
+    // Pre-cargar imágenes de bloques texto base
+    status.textContent='Cargando imágenes de lectura...';
+    await gpPreloadTextoImgs();
+
     // Pre-render LaTeX
     status.textContent='Renderizando LaTeX...';
     const imgs=await gpPrerenderAll(nc);
     let imgIdx=0;
 
     const drawTexto=(item)=>{
-      if(!item.texto?.trim())return;
+      if(!item.texto?.trim()&&!item._textoImg)return;
       const tw=gpCW(nc)-4;
       const lh=gpLHn(nc);
       const fs=gpFSn(nc)-0.5;
-      doc.setFont('helvetica','italic');doc.setFontSize(fs);
-      const allLines=doc.splitTextToSize(item.texto.trim(),tw);
-      let remaining=[...allLines];
-      while(remaining.length){
-        const cx=colXs[curCol];
-        const avail=gpFOOT-curY;
-        const maxLines=Math.max(1,Math.floor((avail-4)/lh));
-        const chunk=remaining.splice(0,maxLines);
-        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
-        doc.text(chunk,cx+2,curY+lh);
-        curY+=chunk.length*lh+3;
-        if(remaining.length)moveNext();
+      // Imagen del texto (e.g. lectura escaneada subida como imagen)
+      if(item._textoImg){
+        const{b64,w,h}=item._textoImg;
+        const imgW=tw;
+        const imgH=Math.round((imgW/w)*h);
+        if(curY+imgH+2>gpFOOT)moveNext();
+        doc.addImage(b64,'PNG',colXs[curCol]+2,curY,imgW,imgH);
+        curY+=imgH+4;
+      }
+      // Texto de la lectura
+      if(item.texto?.trim()){
+        const allLines=doc.splitTextToSize(item.texto.trim(),tw);
+        let remaining=[...allLines];
+        while(remaining.length){
+          const cx=colXs[curCol];
+          const avail=gpFOOT-curY;
+          const maxLines=Math.max(1,Math.floor((avail-4)/lh));
+          const chunk=remaining.splice(0,maxLines);
+          doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+          doc.text(chunk,cx+2,curY+lh);
+          curY+=chunk.length*lh+3;
+          if(remaining.length)moveNext();
+        }
       }
     };
 
@@ -8247,8 +8287,23 @@ async function bpMandadAPractica(){
 function bpToGpItems(preg){
   const items=[];
   if(preg.tipo==='texto_base'){
-    items.push({tipo:'texto',texto:preg.enunciado_texto||'',etiqueta:preg.subtema||'Lectura',bpImgUrl:preg.enunciado_imagen_url||null});
-    const sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
+    let textoBase=preg.enunciado_texto||'';
+    let textoImgUrl=preg.enunciado_imagen_url||null;
+    let sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
+    // Si enunciado_texto está vacío y el primer subitem no tiene alternativas,
+    // ese subitem fue ingresado como texto de lectura por error de estructura.
+    // Lo promovemos al bloque texto y lo excluimos de las preguntas numeradas.
+    if(!textoBase.trim()&&!textoImgUrl&&sis.length){
+      const primero=sis[0];
+      const tieneAlts=(primero.banco_alternativas||[]).some(a=>a.texto?.trim());
+      if(!tieneAlts){
+        textoBase=primero.texto||'';
+        textoImgUrl=primero.imagen_url||null;
+        sis=sis.slice(1);
+        console.log('[BP→GP] Texto de lectura promovido desde subitem 0:',textoBase.slice(0,60));
+      }
+    }
+    items.push({tipo:'texto',texto:textoBase,etiqueta:preg.subtema||'Lectura',bpImgUrl:textoImgUrl});
     for(const si of sis){
       const alts=(si.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
       const sol=si.banco_soluciones?.[0]||null;
