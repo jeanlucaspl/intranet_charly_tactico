@@ -7542,7 +7542,11 @@ function bpRenderUI(){
   <!-- Enunciado / Texto de Lectura -->
   <div style="background:var(--navy2);border:1px solid ${ed.tipo==='texto_base'?'rgba(201,168,76,.5)':'var(--border)'};padding:16px;margin-bottom:14px">
     ${ed.tipo==='texto_base'
-      ?`<label style="${BPLBL}">📖 Texto de Lectura &nbsp;<span style="color:#e55;font-size:12px">*</span> &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Este texto aparece como encabezado en la práctica — es la lectura que los alumnos deben leer</span></label>`
+      ?`<label style="${BPLBL}">📖 Texto de Lectura &nbsp;<span style="color:#e55;font-size:12px">*</span> &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Este texto aparece como encabezado en la práctica — es la lectura que los alumnos deben leer</span></label>
+        ${ed.enunciado_imagen_url&&!ed.enunciado_texto?.trim()?`<div style="background:rgba(229,85,85,.1);border:1px solid #e55;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#e55">
+          ⚠ Esta pregunta tiene el texto guardado como imagen. Para ahorrar espacio en el PDF, borra la imagen y <strong>pega el texto directamente en el campo de abajo</strong>.
+        </div>`:''}
+      `
       :`<label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>`
     }
     ${BP_FMT_BAR('bp-enunciado')}
