@@ -663,12 +663,19 @@ const S = {
    INIT — load question list only (no nested joins to avoid RLS issues)
 ═══════════════════════════════════════════════════════════════════════════════ */
 async function init() {
-  // Only fetch id + subtema + enunciado_texto — no nesting
+  // Restaurar sesión explícitamente antes de cualquier query
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.href = './login.html?rol=alumno&next=quiz_rv.html';
+    return;
+  }
+
+  // Fetch solo id+subtema+enunciado_texto, filtro de subtema en cliente
+  // (evita problemas de codificación de acentos en PostgREST)
   const fetchPage = (from, to) =>
     sb.from('banco_preguntas')
       .select('id,subtema,enunciado_texto')
       .eq('materia_id', RV_ID)
-      .in('subtema', ['Sinónimos', 'Antónimos'])
       .range(from, to);
 
   const [a, b] = await Promise.all([
@@ -676,15 +683,27 @@ async function init() {
     fetchPage(1000, 1999),
   ]);
 
-  const all = [...(a.data||[]), ...(b.data||[])];
-  S.sino = all.filter(q => /sin/i.test(q.subtema));
-  S.ant  = all.filter(q => /ant/i.test(q.subtema));
+  if (a.error) throw new Error(`Error DB: ${a.error.message}`);
 
-  if (!all.length) throw new Error('No se encontraron preguntas (verificar sesión y RLS)');
+  const all = [...(a.data||[]), ...(b.data||[])];
+
+  // Filtrar sinónimos/antónimos en cliente
+  S.sino = all.filter(q => /sin[oó]/i.test(q.subtema));
+  S.ant  = all.filter(q => /ant[oó]/i.test(q.subtema));
+  const total = S.sino.length + S.ant.length;
+
+  if (!total) {
+    // Debug: mostrar qué subtemas existen para diagnosticar
+    const subtemas = [...new Set(all.map(q => q.subtema))];
+    throw new Error(
+      `No se encontraron preguntas de sinónimos/antónimos en RV.\n` +
+      `Subtemas disponibles: ${subtemas.join(', ') || '(ninguno — posible problema de RLS o sesión)'}`
+    );
+  }
 
   $('cnt-sino').textContent  = `${S.sino.length} preguntas`;
   $('cnt-ant').textContent   = `${S.ant.length} preguntas`;
-  $('cnt-ambos').textContent = `${all.length} preguntas`;
+  $('cnt-ambos').textContent = `${total} preguntas`;
 
   $('setup-loading').style.display = 'none';
   $('setup-form').style.display    = 'block';
