@@ -6491,28 +6491,39 @@ async function gpIniciar(){
 }
 
 /* ── Layout engine ── */
-function gpEstimarH(doc,item,nc){
+function gpEstimarHEnunciado(doc,item,nc){
   const lh=gpLHn(nc),tw=gpTW(nc);
-  doc.setFont('helvetica','normal');doc.setFontSize(gpFSn(nc));
-  if(item.tipo==='texto'){
-    const lines=item.texto?.trim()?doc.splitTextToSize(item.texto.trim(),gpCW(nc)-4):[];
-    const imgH=item.bpImgUrl?gpCW(nc)*0.5:0; // estimado: imagen ocupa ~50% del ancho
-    return lines.length*lh+(lines.length?3:0)+imgH+4;
-  }
   let h=0;
   (item.e||'').split('\n').forEach(p=>{if(!p.trim()){h+=lh*.4;return;}h+=doc.splitTextToSize(p,tw).length*lh;});
   if((item.imgData&&item.imgW&&item.imgH)||item.bpImgUrl){
     const _ratio=(item.imgW&&item.imgH)?item.imgH/item.imgW:0.5;
-    h+=_ratio*gpTW(nc)+4;
+    h+=_ratio*gpTW(nc)+3;
     (item.ePost||'').split('\n').forEach(p=>{if(!p.trim()){h+=lh*.4;return;}h+=doc.splitTextToSize(p,tw).length*lh;});
   }
+  return h;
+}
+function gpEstimarHAlts(doc,item,nc){
+  const lh=gpLHn(nc),tw=gpTW(nc);
+  let h=0;
   if(item.tipo==='alternativas'){
     const n=item.numAlts||5;
-    (item.alts||[]).slice(0,n).forEach(a=>{h+=doc.splitTextToSize(a||' ',tw-8).length*lh+1.5;});
+    (item.alts||[]).slice(0,n).forEach(a=>{h+=doc.splitTextToSize(a||' ',tw-8).length*lh+1;});
   } else {
     (item.si||[]).forEach(s=>{h+=doc.splitTextToSize(s||' ',tw-8).length*lh+2;});
   }
-  return 6+h+4;
+  return h;
+}
+function gpEstimarH(doc,item,nc){
+  doc.setFont('helvetica','normal');doc.setFontSize(gpFSn(nc));
+  if(item.tipo==='texto'){
+    const lh=gpLHn(nc);
+    const lines=item.texto?.trim()?doc.splitTextToSize(item.texto.trim(),gpCW(nc)-4):[];
+    const imgH=item.bpImgUrl?gpCW(nc)*0.5:0;
+    return lines.length*lh+(lines.length?3:0)+imgH+4;
+  }
+  const hE=gpEstimarHEnunciado(doc,item,nc);
+  const hA=gpEstimarHAlts(doc,item,nc);
+  return 2+hE+hA+1;
 }
 function gpFirstY(doc){
   doc.setFont('helvetica','normal');doc.setFontSize(8);
@@ -6529,7 +6540,21 @@ function gpSimular(nc){
   const next=()=>{col++;if(col>=nc){col=0;pages++;colTop=topO;}curY=colTop;};
   GP.secciones.forEach(sec=>{
     if(multi){if(curY+9>gpFOOT)next();curY+=9;}
-    sec.items.forEach(item=>{const h=gpEstimarH(doc,item,nc);if(curY+h>gpFOOT)next();curY+=h;});
+    sec.items.forEach(item=>{
+      const h=gpEstimarH(doc,item,nc);
+      if(curY+h<=gpFOOT){curY+=h;return;}
+      // No cabe entero — intentar corte si es alternativas
+      if(item.tipo==='alternativas'){
+        const hEnc=2+gpEstimarHEnunciado(doc,item,nc);
+        if(curY+hEnc<=gpFOOT){
+          // Corte: enunciado aquí, alternativas en siguiente columna
+          curY+=hEnc;next();
+          curY+=gpEstimarHAlts(doc,item,nc)+1;
+          return;
+        }
+      }
+      next();curY+=h;
+    });
   });
   return pages;
 }
@@ -6833,18 +6858,17 @@ function gpSetColsForzar(n){GP.cfg.colsForzar=(GP.cfg.colsForzar===n?0:n);gpRend
 /* ── MathJax pre-render ── */
 function gpBuildQHTML(item,fsPt){
   const fsPx=(fsPt*(96/72)).toFixed(1),lhPx=(fsPt*(96/72)*1.55).toFixed(1);
-  const aln=item.align||'left';
-  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:2px 0;text-align:${aln}">`;
+  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
   (item.e||'').split('\n').forEach(par=>{
     if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-    h+=`<p style="margin:0 0 2px 0">${par}</p>`;
+    h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
   });
   const _imgSrc=item.imgData||(item.bpImgUrl||null);
   if(_imgSrc){
-    h+=`<img src="${_imgSrc}" crossorigin="anonymous" style="max-width:100%;height:auto;display:block;margin:4px 0">`;
+    h+=`<img src="${_imgSrc}" crossorigin="anonymous" style="max-width:100%;height:auto;display:block;margin:3px 0">`;
     (item.ePost||'').split('\n').forEach(par=>{
       if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-      h+=`<p style="margin:0 0 2px 0">${par}</p>`;
+      h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
     });
   }
   if(item.tipo==='alternativas'){
@@ -6852,18 +6876,50 @@ function gpBuildQHTML(item,fsPt){
     const altsToShow=(item.alts||[]).slice(0,n);
     const maxAltLen=Math.max(...altsToShow.map(a=>(a||'').length));
     const cols=maxAltLen>42?1:2;
-    h+=`<div style="display:grid;grid-template-columns:${cols===1?'1fr':'1fr 1fr'};gap:2px 8px;margin-top:4px">`;
+    h+=`<div style="display:grid;grid-template-columns:${cols===1?'1fr':'1fr 1fr'};gap:1px 8px;margin-top:2px">`;
     ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
       const txt=(item.alts||[])[i]||'';
-      h+=`<div style="display:flex;gap:4px;align-items:flex-start;padding:1px 0"><span style="font-weight:700;min-width:13px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
+      h+=`<div style="display:flex;gap:4px;align-items:flex-start;padding:0"><span style="font-weight:700;min-width:13px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
     });
     h+=`</div>`;
   } else {
     (item.si||[]).forEach((si,i)=>{
-      h+=`<div style="display:flex;gap:6px;margin-top:3px"><span style="color:#333333;font-weight:700;min-width:18px;flex-shrink:0">${String.fromCharCode(97+i)})</span><span>${si}</span></div>`;
+      h+=`<div style="display:flex;gap:6px;margin-top:2px"><span style="color:#333333;font-weight:700;min-width:18px;flex-shrink:0">${String.fromCharCode(97+i)})</span><span>${si}</span></div>`;
     });
   }
   return h+'</div>';
+}
+function gpBuildEnunciadoHTML(item,fsPt){
+  const fsPx=(fsPt*(96/72)).toFixed(1),lhPx=(fsPt*(96/72)*1.55).toFixed(1);
+  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
+  (item.e||'').split('\n').forEach(par=>{
+    if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
+    h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+  });
+  const _imgSrc=item.imgData||(item.bpImgUrl||null);
+  if(_imgSrc){
+    h+=`<img src="${_imgSrc}" crossorigin="anonymous" style="max-width:100%;height:auto;display:block;margin:3px 0">`;
+    (item.ePost||'').split('\n').forEach(par=>{
+      if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
+      h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+    });
+  }
+  return h+'</div>';
+}
+function gpBuildAltsHTML(item,fsPt){
+  const fsPx=(fsPt*(96/72)).toFixed(1),lhPx=(fsPt*(96/72)*1.55).toFixed(1);
+  const n=item.numAlts||5;
+  const altsToShow=(item.alts||[]).slice(0,n);
+  const maxAltLen=Math.max(...altsToShow.map(a=>(a||'').length));
+  const cols=maxAltLen>42?1:2;
+  let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
+  h+=`<div style="display:grid;grid-template-columns:${cols===1?'1fr':'1fr 1fr'};gap:1px 8px;margin-top:2px">`;
+  ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
+    const txt=(item.alts||[])[i]||'';
+    h+=`<div style="display:flex;gap:4px;align-items:flex-start;padding:0"><span style="font-weight:700;min-width:13px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
+  });
+  h+=`</div></div>`;
+  return h;
 }
 async function gpPrerenderAll(nc){
   await MathJax.startup.promise;
@@ -6875,10 +6931,23 @@ async function gpPrerenderAll(nc){
   for(const sec of GP.secciones){
     for(const item of sec.items){
       if(item.tipo==='texto') continue; // texto se dibuja directamente en PDF
-      box.innerHTML=gpBuildQHTML(item,fsPt);
-      await MathJax.typesetPromise([box]);
-      const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
-      imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*2)});
+      if(item.tipo==='alternativas'){
+        // Render enunciado y alternativas por separado para el algoritmo de corte de columna
+        box.innerHTML=gpBuildEnunciadoHTML(item,fsPt);
+        await MathJax.typesetPromise([box]);
+        const canvasE=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        const hE=canvasE.height/(mmToPx*2);
+        box.innerHTML=gpBuildAltsHTML(item,fsPt);
+        await MathJax.typesetPromise([box]);
+        const canvasA=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        const hA=canvasA.height/(mmToPx*2);
+        imgs.push({urlE:canvasE.toDataURL('image/png'),hE,urlA:canvasA.toDataURL('image/png'),hA,wMm:gpTW(nc),split:true});
+      } else {
+        box.innerHTML=gpBuildQHTML(item,fsPt);
+        await MathJax.typesetPromise([box]);
+        const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*2),split:false});
+      }
     }
   }
   document.body.removeChild(box);
@@ -7118,17 +7187,48 @@ async function generarPracticaPDF(){
 
     const drawQ=(item,num)=>{
       const img=imgs[imgIdx++];
-      const ind=gpIND[nc],h=3+img.hMm+2;
-      if(curY+h>gpFOOT)moveNext();
-      const cx=colXs[curCol];
-      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?10:9);doc.setTextColor(0,0,0);
-      doc.text(String(num)+'.',cx+1,curY+gpFSn(nc)*0.35+1);
-      if(GP.cfg.mostrarPts&&item.p){
-        doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(80,80,80);
-        doc.text('('+item.p+'pt'+(item.p>1?'s':'')+')',cx+cw,curY+gpFSn(nc)*0.35+1,{align:'right'});
+      const ind=gpIND[nc];
+      const _drawNum=(cx)=>{
+        doc.setFont('helvetica','bold');doc.setFontSize(nc===1?10:9);doc.setTextColor(0,0,0);
+        doc.text(String(num)+'.',cx+1,curY+gpFSn(nc)*0.35+1);
+        if(GP.cfg.mostrarPts&&item.p){
+          doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(80,80,80);
+          doc.text('('+item.p+'pt'+(item.p>1?'s':'')+')',cx+cw,curY+gpFSn(nc)*0.35+1,{align:'right'});
+        }
+      };
+      if(!img.split){
+        // Item sin alternativas (enunciado solo)
+        const h=2+img.hMm+1;
+        if(curY+h>gpFOOT)moveNext();
+        const cx=colXs[curCol];_drawNum(cx);
+        doc.addImage(img.url,'PNG',cx+ind,curY,img.wMm,img.hMm);
+        curY+=h;
+        return;
       }
-      doc.addImage(img.url,'PNG',cx+ind,curY,img.wMm,img.hMm);
-      curY+=h;
+      // Item con alternativas — algoritmo de corte de columna
+      const hFull=2+img.hE+img.hA+1;
+      const hEnc=2+img.hE;
+      if(curY+hFull<=gpFOOT){
+        // Cabe entero
+        const cx=colXs[curCol];_drawNum(cx);
+        doc.addImage(img.urlE,'PNG',cx+ind,curY,img.wMm,img.hE);
+        doc.addImage(img.urlA,'PNG',cx+ind,curY+img.hE,img.wMm,img.hA);
+        curY+=hFull;
+      } else if(curY+hEnc<=gpFOOT){
+        // Corte: enunciado en columna actual, alternativas en la siguiente
+        const cx=colXs[curCol];_drawNum(cx);
+        doc.addImage(img.urlE,'PNG',cx+ind,curY,img.wMm,img.hE);
+        curY+=hEnc;moveNext();
+        doc.addImage(img.urlA,'PNG',colXs[curCol]+ind,curY,img.wMm,img.hA);
+        curY+=img.hA+1;
+      } else {
+        // Ni el enunciado cabe — mover todo a siguiente columna
+        moveNext();
+        const cx=colXs[curCol];_drawNum(cx);
+        doc.addImage(img.urlE,'PNG',cx+ind,curY,img.wMm,img.hE);
+        doc.addImage(img.urlA,'PNG',cx+ind,curY+img.hE,img.wMm,img.hA);
+        curY+=hFull;
+      }
     };
 
     const drawDiv=(nombre)=>{
@@ -7240,7 +7340,7 @@ function showToast(msg,color='var(--gold)'){
 // ── BANCO DE PREGUNTAS ────────────────────────────────────────────────────────
 const BP={
   init:false,tab:'gestionar',mats:[],subtemas:{},
-  ed:null,fMat:'',fSub:'',lista:[],listaConteo:[],sel:new Set(),saving:false,randSubtemas:[]
+  ed:null,fMat:'',fSub:'',fTxt:'',lista:[],listaConteo:[],sel:new Set(),saving:false,randSubtemas:[],_txtTimer:null
 };
 const BPINP=`background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;outline:none;width:100%;box-sizing:border-box`;
 const BPLBL=`font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block`;
@@ -7326,7 +7426,7 @@ async function bpRefreshSubtemas(matId){
 function bpNueva(){
   const mid=BP.mats[0]?.id||'';
   BP.ed={
-    id:null,materia_id:mid,subtema:'',tipo:'simple',
+    id:null,materia_id:mid,subtema:'',tipo:'simple',nivel:null,fuente:'',
     enunciado_texto:'',enunciado_imagen_url:null,enunciado_post:'',
     alts:['','','','',''],altImgs:[null,null,null,null,null],
     sol:{tipo:'alternativa',alt:-1,desarrollo:'',devImg:null},
@@ -7343,6 +7443,9 @@ function bpShowTab(t){
   });
   if(t==='explorar'){if(!BP.lista.length)bpCargarLista();else bpRenderLista();}
 }
+
+const BP_MAT_KEYS=/matem|aritm|álgebra|algebra|geometr|trigon|estad|razon.*mat/i;
+function bpEsMatematica(matId){return BP_MAT_KEYS.test(BP.mats.find(m=>m.id===matId)?.nombre||'');}
 
 function bpRenderUI(){
   const root=document.getElementById('bp-root');if(!root)return;
@@ -7377,6 +7480,21 @@ function bpRenderUI(){
         <option value="simple"${(ed.tipo||'simple')==='simple'?' selected':''}>Simple (alternativas A-E)</option>
         <option value="texto_base"${ed.tipo==='texto_base'?' selected':''}>Texto Base (RV – lectura)</option>
       </select>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:16px">
+    <div id="bp-nivel-row" style="min-width:170px;${bpEsMatematica(mid)?'':'display:none'}">
+      <label style="${BPLBL}">Nivel de dificultad</label>
+      <select id="bp-nivel" style="${BPINP}">
+        <option value="">— Sin nivel —</option>
+        <option value="facil"${ed.nivel==='facil'?' selected':''}>Fácil</option>
+        <option value="medio"${ed.nivel==='medio'?' selected':''}>Medio</option>
+        <option value="dificil"${ed.nivel==='dificil'?' selected':''}>Difícil</option>
+      </select>
+    </div>
+    <div style="flex:1">
+      <label style="${BPLBL}">Fuente <span style="font-weight:400;color:#8aaac8;font-size:10px">(libro, examen, año, etc.)</span></label>
+      <input id="bp-fuente" style="${BPINP}" placeholder="Ej: UNI 2023, Lumbreras cap.5, UNMSM 2021-I..." value="${gpEsc(ed.fuente||'')}"/>
     </div>
   </div>
 
@@ -7460,6 +7578,11 @@ function bpRenderUI(){
     </div>
     <button class="btn btn-gold" id="bp-btn-enviar" onclick="bpMandadAPractica()" style="white-space:nowrap">Mandar a Práctica →</button>
   </div>
+  <div style="margin-bottom:14px;position:relative">
+    <label style="${BPLBL}">Buscar por texto del enunciado</label>
+    <input id="bp-filt-txt" style="${BPINP};padding-right:36px" placeholder="Escribe parte del enunciado para buscar..." value="${gpEsc(BP.fTxt)}" oninput="bpFiltrarTxt(this.value)"/>
+    <button id="bp-filt-txt-clear" onclick="bpFiltrarTxt('');this.closest('div').querySelector('input').value=''" style="position:absolute;right:8px;bottom:9px;background:none;border:none;color:#8aaac8;cursor:pointer;font-size:16px;line-height:1;display:${BP.fTxt?'block':'none'}" title="Limpiar">✕</button>
+  </div>
   <div id="bp-lista-sel" style="font-size:12px;color:#8aaac8;margin-bottom:8px">0 seleccionadas</div>
   <div id="bp-lista"><div class="empty"><div class="ei"></div><div class="et">Selecciona una materia para ver preguntas</div></div></div>
 </div>
@@ -7515,6 +7638,8 @@ function bpOnMateriaChange(val){
   BP.ed.materia_id=val;
   const dl=document.getElementById('bp-sub-dl');
   if(dl)dl.innerHTML=(BP.subtemas[val]||[]).map(s=>`<option value="${gpEsc(s)}">`).join('');
+  const nivelRow=document.getElementById('bp-nivel-row');
+  if(nivelRow)nivelRow.style.display=bpEsMatematica(val)?'':'none';
 }
 
 function bpOnTipoChange(val){
@@ -7557,6 +7682,9 @@ function bpLeerForm(){
   ed.materia_id=document.getElementById('bp-materia')?.value||ed.materia_id;
   ed.subtema=(document.getElementById('bp-subtema')?.value||'').trim();
   ed.tipo=document.getElementById('bp-tipo')?.value||ed.tipo;
+  ed.fuente=(document.getElementById('bp-fuente')?.value||'').trim();
+  const _nivelEl=document.getElementById('bp-nivel');
+  if(_nivelEl)ed.nivel=_nivelEl.value||null;
   ed.enunciado_texto=document.getElementById('bp-enunciado')?.value||'';
   ed.enunciado_post=document.getElementById('bp-epost')?.value||'';
   if(ed.tipo==='simple'){
@@ -7631,6 +7759,8 @@ async function bpGuardar(){
   try{
     const{data:{user}}=await sb.auth.getUser();
     const pregData={materia_id:ed.materia_id,subtema:ed.subtema,tipo:ed.tipo,
+      nivel:bpEsMatematica(ed.materia_id)?ed.nivel||null:null,
+      fuente:ed.fuente||null,
       enunciado_texto:ed.enunciado_texto,enunciado_imagen_url:ed.enunciado_imagen_url,
       enunciado_post:ed.enunciado_post,creado_por:user?.id};
     let pregId=ed.id;
@@ -7675,6 +7805,7 @@ async function bpGuardar(){
     const _savedMat=ed.materia_id,_savedSub=ed.subtema;
     const _matNom=BP.mats.find(m=>m.id===_savedMat)?.nombre||'';
     const _subInfo=_savedSub?` · ${_savedSub}`:'';
+    BP.lista=[];BP.listaConteo=[];
     bpNueva();BP.ed.materia_id=_savedMat;BP.ed.subtema=_savedSub;bpRenderUI();
     showToast(`✓ Pregunta guardada → ${_matNom}${_subInfo||' · sin subtema'}`);
   }catch(e){
@@ -7687,7 +7818,10 @@ async function bpGuardar(){
 function bpHtmlPreviewContent(data,matNom){
   // data: {materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,alts[],altImgs[],sol,subitems[]}
   const LTRS=['A','B','C','D','E'];
-  let h=`<div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:6px">${gpEsc(matNom)}${data.subtema?' <span style="color:#8aaac8">·</span> '+gpEsc(data.subtema):''}</div>`;
+  const _NCOL={facil:'#2ea84a',medio:'#c9a84c',dificil:'#e55'};
+  const _nivelStr=data.nivel?` <span style="font-size:10px;border:1px solid ${_NCOL[data.nivel]||'#8aaac8'};color:${_NCOL[data.nivel]||'#8aaac8'};padding:1px 7px;margin-left:4px">${data.nivel.toUpperCase()}</span>`:'';
+  const _fuenteStr=data.fuente?`<div style="font-size:10px;color:#6a9ac8;margin-top:3px">📚 ${gpEsc(data.fuente)}</div>`:'';
+  let h=`<div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:2px">${gpEsc(matNom)}${data.subtema?' <span style="color:#8aaac8">·</span> '+gpEsc(data.subtema):''}${_nivelStr}</div>${_fuenteStr}<div style="margin-bottom:6px"></div>`;
   if(data.enunciado_texto)h+=`<div style="font-size:14px;line-height:1.7;margin-bottom:10px">${data.enunciado_texto}</div>`;
   if(data.enunciado_imagen_url)h+=`<img src="${data.enunciado_imagen_url}" style="max-width:100%;max-height:220px;object-fit:contain;border:1px solid var(--border);margin-bottom:8px;display:block">`;
   if(data.enunciado_post)h+=`<div style="font-size:13px;color:#c0d0e0;margin-bottom:10px">${data.enunciado_post}</div>`;
@@ -7744,6 +7878,7 @@ function bpPrevisualizar(){
   const matNom=BP.mats.find(m=>m.id===ed.materia_id)?.nombre||'Sin materia';
   const html=bpHtmlPreviewContent({
     materia_id:ed.materia_id,subtema:ed.subtema,tipo:ed.tipo,
+    nivel:ed.nivel,fuente:ed.fuente,
     enunciado_texto:ed.enunciado_texto,enunciado_imagen_url:ed.enunciado_imagen_url,
     enunciado_post:ed.enunciado_post,
     alts:ed.alts,altImgs:ed.altImgs,sol:ed.sol,subitems:ed.subitems
@@ -7761,7 +7896,7 @@ async function bpPrevLista(pregId){
   content.innerHTML='<div style="color:#8aaac8;font-size:13px">Cargando...</div>';
   overlay.style.display='flex';
   const{data:preg,error}=await sb.from('banco_preguntas').select(`
-    id,materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,
+    id,materia_id,subtema,tipo,nivel,fuente,enunciado_texto,enunciado_imagen_url,enunciado_post,
     banco_subitems(id,orden,texto,imagen_url,banco_alternativas(id,orden,texto),banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto)),
     banco_alternativas(id,orden,texto,imagen_url),
     banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
@@ -7773,6 +7908,7 @@ async function bpPrevLista(pregId){
   const sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
   const data={
     materia_id:preg.materia_id,subtema:preg.subtema||'',tipo:preg.tipo,
+    nivel:preg.nivel||null,fuente:preg.fuente||'',
     enunciado_texto:preg.enunciado_texto||'',enunciado_imagen_url:preg.enunciado_imagen_url,
     enunciado_post:preg.enunciado_post||'',
     alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
@@ -7794,15 +7930,19 @@ async function bpPrevLista(pregId){
 async function bpCargarLista(){
   const el=document.getElementById('bp-lista');if(!el)return;
   el.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();
-  if(!matId){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia</div></div>';return;}
-  // Query de conteo real (sin límite, solo id+subtema)
-  let qCount=sb.from('banco_preguntas').select('id,subtema').eq('materia_id',matId);
+  const matId=BP.fMat;const subFilt=BP.fSub.trim().toLowerCase();const txtFilt=BP.fTxt.trim();
+  if(!matId&&!txtFilt){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia o escribe texto para buscar</div></div>';return;}
+  // Query de conteo real (sin límite)
+  let qCount=sb.from('banco_preguntas').select('id,subtema,materia_id');
+  if(matId)qCount=qCount.eq('materia_id',matId);
   if(subFilt)qCount=qCount.ilike('subtema','%'+subFilt+'%');
+  if(txtFilt)qCount=qCount.ilike('enunciado_texto','%'+txtFilt+'%');
   // Query de display (con límite)
   const DISPLAY_LIMIT=200;
-  let qDisplay=sb.from('banco_preguntas').select('id,subtema,tipo,enunciado_texto,enunciado_imagen_url,materias(nombre),banco_subitems(id)').eq('materia_id',matId).order('creado_en',{ascending:false}).limit(DISPLAY_LIMIT);
+  let qDisplay=sb.from('banco_preguntas').select('id,materia_id,subtema,tipo,nivel,fuente,enunciado_texto,enunciado_imagen_url,materias(nombre),banco_subitems(id)').order('creado_en',{ascending:false}).limit(DISPLAY_LIMIT);
+  if(matId)qDisplay=qDisplay.eq('materia_id',matId);
   if(subFilt)qDisplay=qDisplay.ilike('subtema','%'+subFilt+'%');
+  if(txtFilt)qDisplay=qDisplay.ilike('enunciado_texto','%'+txtFilt+'%');
   const[{data:countData,error:cErr},{data:displayData,error:dErr}]=await Promise.all([qCount,qDisplay]);
   if(cErr||dErr){el.innerHTML='<div class="empty"><div class="et">Error: '+((cErr||dErr).message)+'</div></div>';return;}
   BP.listaConteo=countData||[];
@@ -7815,7 +7955,24 @@ function bpFiltrar(){
   BP.fSub=(document.getElementById('bp-filt-sub')?.value||'').trim().toLowerCase();
   const dl=document.getElementById('bp-filt-dl');
   if(dl&&BP.fMat)dl.innerHTML=(BP.subtemas[BP.fMat]||[]).map(s=>`<option value="${gpEsc(s)}">`).join('');
-  if(BP.fMat)bpCargarLista();
+  if(BP.fMat||BP.fTxt)bpCargarLista();
+}
+
+function bpFiltrarTxt(val){
+  clearTimeout(BP._txtTimer);
+  BP.fTxt=val.trim();
+  const clearBtn=document.getElementById('bp-filt-txt-clear');
+  if(clearBtn)clearBtn.style.display=BP.fTxt?'block':'none';
+  const lbl=document.getElementById('bp-lista-sel');
+  if(lbl&&BP.fTxt)lbl.textContent='Buscando...';
+  BP._txtTimer=setTimeout(()=>{
+    if(BP.fMat||BP.fTxt)bpCargarLista();
+    else{
+      const el=document.getElementById('bp-lista');
+      if(el)el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Selecciona una materia o escribe texto para buscar</div></div>';
+      if(lbl)lbl.textContent='0 seleccionadas';
+    }
+  },420);
 }
 
 function bpRenderLista(){
@@ -7831,8 +7988,8 @@ function bpRenderLista(){
   for(const p of conteoBase){const s=p.subtema||'(sin subtema)';resMap[s]=(resMap[s]||0)+1;}
   BP.randSubtemas=Object.entries(resMap).sort((a,b)=>b[1]-a[1]).map(([s])=>s);
   const totalReal=conteoBase.length;
-  const matNomR=BP.mats.find(m=>m.id===BP.fMat)?.nombre||'';
-  const activeSub=BP.fSub.trim().toLowerCase();
+  const matNomR=BP.mats.find(m=>m.id===BP.fMat)?.nombre||'TODAS LAS MATERIAS';
+  const activeSub=BP.fSub.trim().toLowerCase();const activeTxt=BP.fTxt.trim();
   const resHtml=BP.randSubtemas.map(s=>{
     const c=resMap[s];
     const isActive=activeSub&&s.toLowerCase()===activeSub;
@@ -7852,7 +8009,7 @@ function bpRenderLista(){
     ? `${totalReal} registro${totalReal===1?'':'s'} · <span style="color:var(--white)">${simples} simple${simples===1?'':'s'}</span> + <span style="color:var(--gold)">${textos} texto${textos===1?'':'s'} base (${subpregs} sub-preg.)</span> = <span style="color:var(--white);font-weight:700">${totalEfectivo} preguntas efectivas</span>`
     : `${totalReal} pregunta${totalReal===1?'':'s'}`;
   const resumenBloque=`<div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);padding:10px 14px;margin-bottom:14px">
-  <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:7px">${gpEsc(matNomR).toUpperCase()} — ${conteoStr}${BP.lista.length<totalReal?` <span style="color:#8aaac8;font-weight:400">(mostrando ${BP.lista.length})</span>`:''}${activeSub?` <span style="color:#8aaac8;font-weight:400">· filtro: ${gpEsc(BP.fSub)}</span>`:''}</div>
+  <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em;margin-bottom:7px">${gpEsc(matNomR).toUpperCase()} — ${conteoStr}${BP.lista.length<totalReal?` <span style="color:#8aaac8;font-weight:400">(mostrando ${BP.lista.length})</span>`:''}${activeSub?` <span style="color:#8aaac8;font-weight:400">· subtema: ${gpEsc(BP.fSub)}</span>`:''}${activeTxt?` <span style="color:#8aaac8;font-weight:400">· texto: "${gpEsc(activeTxt)}"</span>`:''}</div>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${resHtml}</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <button class="btn btn-outline" style="font-size:11px;padding:4px 14px" onclick="bpSelTodos()">☑ Seleccionar todos</button>
@@ -7888,12 +8045,15 @@ function bpRenderLista(){
     const sinTexto=p.tipo==='texto_base'&&!p.enunciado_texto?.trim()&&!p.enunciado_imagen_url;
     const tipoTag=p.tipo==='texto_base'?`<span style="font-size:10px;border:1px solid var(--gold);color:var(--gold);padding:1px 6px">TEXTO BASE · ${peso} preg.</span>${sinTexto?`<span style="font-size:10px;border:1px solid #e55;color:#e55;padding:1px 6px">⚠ sin texto</span>`:''}`:`<span style="font-size:10px;border:1px solid var(--border);color:#8aaac8;padding:1px 6px">SIMPLE</span>`;
     const subTag=p.subtema?`<span style="font-size:10px;background:var(--gold);color:#0d1b2e;padding:1px 7px;font-weight:700">${gpEsc(p.subtema)}</span>`:'';
+    const _NC={facil:'#2ea84a',medio:'#c9a84c',dificil:'#e55'};
+    const nivelTag=p.nivel?`<span style="font-size:10px;border:1px solid ${_NC[p.nivel]||'#8aaac8'};color:${_NC[p.nivel]||'#8aaac8'};padding:1px 6px">${p.nivel.toUpperCase()}</span>`:'';
+    const fuenteTag=p.fuente?`<span style="font-size:10px;color:#6a9ac8">📚 ${gpEsc(p.fuente)}</span>`:'';
     return `<div style="display:flex;align-items:flex-start;gap:12px;background:var(--navy2);border:1px solid var(--border);padding:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=BP.sel.has('${p.id}')?'var(--gold)':'var(--border)'">
       <input type="checkbox" ${chk} style="margin-top:2px;width:16px;height:16px;flex-shrink:0;cursor:pointer" onclick="bpToggleSel('${p.id}',this.closest('div'))">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="bpToggleSel('${p.id}',this.closest('div'))">
-        <div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">${subTag}${tipoTag}</div>
+        <div style="display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap">${subTag}${tipoTag}${nivelTag}</div>
         <div style="font-size:13px;color:var(--white);line-height:1.4">${gpEsc(preview)||'[imagen]'}</div>
-        ${p.enunciado_imagen_url?`<span style="font-size:10px;color:#6a9ac8">📷 con imagen</span>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px">${p.enunciado_imagen_url?`<span style="font-size:10px;color:#6a9ac8">📷 con imagen</span>`:''}${fuenteTag}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
         <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="event.stopPropagation();bpPrevLista('${p.id}')">👁 Ver</button>
@@ -7981,7 +8141,7 @@ function bpToggleSel(id,el){
 
 async function bpCargarParaEditar(pregId){
   const{data:preg,error}=await sb.from('banco_preguntas').select(`
-    id,materia_id,subtema,tipo,enunciado_texto,enunciado_imagen_url,enunciado_post,
+    id,materia_id,subtema,tipo,nivel,fuente,enunciado_texto,enunciado_imagen_url,enunciado_post,
     banco_subitems(id,orden,texto,imagen_url,banco_alternativas(id,orden,texto,imagen_url),banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)),
     banco_alternativas(id,orden,texto,imagen_url),
     banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
@@ -7997,6 +8157,8 @@ async function bpCargarParaEditar(pregId){
     materia_id:preg.materia_id||'',
     subtema:preg.subtema||'',
     tipo:preg.tipo||'simple',
+    nivel:preg.nivel||null,
+    fuente:preg.fuente||'',
     enunciado_texto:preg.enunciado_texto||'',
     enunciado_imagen_url:preg.enunciado_imagen_url||null,
     enunciado_post:preg.enunciado_post||'',
@@ -8044,6 +8206,7 @@ async function bpMandadAPractica(){
         banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
       `).eq('id',pregId).single();
       if(error||!preg)continue;
+      if(preg.tipo==='texto_base')console.log('[BP→GP]',pregId,'enunciado_texto:',preg.enunciado_texto?.slice(0,60)||'(vacío)');
       // Fallback: si texto_base vino sin enunciado_texto (race/RLS), usar dato de BP.lista
       if(preg.tipo==='texto_base'&&!preg.enunciado_texto){
         const cached=BP.lista.find(p=>p.id===pregId);
