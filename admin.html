@@ -6649,7 +6649,8 @@ function gpRenderUI(){
                 <button class="btn btn-red" style="padding:3px 8px;font-size:10px" onclick="gpDelItem(${si},${ii})">✕</button>
               </div>
               ${item.bpImgUrl?`<img src="${item.bpImgUrl}" style="max-width:100%;max-height:220px;object-fit:contain;display:block;margin-bottom:8px;border:1px solid var(--border)">`:''}
-              <textarea style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:8px;outline:none;resize:vertical;line-height:1.6" rows="5"
+              ${!item.texto?.trim()&&!item.bpImgUrl?`<div style="background:rgba(229,85,85,.1);border:1px solid #e55;padding:8px 10px;margin-bottom:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#e55;letter-spacing:.05em">⚠ Texto de lectura vacío — pega la lectura completa en el campo de abajo para que aparezca en el PDF</div>`:''}
+              <textarea style="width:100%;background:var(--navy);border:1px solid ${!item.texto?.trim()&&!item.bpImgUrl?'#e55':'var(--border)'};color:var(--white);font-family:'Barlow',sans-serif;font-size:12px;padding:8px;outline:none;resize:vertical;line-height:1.6" rows="5"
                 oninput="GP.secciones[${si}].items[${ii}].texto=this.value;gpRefreshBadge()"
                 placeholder="Pega aquí el texto de lectura...">${gpEsc(item.texto||'')}</textarea>
             </div>`;
@@ -7498,11 +7499,14 @@ function bpRenderUI(){
     </div>
   </div>
 
-  <!-- Enunciado -->
-  <div style="background:var(--navy2);border:1px solid var(--border);padding:16px;margin-bottom:14px">
-    <label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>
+  <!-- Enunciado / Texto de Lectura -->
+  <div style="background:var(--navy2);border:1px solid ${ed.tipo==='texto_base'?'rgba(201,168,76,.5)':'var(--border)'};padding:16px;margin-bottom:14px">
+    ${ed.tipo==='texto_base'
+      ?`<label style="${BPLBL}">📖 Texto de Lectura &nbsp;<span style="color:#e55;font-size:12px">*</span> &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Este texto aparece como encabezado en la práctica — es la lectura que los alumnos deben leer</span></label>`
+      :`<label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>`
+    }
     ${BP_FMT_BAR('bp-enunciado')}
-    <textarea id="bp-enunciado" rows="4" style="${BPINP};resize:vertical;margin-bottom:8px" onpaste="bpOnPaste(event)">${gpEsc(ed.enunciado_texto||'')}</textarea>
+    <textarea id="bp-enunciado" rows="${ed.tipo==='texto_base'?8:4}" style="${BPINP};resize:vertical;margin-bottom:8px" onpaste="bpOnPaste(event)" placeholder="${ed.tipo==='texto_base'?'Pega aquí el texto completo de la lectura...':''}">${gpEsc(ed.enunciado_texto||'')}</textarea>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
       <label class="btn btn-outline" style="cursor:pointer;font-size:11px;padding:5px 12px;margin:0">
         📷 Imagen enunciado<input type="file" accept="image/*" style="display:none" onchange="bpUploadEnunciado(this)">
@@ -7754,6 +7758,7 @@ async function bpGuardar(){
   const btn=document.getElementById('bp-btn-guardar');
   if(!ed.materia_id){await myAlert('Selecciona una materia.');return;}
   if(ed.tipo!=='texto_base'&&!ed.enunciado_texto.trim()&&!ed.enunciado_imagen_url){await myAlert('Escribe el enunciado o sube una imagen.');return;}
+  if(ed.tipo==='texto_base'&&!ed.enunciado_texto.trim()&&!ed.enunciado_imagen_url){await myAlert('El campo "Texto de Lectura" es obligatorio para preguntas de Texto Base.\n\nPega la lectura completa en el campo resaltado con borde dorado antes de guardar.');return;}
   if(ed.tipo==='texto_base'&&!ed.subitems.length){await myAlert('Agrega al menos una sub-pregunta para tipo Texto Base.');return;}
   if(btn)btn.disabled=true;BP.saving=true;if(st)st.textContent='Guardando...';
   try{
@@ -8214,11 +8219,11 @@ async function bpMandadAPractica(){
         banco_soluciones(id,tipo,alternativa_correcta,desarrollo_texto,desarrollo_imagen_url)
       `).eq('id',pregId).single();
       if(error||!preg)continue;
-      if(preg.tipo==='texto_base')console.log('[BP→GP]',pregId,'enunciado_texto:',preg.enunciado_texto?.slice(0,60)||'(vacío)');
-      // Fallback: si texto_base vino sin enunciado_texto (race/RLS), usar dato de BP.lista
-      if(preg.tipo==='texto_base'&&!preg.enunciado_texto){
+      if(preg.tipo==='texto_base')console.log('[BP→GP]',pregId,'enunciado_texto:',preg.enunciado_texto?.slice(0,80)||'(vacío — revisar en banco)');
+      // Fallback: si texto_base vino sin enunciado_texto, intentar desde BP.lista (caché de la lista)
+      if(preg.tipo==='texto_base'&&!preg.enunciado_texto?.trim()){
         const cached=BP.lista.find(p=>p.id===pregId);
-        if(cached?.enunciado_texto)preg={...preg,enunciado_texto:cached.enunciado_texto};
+        if(cached?.enunciado_texto?.trim())preg={...preg,enunciado_texto:cached.enunciado_texto};
         if(cached?.enunciado_imagen_url&&!preg.enunciado_imagen_url)preg={...preg,enunciado_imagen_url:cached.enunciado_imagen_url};
       }
       let sec=GP.secciones.find(s=>s.materia_id===preg.materia_id);
