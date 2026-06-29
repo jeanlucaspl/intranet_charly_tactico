@@ -6947,6 +6947,31 @@ async function gpPreloadTextoImgs(){
   }
 }
 
+function gpShuffleAlts(){
+  for(const sec of GP.secciones){
+    for(const item of sec.items){
+      if(item.tipo!=='alternativas') continue;
+      const correctIdx=item.bpSolAlt;
+      if(correctIdx<0) continue; // sin respuesta correcta definida
+      const alts=item.alts||[];
+      const n=alts.filter(a=>(a||'').trim()).length;
+      if(n<2) continue;
+      const altImgs=item.altImgs||Array(5).fill(null);
+      // Fisher-Yates sobre los primeros n elementos
+      const perm=Array.from({length:n},(_,i)=>i);
+      for(let i=n-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [perm[i],perm[j]]=[perm[j],perm[i]];
+      }
+      item.alts=[...perm.map(i=>alts[i]),...Array(5-n).fill('')];
+      item.altImgs=[...perm.map(i=>altImgs[i]||null),...Array(5-n).fill(null)];
+      const newCorrect=perm.indexOf(correctIdx);
+      item.bpSolAlt=newCorrect;
+      item.altCorrecta=newCorrect;
+    }
+  }
+}
+
 async function gpPrerenderAll(nc){
   await MathJax.startup.promise;
   const mmToPx=3.7795,colWpx=Math.round(gpTW(nc)*mmToPx),fsPt=gpFSn(nc);
@@ -7173,6 +7198,9 @@ async function generarPracticaPDF(){
     status.textContent='Cargando imágenes de lectura...';
     await gpPreloadTextoImgs();
 
+    // Mezclar orden de alternativas (la correcta se rastrea y actualiza en bpSolAlt)
+    gpShuffleAlts();
+
     // Pre-render LaTeX
     status.textContent='Renderizando LaTeX...';
     const imgs=await gpPrerenderAll(nc);
@@ -7192,18 +7220,19 @@ async function generarPracticaPDF(){
         doc.addImage(b64,'PNG',colXs[curCol]+2,curY,imgW,imgH);
         curY+=imgH+4;
       }
-      // Texto de la lectura
+      // Texto de la lectura — usa interlineado real de jsPDF (fs*1.15*(25.4/72))
       if(item.texto?.trim()){
+        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+        const alh=fs*1.15*(25.4/72); // line height real en mm
         const allLines=doc.splitTextToSize(item.texto.trim(),tw);
         let remaining=[...allLines];
         while(remaining.length){
           const cx=colXs[curCol];
           const avail=gpFOOT-curY;
-          const maxLines=Math.max(1,Math.floor((avail-4)/lh));
+          const maxLines=Math.max(1,Math.floor((avail-alh)/alh));
           const chunk=remaining.splice(0,maxLines);
-          doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
-          doc.text(chunk,cx+2,curY+lh);
-          curY+=chunk.length*lh+3;
+          doc.text(chunk,cx+2,curY+alh*0.5);
+          curY+=chunk.length*alh+(remaining.length?0:0.5);
           if(remaining.length)moveNext();
         }
       }
@@ -7293,6 +7322,11 @@ async function generarPracticaPDF(){
       let prevSubtema=null;
       sec.items.forEach(item=>{
         if(item.tipo==='texto'){
+          const _sub=item.bpSubtema||item.etiqueta||'';
+          if(_sub&&_sub!=='Lectura'&&_sub!=='Texto'&&_sub!==prevSubtema){
+            drawSubtema(_sub);
+            prevSubtema=_sub;
+          }
           drawTexto(item);
         }else{
           if(isRV&&!item.bpEsSubitem&&item.bpSubtema&&item.bpSubtema!==prevSubtema){
@@ -7546,6 +7580,9 @@ function bpRenderUI(){
         ${ed.enunciado_imagen_url&&!ed.enunciado_texto?.trim()?`<div style="background:rgba(229,85,85,.1);border:1px solid #e55;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#e55">
           ⚠ Esta pregunta tiene el texto guardado como imagen. Para ahorrar espacio en el PDF, borra la imagen y <strong>pega el texto directamente en el campo de abajo</strong>.
         </div>`:''}
+        ${!ed.enunciado_imagen_url&&!ed.enunciado_texto?.trim()&&ed.enunciado_post?.trim()?`<div style="background:rgba(229,85,85,.1);border:1px solid #e55;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#e55">
+          ⚠ El texto de lectura está en el campo "Texto post-imagen" (más abajo). <strong>Córtalo y pégalo aquí</strong> para que aparezca correctamente en la práctica y el PDF.
+        </div>`:''}
       `
       :`<label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>`
     }
@@ -7558,7 +7595,8 @@ function bpRenderUI(){
       ${ed.enunciado_imagen_url?`<span style="font-size:11px;color:#8aaac8">imagen adjunta <button onclick="bpQuitarImgEnunciado()" style="color:#e55;background:none;border:none;cursor:pointer">✕</button></span>`:'<span style="font-size:11px;color:#4a5a6a">sin imagen</span>'}
     </div>
     ${ed.enunciado_imagen_url?`<img src="${ed.enunciado_imagen_url}" style="max-width:240px;max-height:130px;object-fit:contain;border:1px solid var(--border);margin-bottom:8px;display:block">`:''}
-    <label style="${BPLBL}">Texto post-imagen <span style="font-weight:400;color:#8aaac8;font-size:10px">(opcional)</span></label>
+    <label style="${BPLBL}">Texto post-imagen <span style="font-weight:400;color:#8aaac8;font-size:10px">(opcional — aparece debajo de la imagen, no como lectura principal)</span></label>
+    ${ed.tipo==='texto_base'&&ed.enunciado_post?.trim()&&!ed.enunciado_texto?.trim()?`<div style="background:rgba(201,168,76,.12);border:1px solid var(--gold);padding:6px 10px;margin-bottom:6px;font-size:11px;color:var(--gold)">⚠ Para texto_base, el texto de lectura debe ir en el campo principal de arriba, no aquí.</div>`:''}
     <textarea id="bp-epost" rows="2" style="${BPINP};resize:vertical" placeholder="Texto que aparece después de la imagen...">${gpEsc(ed.enunciado_post||'')}</textarea>
   </div>
 
@@ -8294,6 +8332,12 @@ function bpToGpItems(preg){
     let textoBase=preg.enunciado_texto||'';
     let textoImgUrl=preg.enunciado_imagen_url||null;
     let sis=(preg.banco_subitems||[]).slice().sort((a,b)=>a.orden-b.orden);
+    // Fallback: si enunciado_texto está vacío pero enunciado_post tiene contenido,
+    // el admin ingresó el texto de lectura en el campo post-imagen por error.
+    if(!textoBase.trim()&&!textoImgUrl&&preg.enunciado_post?.trim()){
+      textoBase=preg.enunciado_post;
+      console.log('[BP→GP] Fallback enunciado_post→texto para',preg.id,textoBase.slice(0,60));
+    }
     // Si enunciado_texto está vacío y el primer subitem no tiene alternativas,
     // ese subitem fue ingresado como texto de lectura por error de estructura.
     // Lo promovemos al bloque texto y lo excluimos de las preguntas numeradas.
@@ -8307,7 +8351,7 @@ function bpToGpItems(preg){
         console.log('[BP→GP] Texto de lectura promovido desde subitem 0:',textoBase.slice(0,60));
       }
     }
-    items.push({tipo:'texto',texto:textoBase,etiqueta:preg.subtema||'Lectura',bpImgUrl:textoImgUrl});
+    items.push({tipo:'texto',texto:textoBase,etiqueta:preg.subtema||'Lectura',bpSubtema:preg.subtema||'',bpImgUrl:textoImgUrl});
     for(const si of sis){
       const alts=(si.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
       const sol=si.banco_soluciones?.[0]||null;
