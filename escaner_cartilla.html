@@ -690,7 +690,7 @@ async function connectServer() {
   const ip = raw.includes(':') ? raw : raw + ':5000';
   setCfgStatus('Conectando...', '');
   try {
-    const resp = await fetch(`http://${ip}/health`, { signal: AbortSignal.timeout(4000) });
+    const resp = await fetch(`https://${ip}/health`, { signal: AbortSignal.timeout(4000) });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     if (!data.ok) throw new Error('Respuesta inesperada');
@@ -895,7 +895,7 @@ async function captureOMR() {
   fd.append('n', examN);
 
   try {
-    const resp = await fetch(`http://${serverIP}/process`, {
+    const resp = await fetch(`https://${serverIP}/process`, {
       method: 'POST',
       body: fd,
       signal: AbortSignal.timeout(15000),

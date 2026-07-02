@@ -270,8 +270,8 @@ if __name__ == '__main__':
     print(f"  Charly Táctico · Servidor OMR")
     print(f"{'═' * 52}")
     print(f"  IP local  →  {local_ip}")
-    print(f"  Endpoint  →  http://{local_ip}:5000")
+    print(f"  Endpoint  →  https://{local_ip}:5000")
     print(f"  Ingresa esa IP en el escáner del celular")
     print(f"{'═' * 52}\n")
 
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, ssl_context='adhoc', debug=False)
