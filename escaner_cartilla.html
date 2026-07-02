@@ -685,7 +685,8 @@ let lastResults = null;  // array de {q, detected, status, brights}
    CONFIG SERVIDOR
 ═══════════════════════════════════════════════════════════════════ */
 async function connectServer() {
-  const raw = document.getElementById('cfg-ip').value.trim();
+  const raw = document.getElementById('cfg-ip').value.trim()
+    .replace(/^https?:\/\//i, '');
   if (!raw) { setCfgStatus('Ingresa la IP del servidor', 'err'); return; }
   const ip = raw.includes(':') ? raw : raw + ':5000';
   setCfgStatus('Conectando...', '');
