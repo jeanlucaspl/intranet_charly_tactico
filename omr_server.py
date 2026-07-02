@@ -43,19 +43,26 @@ A4_W     = int(210 * MM_TO_PX)
 A4_H     = int(297 * MM_TO_PX)
 
 # Umbral de relleno: burbuja marcada si >35% de sus píxeles son oscuros
-FILL_THRESH = 0.35
+FILL_THRESH = 0.18   # lápiz da ~20-40%, contorno vacío da ~2-8%
 
 
 # ══════════════════════════════════════════════════════════════════
 #  PREPROCESAMIENTO
 # ══════════════════════════════════════════════════════════════════
 
+def enhance_contrast(gray: np.ndarray) -> np.ndarray:
+    """CLAHE: mejora contraste local para cámaras de baja calidad."""
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    return clahe.apply(gray)
+
+
 def preprocess(gray: np.ndarray) -> np.ndarray:
     """
-    Gaussian Blur → Otsu threshold (invertido).
+    CLAHE → Gaussian Blur → Otsu threshold (invertido).
     Retorna imagen binaria donde píxeles oscuros = 255 (burbujas rellenas y marcas).
     """
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    enhanced = enhance_contrast(gray)
+    blurred  = cv2.GaussianBlur(enhanced, (5, 5), 0)
     _, binary = cv2.threshold(blurred, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binary
@@ -68,49 +75,68 @@ def preprocess(gray: np.ndarray) -> np.ndarray:
 def find_registration_marks(gray: np.ndarray):
     """
     Detecta los 4 cuadros negros 7×7mm en las esquinas del papel.
+    Procesa cada cuadrante con su propio Otsu local (evita bias del fondo oscuro).
     Retorna [(cx, cy), ...] en píxeles, orden [TL, TR, BL, BR].
     """
-    binary = preprocess(gray)
-
-    # Cerrar pequeños huecos
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
     H, W = gray.shape
-    Z = 0.28
+    Z = 0.40   # zona de búsqueda más amplia
     quadrants = [
         (0,            0,            int(W * Z),       int(H * Z)),
         (int(W*(1-Z)), 0,            W,                int(H * Z)),
         (0,            int(H*(1-Z)), int(W * Z),       H),
         (int(W*(1-Z)), int(H*(1-Z)), W,                H),
     ]
+    names_q = ['TL', 'TR', 'BL', 'BR']
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
     marks = []
-    for (x0, y0, x1, y1) in quadrants:
+    for qi, (x0, y0, x1, y1) in enumerate(quadrants):
+        # ── CLAHE + Otsu LOCAL por cuadrante ─────────────────────
+        crop    = enhance_contrast(gray[y0:y1, x0:x1])
+        blurred = cv2.GaussianBlur(crop, (5, 5), 0)
+        _, bin_crop = cv2.threshold(blurred, 0, 255,
+                                    cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        bin_crop = cv2.morphologyEx(bin_crop, cv2.MORPH_CLOSE, kernel)
+
+        contours, _ = cv2.findContours(bin_crop, cv2.RETR_EXTERNAL,
+                                        cv2.CHAIN_APPROX_SIMPLE)
+
         best, best_score = None, 0
+        top_cands = []
+        cH, cW = crop.shape[:2]
+        # Margen de borde: ignorar contornos en el 8% exterior de la imagen completa
+        # (convierte el margen a coordenadas del crop)
+        ex0 = max(0, int(W * 0.08) - x0)
+        ey0 = max(0, int(H * 0.08) - y0)
+        ex1 = min(cW, int(W * 0.92) - x0)
+        ey1 = min(cH, int(H * 0.92) - y0)
+
         for cnt in contours:
             M = cv2.moments(cnt)
-            if M['m00'] < 30:
+            if M['m00'] < 20:
                 continue
-            cx = M['m10'] / M['m00']
-            cy = M['m01'] / M['m00']
-            if not (x0 <= cx <= x1 and y0 <= cy <= y1):
-                continue
-            if cx < 4 or cx > W - 4 or cy < 4 or cy > H - 4:
+            cx_c = M['m10'] / M['m00']
+            cy_c = M['m01'] / M['m00']
+            # Rechazar si está en el margen exterior de la imagen completa
+            if not (ex0 < cx_c < ex1 and ey0 < cy_c < ey1):
                 continue
             area = cv2.contourArea(cnt)
-            if area < 150 or area > 20000:
+            if area < 80 or area > 25000:
                 continue
-            x, y, w, h = cv2.boundingRect(cnt)
-            squareness = min(w, h) / max(w, h) if max(w, h) > 0 else 0
-            if squareness < 0.3:
+            bx, by, bw, bh = cv2.boundingRect(cnt)
+            squareness = min(bw, bh) / max(bw, bh) if max(bw, bh) > 0 else 0
+            if squareness < 0.25:
                 continue
             score = area * (squareness ** 2)
+            top_cands.append((round(score), round(area), round(squareness, 2),
+                              round(cx_c), round(cy_c)))
             if score > best_score:
                 best_score = score
-                best = (cx, cy)
+                best = (x0 + cx_c, y0 + cy_c)   # coords en imagen completa
+
+        top_cands.sort(reverse=True)
+        print(f"  {names_q[qi]}: {'OK ({:.0f},{:.0f}) score={:.0f}'.format(*best, best_score) if best else 'NO DETECTADA'}  "
+              f"cands_top3={top_cands[:3]}")
         marks.append(best)
 
     return marks
@@ -211,7 +237,7 @@ def process_omr(warped_bin: np.ndarray, N: int) -> list:
 def _save_marks_debug(gray: np.ndarray, marks: list):
     H, W = gray.shape
     dbg  = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-    Z    = 0.28
+    Z    = 0.40
     zones = [
         (0,            0,            int(W*Z),   int(H*Z)),
         (int(W*(1-Z)), 0,            W-1,        int(H*Z)),
@@ -270,7 +296,10 @@ def _save_debug(warped_bin: np.ndarray, results: list, N: int):
 @app.route('/')
 @app.route('/escaner_cartilla.html')
 def scanner_page():
-    return send_from_directory(BASE_DIR, 'escaner_cartilla.html')
+    resp = send_from_directory(BASE_DIR, 'escaner_cartilla.html')
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
 
 @app.route('/favicon.ico')
 def favicon():

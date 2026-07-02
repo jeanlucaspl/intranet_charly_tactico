@@ -915,29 +915,55 @@ function frameSharpness(ctx, W, H) {
   return sum;
 }
 
+// Calcula el recorte del marco guía A4 directamente en coordenadas del video.
+// El marco guía mide 72% del ancho del contenedor con aspect-ratio 210/297.
+// Como el video es portrait y fill la pantalla, calculamos el crop en el espacio del video.
+function getGuideCropRect(video) {
+  const vW = video.videoWidth, vH = video.videoHeight;
+  if (!vW || !vH) return { x: 0, y: 0, w: vW, h: vH };
+
+  const dW = video.clientWidth  || video.offsetWidth;
+  const dH = video.clientHeight || video.offsetHeight;
+
+  // Escala object-fit:cover
+  const s     = Math.max(dW / vW, dH / vH);
+  const clipX = (vW * s - dW) / 2;  // píxeles de video ocultos a cada lado X
+  const clipY = (vH * s - dH) / 2;  // píxeles de video ocultos arriba/abajo
+
+  // Guía en display: 72% ancho centrada
+  const gW_d = dW * 0.72;
+  const gH_d = gW_d * (297 / 210);
+  const gX_d = (dW - gW_d) / 2;
+  const gY_d = (dH - gH_d) / 2;
+
+  // Mapear de display → video: sumar clip, dividir por escala
+  const x = Math.max(0, Math.round((gX_d + clipX) / s));
+  const y = Math.max(0, Math.round((gY_d + clipY) / s));
+  const w = Math.min(vW - x, Math.round(gW_d / s));
+  const h = Math.min(vH - y, Math.round(gH_d / s));
+  console.log(`[crop] video=${vW}x${vH} disp=${Math.round(dW)}x${Math.round(dH)} s=${s.toFixed(3)} crop=${x},${y} ${w}x${h}`);
+  return { x, y, w, h };
+}
+
 async function captureOMR() {
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
   if (!IS_LOCAL && !serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
   const video = document.getElementById('omr-video');
-  const W = video.videoWidth, H = video.videoHeight;
-  if (!W || !H) { showToast('La cámara aún no está lista', false); return; }
+  const vW = video.videoWidth, vH = video.videoHeight;
+  if (!vW || !vH) { showToast('La cámara aún no está lista', false); return; }
+
+  // Recorte al marco guía (excluye fondo negro alrededor)
+  const crop = getGuideCropRect(video);
 
   const canvas = document.getElementById('omr-canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = crop.w; canvas.height = crop.h;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  // Captura 5 frames, elige el más nítido
-  showProc('Capturando 5 frames...');
-  let bestBlob = null, bestScore = -1;
-  for (let i = 0; i < 5; i++) {
-    await new Promise(r => setTimeout(r, 200));
-    ctx.drawImage(video, 0, 0, W, H);
-    const score = frameSharpness(ctx, W, H);
-    if (score > bestScore) {
-      bestScore = score;
-      bestBlob  = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
-    }
-  }
+  // Captura inmediata: 1 solo frame en el momento que el usuario presiona
+  // (evita blur de movimiento del loop de 5 frames)
+  showProc('Capturando...');
+  ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+  const bestBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
 
   showProc('Enviando al servidor OMR...');
   const fd = new FormData();
