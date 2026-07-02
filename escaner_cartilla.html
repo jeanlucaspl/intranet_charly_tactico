@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Escáner Cartilla · Charly Táctico</title>
+  <link rel="icon" href="./favicon.ico" sizes="any"/>
+  <link rel="icon" href="./icons/icon-32.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="./icons/icon-180.png"/>
+  <meta name="theme-color" content="#080C10"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:  #080C10;
+      --gold:   #C9A84C;
+      --gold2:  #e5c46a;
+      --lime:   #9DD900;
+      --fern:   #1A4A16;
+      --chalk:  #F0F4F8;
+      --red:    #E05555;
+      --green:  #28a745;
+      --yellow: #f0c040;
+      --navy2:  #0d1117;
+      --navy3:  #13191f;
+      --border: rgba(201,168,76,.15);
+      --muted:  #8892a0;
+    }
+
+    html { background: var(--black); }
+    body {
+      background: var(--black);
+      color: var(--chalk);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* Tactical grid overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,.022) 1px, transparent 1px);
+      background-size: 52px 52px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: rgba(8,12,16,.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 18px; z-index: 100; gap: 10px;
+    }
+    .tb-back {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); background: none; border: none;
+      cursor: pointer; text-decoration: none;
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 10px; transition: color .2s;
+    }
+    .tb-back:hover { color: var(--gold); }
+    .tb-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 19px; letter-spacing: .05em; color: var(--gold);
+    }
+    .tb-brand span { color: var(--chalk); }
+    .tb-sep { flex: 1; }
+    .tb-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--navy3);
+      transition: all .3s;
+    }
+    .tb-badge.loaded {
+      color: var(--lime);
+      border-color: var(--lime);
+      background: rgba(157,217,0,.08);
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      display: none;
+      position: relative; z-index: 1;
+      padding-top: 54px;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ── SHARED COMPONENTS ── */
+    .sc-inner {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 18px;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sc-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: .08em;
+      color: var(--chalk);
+      line-height: 1;
+    }
+    .sc-eye {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .3em; text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase;
+      padding: 12px 20px;
+      cursor: pointer; border: none;
+      transition: all .2s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: 2px;
+    }
+    .btn-gold { background: var(--gold); color: #080C10; }
+    .btn-gold:hover { background: var(--gold2); }
+    .btn-gold:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-lime { background: var(--lime); color: #080C10; }
+    .btn-lime:hover { background: #b5f000; }
+    .btn-red { background: transparent; border: 1px solid var(--red); color: var(--red); }
+    .btn-red:hover { background: var(--red); color: var(--chalk); }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 3px;
+    }
+    .badge-lime { color: var(--lime); background: rgba(157,217,0,.1); border: 1px solid rgba(157,217,0,.3); }
+    .badge-gold { color: var(--gold); background: rgba(201,168,76,.1); border: 1px solid var(--border); }
+    .badge-red  { color: var(--red);  background: rgba(224,85,85,.1); border: 1px solid rgba(224,85,85,.3); }
+
+    /* ── VIDEO / CAMERA ── */
+    .cam-wrap {
+      position: relative;
+      width: 100%;
+      background: #000;
+      overflow: hidden;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .cam-wrap video {
+      width: 100%; display: block;
+      max-height: 65vh;
+      object-fit: cover;
+    }
+    .cam-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .qr-frame {
+      width: 200px; height: 200px;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.45);
+      border-radius: 4px;
+      position: relative;
+    }
+    .qr-frame::before, .qr-frame::after,
+    .qr-frame > .c3, .qr-frame > .c4 {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: var(--gold);
+      border-style: solid;
+    }
+    .qr-frame::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; }
+    .qr-frame::after  { top: -2px; right: -2px; border-width: 3px 3px 0 0; }
+    .qr-frame > .c3   { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; }
+    .qr-frame > .c4   { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
+
+    /* A4 guide frame for scan screen */
+    .a4-frame {
+      position: absolute;
+      border: 2px solid var(--gold);
+      border-radius: 2px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.5);
+      pointer-events: none;
+    }
+
+    /* ── QR STATUS ── */
+    .qr-status {
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; letter-spacing: .08em;
+      color: var(--muted);
+    }
+    .qr-status.success { color: var(--lime); }
+    .qr-status.error   { color: var(--red); }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(201,168,76,.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MANUAL INPUT ── */
+    .manual-wrap {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .manual-wrap.visible { display: flex; }
+    .manual-wrap label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .manual-wrap input {
+      background: var(--navy2); border: 1px solid var(--border);
+      color: var(--chalk); padding: 10px 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; letter-spacing: .08em;
+      width: 100%; outline: none;
+    }
+    .manual-wrap input:focus { border-color: var(--gold); }
+
+    /* ── RESULT SCREEN ── */
+    .score-block {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+    }
+    .score-big {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px; letter-spacing: .04em;
+      color: var(--chalk);
+      line-height: 1;
+    }
+    .score-pct {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; letter-spacing: .1em;
+      color: var(--muted); text-transform: uppercase;
+    }
+    .score-bar-wrap {
+      height: 6px; background: var(--navy2);
+      border-radius: 3px; overflow: hidden;
+      margin-top: 12px;
+    }
+    .score-bar {
+      height: 100%; border-radius: 3px;
+      transition: width .5s ease;
+    }
+    .score-bar.pass { background: var(--lime); }
+    .score-bar.fail { background: var(--red); }
+
+    /* Response table */
+    .resp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+    }
+    .resp-table th {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: var(--muted);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .resp-table td {
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(201,168,76,.06);
+      color: var(--chalk);
+    }
+    .resp-table tr:hover td { background: rgba(201,168,76,.04); }
+    .mark-ok   { color: var(--lime); font-weight: 700; }
+    .mark-err  { color: var(--red);  font-weight: 700; }
+    .mark-dud  { color: var(--yellow); font-weight: 700; }
+
+    .name-input {
+      background: var(--navy3); border: 1px solid var(--border);
+      color: var(--chalk); padding: 10px 14px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px; width: 100%; outline: none;
+      border-radius: 2px;
+    }
+    .name-input:focus { border-color: var(--gold); }
+    .name-input::placeholder { color: var(--muted); }
+
+    /* ── SUMMARY SCREEN ── */
+    .summary-list {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .summary-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--navy3); border: 1px solid var(--border);
+      padding: 12px 14px;
+    }
+    .si-rank {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px; color: var(--muted); min-width: 28px;
+    }
+    .si-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: .05em; color: var(--chalk);
+      flex: 1;
+    }
+    .si-score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+    }
+    .si-score.pass { color: var(--lime); }
+    .si-score.fail { color: var(--red); }
+
+    .stat-row {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+    }
+    .stat-box {
+      background: var(--navy3); border: 1px solid var(--border);
+      padding: 12px; text-align: center;
+    }
+    .stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; color: var(--chalk);
+    }
+    .stat-lbl {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .15em; text-transform: uppercase;
+      color: var(--muted); margin-top: 2px;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--red); color: var(--chalk);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 12px 20px; border-radius: 4px;
+      z-index: 999; transition: opacity .3s;
+      max-width: 90vw; text-align: center;
+    }
+    .toast.success { background: var(--fern); border: 1px solid var(--lime); color: var(--lime); }
+    .toast.hidden  { opacity: 0; pointer-events: none; }
+
+    /* ── PROCESSING OVERLAY ── */
+    .proc-overlay {
+      position: fixed; inset: 0;
+      background: rgba(8,12,16,.85);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 200; gap: 14px;
+      display: none;
+    }
+    .proc-overlay.visible { display: flex; }
+    .proc-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold);
+    }
+    .proc-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(201,168,76,.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    /* Responsive helpers */
+    @media (max-width: 480px) {
+      .score-big { font-size: 42px; }
+      .sc-title  { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a class="tb-back" href="./admin.html">← Admin</a>
+  <div class="tb-brand">CHARLY <span>TÁCTICO</span></div>
+  <div class="tb-sep"></div>
+  <div class="tb-badge" id="tb-badge">Sin clave</div>
+</div>
+
+<!-- HIDDEN CANVASES -->
+<canvas id="qr-canvas"  style="display:none"></canvas>
+<canvas id="omr-canvas" style="display:none"></canvas>
+
+<!-- PROCESSING OVERLAY -->
+<div class="proc-overlay" id="proc-overlay">
+  <div class="proc-spinner"></div>
+  <div class="proc-text" id="proc-text">Procesando...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast hidden" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1: QR SCAN
+══════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-qr">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Paso 1 de 2</div>
+      <div class="sc-title">ESCANEAR QR DE CLAVE</div>
+    </div>
+    <div class="cam-wrap" id="qr-cam-wrap">
+      <video id="qr-video" autoplay muted playsinline></video>
+      <div class="cam-overlay">
+        <div class="qr-frame"><div class="c3"></div><div class="c4"></div></div>
+      </div>
+    </div>
+    <div class="qr-status" id="qr-status">
+      <span class="spinner"></span> Apunta al código QR de la Hoja Docente
+    </div>
+    <button class="btn btn-outline" style="width:100%" onclick="toggleManual()">
+      Ingresar código manualmente
+    </button>
+    <div class="manual-wrap" id="manual-wrap">
+      <label>Código de la prueba (formato: CT|N|ABCD...)</label>
+      <input type="text" id="manual-input" placeholder="Ej: CT|20|ABCDABCDABCDABCDABCD" autocomplete="off" autocapitalize="characters"/>
+      <button class="btn btn-gold" style="width:100%" onclick="applyManualCode()">CARGAR CLAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2: OMR SCAN
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-scan">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Paso 2 de 2</div>
+      <div class="sc-title">ESCANEAR CARTILLA</div>
+    </div>
+    <div id="scan-key-badge"></div>
+    <div class="cam-wrap" id="omr-cam-wrap" style="position:relative">
+      <video id="omr-video" autoplay muted playsinline style="width:100%;display:block;max-height:65vh;object-fit:cover"></video>
+      <div id="a4-guide" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+        <div style="border:2px solid var(--gold);border-radius:2px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);width:72%;aspect-ratio:210/297"></div>
+      </div>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.5">
+      Alinea la cartilla dentro del marco dorado.<br>Las 4 marcas negras deben ser visibles.
+    </div>
+    <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="captureOMR()">
+      CAPTURAR
+    </button>
+    <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="goToQR()">
+      Cambiar prueba (nuevo QR)
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 3: RESULTADO
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Resultado</div>
+      <div class="sc-title">CORRECCIÓN</div>
+    </div>
+    <input class="name-input" id="alumno-nombre" type="text" placeholder="Nombre del alumno (opcional)"/>
+    <div class="score-block" id="score-block">
+      <div class="score-big" id="score-text">—</div>
+      <div class="score-pct" id="score-pct">—</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar" id="score-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="resp-table" id="resp-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Tu resp.</th>
+            <th>Correcta</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="resp-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="nextStudent()">
+        SIGUIENTE ALUMNO
+      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="showSummary()">Ver resumen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 4: RESUMEN
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-summary">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Sesión actual</div>
+      <div class="sc-title">RESUMEN</div>
+    </div>
+    <div class="stat-row" id="stat-row">
+      <div class="stat-box"><div class="stat-val" id="st-prom">—</div><div class="stat-lbl">Promedio</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-max">—</div><div class="stat-lbl">Mejor</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-min">—</div><div class="stat-lbl">Peor</div></div>
+    </div>
+    <div class="summary-list" id="summary-list"></div>
+    <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="showScreen('screen-scan')">
+      Continuar escaneando
+    </button>
+    <button class="btn btn-outline" style="width:100%;font-size:12px;padding:10px" onclick="goToQR()">
+      Nueva prueba
+    </button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   SUPABASE CONFIG
+═══════════════════════════════════════════════════════════════════ */
+const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+/* ═══════════════════════════════════════════════════════════════════
+   CARTILLA LAYOUT — debe ser idéntico a CART_LAYOUT en admin.html
+═══════════════════════════════════════════════════════════════════ */
+const CL = { GX:10, GY:36, GW:190, GH:200, RM:5, HDR:6, RH:7, QW:8, BA:11, BS:6.5, BR:2.5, GAP:5 };
+
+// Centros de las marcas de registro en mm (TL, TR, BL, BR):
+const REG_MM = [
+  {x: CL.GX + CL.RM/2,        y: CL.GY + CL.RM/2},
+  {x: CL.GX + CL.GW - CL.RM/2, y: CL.GY + CL.RM/2},
+  {x: CL.GX + CL.RM/2,        y: CL.GY + CL.GH - CL.RM/2},
+  {x: CL.GX + CL.GW - CL.RM/2, y: CL.GY + CL.GH - CL.RM/2},
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════════════════════════════ */
+let examKey    = null;   // array de chars ['A','B','C',...]
+let examN      = 0;
+let mediaStream = null;
+let qrLoopActive = false;
+let qrAnimFrame  = null;
+let session     = [];    // [{nombre, correct, total}]
+let lastResults = null;  // array de {q, detected, confident, brights}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT — auth check
+═══════════════════════════════════════════════════════════════════ */
+(async function init() {
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (!s) {
+    window.location.href = './login.html?next=escaner_cartilla.html';
+    return;
+  }
+  startCamera();
+})();
+
+/* ═══════════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goToQR() {
+  stopQRLoop();
+  showScreen('screen-qr');
+  // restart QR loop
+  qrLoopActive = true;
+  qrLoop();
+}
+
+function showSummary() {
+  // Save current if named
+  renderSummary();
+  showScreen('screen-summary');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CAMERA
+═══════════════════════════════════════════════════════════════════ */
+async function startCamera() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    // Attach to both video elements (QR and OMR reuse same stream)
+    const qrV  = document.getElementById('qr-video');
+    const omrV = document.getElementById('omr-video');
+    qrV.srcObject  = mediaStream;
+    omrV.srcObject = mediaStream;
+    await qrV.play().catch(()=>{});
+    await omrV.play().catch(()=>{});
+    // Start QR loop
+    qrLoopActive = true;
+    qrLoop();
+  } catch(e) {
+    document.getElementById('qr-status').textContent = 'No se pudo acceder a la cámara. Usa el código manual.';
+    document.getElementById('qr-status').className = 'qr-status error';
+    document.getElementById('manual-wrap').classList.add('visible');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   QR SCAN LOOP
+═══════════════════════════════════════════════════════════════════ */
+function stopQRLoop() {
+  qrLoopActive = false;
+  if (qrAnimFrame) { cancelAnimationFrame(qrAnimFrame); qrAnimFrame = null; }
+}
+
+function qrLoop() {
+  if (!qrLoopActive) return;
+  const video  = document.getElementById('qr-video');
+  const canvas = document.getElementById('qr-canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  const W = video.videoWidth, H = video.videoHeight;
+  if (W && H) {
+    canvas.width = W; canvas.height = H;
+    ctx.drawImage(video, 0, 0, W, H);
+    const imgData = ctx.getImageData(0, 0, W, H);
+    const code = jsQR(imgData.data, W, H, { inversionAttempts: 'dontInvert' });
+    if (code && code.data.startsWith('CT|')) {
+      stopQRLoop();
+      onQRDetected(code.data);
+      return;
+    }
+  }
+  qrAnimFrame = requestAnimationFrame(qrLoop);
+}
+
+function onQRDetected(data) {
+  const parts = data.split('|');
+  if (parts.length < 3 || parts[0] !== 'CT') {
+    showToast('QR inválido — no es una cartilla Charly Táctico', false);
+    qrLoopActive = true; qrLoop();
+    return;
+  }
+  const n   = parseInt(parts[1]);
+  const key = parts[2].toUpperCase();
+  if (isNaN(n) || n < 1 || key.length < n) {
+    showToast('QR con formato incorrecto', false);
+    qrLoopActive = true; qrLoop();
+    return;
+  }
+  loadKey(n, key);
+}
+
+function loadKey(n, keyStr) {
+  examN   = n;
+  examKey = keyStr.slice(0, n).split('');
+  updateBadge();
+  // Flash success status
+  const st = document.getElementById('qr-status');
+  st.className = 'qr-status success';
+  st.textContent = `✓ Clave cargada — ${n} preguntas`;
+  document.getElementById('scan-key-badge').innerHTML =
+    `<div class="badge badge-lime">✓ Clave cargada: ${n} preguntas</div>`;
+  setTimeout(() => {
+    showScreen('screen-scan');
+  }, 900);
+}
+
+function updateBadge() {
+  const b = document.getElementById('tb-badge');
+  if (examKey) {
+    b.textContent = `Clave: ${examN} pregs`;
+    b.classList.add('loaded');
+  } else {
+    b.textContent = 'Sin clave';
+    b.classList.remove('loaded');
+  }
+}
+
+/* ── Manual code fallback ── */
+function toggleManual() {
+  document.getElementById('manual-wrap').classList.toggle('visible');
+}
+
+function applyManualCode() {
+  const val = document.getElementById('manual-input').value.trim().toUpperCase();
+  if (!val.startsWith('CT|')) {
+    showToast('El código debe empezar con CT|', false);
+    return;
+  }
+  onQRDetected(val);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OMR — CAPTURE & PROCESS
+═══════════════════════════════════════════════════════════════════ */
+async function captureOMR() {
+  if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
+  const video = document.getElementById('omr-video');
+  const W = video.videoWidth, H = video.videoHeight;
+  if (!W || !H) { showToast('La cámara aún no está lista', false); return; }
+
+  showProc('Procesando cartilla...');
+  // Small delay so UI updates
+  await new Promise(r => setTimeout(r, 60));
+
+  const canvas = document.getElementById('omr-canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0, W, H);
+  const imgData = ctx.getImageData(0, 0, W, H);
+
+  // Detect registration marks
+  const marks = detectMarks(imgData.data, W, H);
+  const validMarks = marks.filter(Boolean);
+
+  if (validMarks.length < 4) {
+    hideProc();
+    showToast(`Solo se detectaron ${validMarks.length}/4 marcas. Mejora la iluminación e inténtalo de nuevo.`, false);
+    return;
+  }
+
+  // Process OMR
+  const results = processOMR(imgData.data, W, H, examN, marks);
+  lastResults = results;
+  hideProc();
+  renderResult(results);
+  showScreen('screen-result');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GAUSSIAN ELIMINATION — para homografía
+═══════════════════════════════════════════════════════════════════ */
+function gaussElim(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let mx = c;
+    for (let r = c+1; r < n; r++)
+      if (Math.abs(M[r][c]) > Math.abs(M[mx][c])) mx = r;
+    [M[c], M[mx]] = [M[mx], M[c]];
+    for (let r = c+1; r < n; r++) {
+      const f = M[r][c] / M[c][c];
+      for (let j = c; j <= n; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n-1; i >= 0; i--) {
+    x[i] = M[i][n] / M[i][i];
+    for (let j = i+1; j < n; j++) x[i] -= M[i][j] * x[j] / M[i][i];
+  }
+  return x;
+}
+
+/* ─── Homografía DLT: mm → pixel ─── */
+function computeH(mmPts, pxPts) {
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const {x, y} = mmPts[i], {x:u, y:v} = pxPts[i];
+    A.push([x, y, 1, 0, 0, 0, -u*x, -u*y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v*x, -v*y]); b.push(v);
+  }
+  const h = gaussElim(A, b);
+  return [[h[0],h[1],h[2]], [h[3],h[4],h[5]], [h[6],h[7],1]];
+}
+
+function applyH(H, x, y) {
+  const w = H[2][0]*x + H[2][1]*y + H[2][2];
+  return { x: (H[0][0]*x + H[0][1]*y + H[0][2]) / w,
+           y: (H[1][0]*x + H[1][1]*y + H[1][2]) / w };
+}
+
+/* ─── Detectar marcas de registro ─── */
+function detectMarks(data, W, H) {
+  const Z = 0.25;
+  const ZW = Math.round(W * Z), ZH = Math.round(H * Z);
+  const zones = [
+    [0,     0,     ZW,   ZH],
+    [W-ZW,  0,     W,    ZH],
+    [0,     H-ZH,  ZW,   H],
+    [W-ZW,  H-ZH,  W,    H],
+  ];
+  return zones.map(([x0, y0, x1, y1]) => {
+    let sx = 0, sy = 0, n = 0;
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * W + x) * 4;
+        const g = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+        if (g < 80) { sx += x; sy += y; n++; }
+      }
+    }
+    return n > 200 ? { x: sx/n, y: sy/n } : null;
+  });
+}
+
+/* ─── Muestrear burbuja circular ─── */
+function sampleBubble(data, W, cx, cy, r) {
+  let sum = 0, cnt = 0;
+  const ri = Math.round(r);
+  for (let dy = -ri; dy <= ri; dy++) {
+    for (let dx = -ri; dx <= ri; dx++) {
+      if (dx*dx + dy*dy > ri*ri) continue;
+      const px = Math.round(cx+dx), py = Math.round(cy+dy);
+      if (px < 0 || px >= W || py < 0) continue;
+      const i = (py * W + px) * 4;
+      sum += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+      cnt++;
+    }
+  }
+  return cnt ? sum/cnt : 255;
+}
+
+/* ─── OMR principal ─── */
+function processOMR(data, W, H, N, marks) {
+  const Hmat = computeH(REG_MM, marks);
+  const N_GRP = N<=25 ? 1 : N<=50 ? 2 : N<=75 ? 3 : 4;
+  const CONT_W = CL.GW - 2*CL.RM;
+  const GRP_W  = (CONT_W - (N_GRP-1)*CL.GAP) / N_GRP;
+  const CX0 = CL.GX + CL.RM;
+
+  // Escala mm→px usando distancia entre marcas TL y TR
+  const scalePx = Math.hypot(marks[1].x - marks[0].x, marks[1].y - marks[0].y) / (CL.GW - CL.RM);
+  const bRadPx  = CL.BR * scalePx * 1.1;
+  const LTRS = ['A','B','C','D'];
+  const results = [];
+
+  for (let q = 0; q < N; q++) {
+    const g  = Math.floor(q / 25);
+    const r  = q % 25;
+    const gx_mm = CX0 + g * (GRP_W + CL.GAP);
+    const cy_mm = CL.GY + CL.RM + CL.HDR + r*CL.RH + CL.RH/2;
+    let minB = 255, chosen = -1;
+    const brights = [];
+    for (let c = 0; c < 4; c++) {
+      const bx_mm = gx_mm + CL.BA + c*CL.BS;
+      const {x: bxPx, y: byPx} = applyH(Hmat, bx_mm, cy_mm);
+      const b = sampleBubble(data, W, bxPx, byPx, bRadPx);
+      brights.push(b);
+      if (b < minB) { minB = b; chosen = c; }
+    }
+    const sorted = [...brights].sort((a, b) => a - b);
+    const confident = (sorted[1] - sorted[0]) > 18;
+    results.push({ q: q+1, detected: LTRS[chosen], confident, brights });
+  }
+  return results;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESULT RENDER
+═══════════════════════════════════════════════════════════════════ */
+function renderResult(results) {
+  if (!examKey) return;
+  let correct = 0;
+  const tbody = document.getElementById('resp-tbody');
+  tbody.innerHTML = '';
+
+  results.forEach(r => {
+    const expec = examKey[r.q - 1] || '?';
+    const ok    = r.detected === expec;
+    if (ok) correct++;
+    const mark = !r.confident ? '<span class="mark-dud">?</span>'
+               : ok           ? '<span class="mark-ok">✓</span>'
+                              : '<span class="mark-err">✗</span>';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.q}</td><td>${r.detected||'—'}</td><td>${expec}</td><td>${mark}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const total = examN;
+  const pct   = Math.round(correct / total * 100);
+  const pass  = pct >= 60;
+
+  document.getElementById('score-text').textContent = `${correct}/${total}`;
+  document.getElementById('score-pct').textContent  = `${pct}% — ${pass ? 'APROBADO' : 'DESAPROBADO'}`;
+  document.getElementById('score-text').style.color = pass ? 'var(--lime)' : 'var(--red)';
+  const bar = document.getElementById('score-bar');
+  bar.style.width = pct + '%';
+  bar.className   = 'score-bar ' + (pass ? 'pass' : 'fail');
+}
+
+function nextStudent() {
+  // Save current student to session
+  const nombre   = document.getElementById('alumno-nombre').value.trim() || `Alumno ${session.length + 1}`;
+  const scoreText = document.getElementById('score-text').textContent;
+  const [c, t] = scoreText.split('/').map(Number);
+  session.push({ nombre, correct: c, total: t });
+  document.getElementById('alumno-nombre').value = '';
+  showScreen('screen-scan');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SUMMARY
+═══════════════════════════════════════════════════════════════════ */
+function renderSummary() {
+  const list = document.getElementById('summary-list');
+  list.innerHTML = '';
+  if (session.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;text-align:center;padding:20px">Sin alumnos escaneados aún</div>';
+    document.getElementById('st-prom').textContent = '—';
+    document.getElementById('st-max').textContent  = '—';
+    document.getElementById('st-min').textContent  = '—';
+    return;
+  }
+  const pcts = session.map(s => Math.round(s.correct / s.total * 100));
+  const prom = Math.round(pcts.reduce((a,b) => a+b, 0) / pcts.length);
+  const max  = Math.max(...pcts);
+  const min  = Math.min(...pcts);
+  document.getElementById('st-prom').textContent = prom + '%';
+  document.getElementById('st-max').textContent  = max  + '%';
+  document.getElementById('st-min').textContent  = min  + '%';
+
+  session.forEach((s, i) => {
+    const pct  = pcts[i];
+    const pass = pct >= 60;
+    const div  = document.createElement('div');
+    div.className = 'summary-item';
+    div.innerHTML = `
+      <div class="si-rank">${i+1}</div>
+      <div class="si-name">${s.nombre}</div>
+      <div class="si-score ${pass?'pass':'fail'}">${s.correct}/${s.total} <span style="font-size:13px;font-family:'Barlow Condensed',sans-serif">(${pct}%)</span></div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════════════════════════ */
+function showProc(txt) {
+  document.getElementById('proc-text').textContent = txt || 'Procesando...';
+  document.getElementById('proc-overlay').classList.add('visible');
+}
+function hideProc() {
+  document.getElementById('proc-overlay').classList.remove('visible');
+}
+
+let toastTimer = null;
+function showToast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast ' + (success ? 'success' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.add('hidden'); }, 3500);
+}
+</script>
+</body>
+</html>

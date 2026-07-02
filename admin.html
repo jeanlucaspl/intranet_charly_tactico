@@ -376,6 +376,7 @@
       <button class="sb-link" onclick="showPanel('armar-practica',this)">Armar Práctica</button>
       <button class="sb-link" onclick="showPanel('banco',this)">Banco de Preguntas</button>
       <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
+      <a class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none">Escáner Cartilla</a>
     </div>
   </div>
   <div class="sb-section sb-collapsible collapsed" id="sec-comunicacion">
@@ -853,9 +854,12 @@
     <!-- Layout preview badge -->
     <div id="voc-badge" style="margin-bottom:14px"></div>
 
-    <!-- Generate button -->
-    <button class="btn btn-gold" style="width:100%;font-size:15px;padding:14px" onclick="vocGenerar()">
-      GENERAR PDF →
+    <!-- Generate buttons -->
+    <button class="btn btn-gold" id="voc-btn-completo" style="width:100%;font-size:15px;padding:14px;margin-bottom:8px" onclick="vocGenerarCompleto()">
+      GENERAR PRUEBA COMPLETA →
+    </button>
+    <button class="btn btn-outline" style="width:100%;font-size:13px;padding:10px" onclick="vocGenerar()">
+      Solo cuadernillo (sin cartilla)
     </button>
 
   </div>
@@ -8790,6 +8794,7 @@ async function wn_save() {
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
 .voc-qty{
   background:var(--navy3);border:1px solid var(--border);
@@ -9108,6 +9113,170 @@ async function wn_save() {
 
     /* ── Guardar ── */
     _pdfSave(doc, `prueba_vocabulario_${fechaVal}.pdf`);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CARTILLA + QR — constantes compartidas con el escáner
+  // IMPORTANTE: Si cambias estas constantes, actualiza también
+  // escaner_cartilla.html (const CL = {...})
+  // ═══════════════════════════════════════════════════════════════
+  const CART_LAYOUT = {
+    GX:10, GY:36, GW:190, GH:200,  // grid origin y dimensiones (mm)
+    RM:5,                            // tamaño marca de registro (mm)
+    HDR:6,                           // fila cabecera A/B/C/D (mm)
+    RH:7,                            // altura por fila/pregunta (mm)
+    QW:8,                            // ancho columna número pregunta (mm)
+    BA:11,                           // centro burbuja A desde inicio de grupo (mm)
+    BS:6.5,                          // separación entre centros de burbujas (mm)
+    BR:2.5,                          // radio de burbuja (mm)
+    GAP:5                            // espacio entre grupos de columnas (mm)
+  };
+
+  function makeQRDataURL(text) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text); qr.make();
+    return qr.createDataURL(5, 0);
+  }
+
+  window.vocGenerarCompleto = async function() {
+    const btn = document.getElementById('voc-btn-completo');
+    btn.disabled = true; btn.textContent = 'Generando…';
+    try {
+      const dict = await vocLoadDict();
+      if (dict.length < 4) throw new Error('Diccionario insuficiente');
+      const qs = vocBuildQuestions(dict, VOC.n);
+      vocPDFCompleto(qs);
+    } catch(e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'GENERAR PRUEBA COMPLETA →';
+    }
+  };
+
+  function vocPDFCompleto(qs) {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    const M=8, PW=210, PH=297;
+    const BLK=[0,0,0], GRY=[100,100,100], LGT=[180,180,180];
+
+    const fechaEl  = document.getElementById('voc-fecha');
+    const fechaVal = fechaEl?.value || new Date().toISOString().slice(0,10);
+    const parts    = fechaVal.split('-');
+    const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const fechaStr = `${parseInt(parts[2])} de ${meses[parseInt(parts[1])-1]} de ${parts[0]}`;
+    const titulo = ((document.getElementById('voc-titulo')?.value||'').trim()) || 'Prueba de Significados';
+
+    function hdr(sub) {
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
+      doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, M+4, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...GRY);
+      doc.text(sub.toUpperCase(), PW/2, M+9, {align:'center'});
+      doc.setFontSize(7); doc.text(fechaStr, PW-M, M+4, {align:'right'});
+      doc.setDrawColor(...LGT); doc.setLineWidth(0.2); doc.line(M, M+11, PW-M, M+11);
+    }
+    function ftr() {
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRY);
+      doc.text('Academia Charly Táctico TEDAX', PW/2, PH-M+2, {align:'center'});
+    }
+
+    // ── PÁGINA 1: CARTILLA ────────────────────────────────────────
+    const {GX,GY,GW,GH,RM,HDR,RH,QW,BA,BS,BR,GAP} = CART_LAYOUT;
+    const N_GRP = qs.length<=25?1:qs.length<=50?2:qs.length<=75?3:4;
+    const CONT_W = GW-2*RM;
+    const GRP_W  = (CONT_W-(N_GRP-1)*GAP)/N_GRP;
+
+    hdr('Cartilla de Respuestas — '+titulo);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRY);
+    doc.text('Rellene completamente el círculo de la alternativa elegida. Use lapicero negro o azul.', M, M+16.5);
+
+    // Marcas de registro (4 esquinas)
+    doc.setFillColor(0,0,0);
+    doc.rect(GX,       GY,       RM, RM, 'F');
+    doc.rect(GX+GW-RM, GY,       RM, RM, 'F');
+    doc.rect(GX,       GY+GH-RM, RM, RM, 'F');
+    doc.rect(GX+GW-RM, GY+GH-RM, RM, RM, 'F');
+
+    // Borde del área de la grilla
+    doc.setDrawColor(...LGT); doc.setLineWidth(0.2); doc.rect(GX, GY, GW, GH, 'S');
+
+    const CX0 = GX+RM;
+    for (let g=0; g<N_GRP; g++) {
+      const gx = CX0 + g*(GRP_W+GAP);
+      const q0 = g*25, q1 = Math.min(q0+25, qs.length);
+      // Cabecera A B C D
+      const hY = GY+RM+HDR-1.5;
+      doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(...GRY);
+      ['A','B','C','D'].forEach((l,ci)=>doc.text(l, gx+BA+ci*BS, hY, {align:'center'}));
+      // Filas
+      for (let qi=q0; qi<q1; qi++) {
+        const r=qi-q0, ry=GY+RM+HDR+r*RH, cy=ry+RH/2;
+        if (r%2===0){doc.setFillColor(248,248,248);doc.rect(gx,ry,GRP_W,RH,'F');}
+        doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRY);
+        doc.text(`${qi+1}`, gx+QW-1.5, cy+2, {align:'right'});
+        doc.setDrawColor(60,60,60); doc.setLineWidth(0.35);
+        for (let ci=0;ci<4;ci++) doc.circle(gx+BA+ci*BS, cy, BR, 'S');
+      }
+    }
+    ftr();
+
+    // ── PÁGINAS 2+: CUADERNILLO ───────────────────────────────────
+    {
+      const lay=vocLayout(qs.length);
+      const COLS=lay.cols, COLG=COLS>1?4:0;
+      const COLW2=(PW-2*M-COLG*(COLS-1))/COLS;
+      const HDR_H2=16, FTR_TOP2=PH-M-4, COL_TOP2=M+HDR_H2, COL_BOT2=FTR_TOP2-2;
+      let col2=0, curY2=COL_TOP2;
+      function colX2(c){return M+c*(COLW2+COLG);}
+      doc.addPage(); hdr(titulo); ftr();
+      for (let qi=0; qi<qs.length; qi++) {
+        const q=qs[qi], maxW=COLW2-2;
+        let estH=7;
+        for(let i=0;i<4;i++){estH+=doc.splitTextToSize(cap(q.alts[i]),maxW-8).length*3.6+0.8;}
+        estH+=2;
+        if(curY2+estH>COL_BOT2){
+          col2++;
+          if(col2>=COLS){col2=0;doc.addPage();hdr(titulo);ftr();}
+          curY2=COL_TOP2;
+        }
+        const x=colX2(col2);
+        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...GRY);doc.text(`${qi+1}.`,x,curY2+3);
+        doc.setFontSize(9);doc.setTextColor(...BLK);doc.text(q.word,x+6,curY2+3.3);
+        let cy2=curY2+7; doc.setFontSize(7.5);
+        ['A','B','C','D'].forEach((l,i)=>{
+          const txt=cap(q.alts[i]);
+          doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);doc.text(l+'.',x+1,cy2+2.5);
+          doc.setFont('helvetica','normal');
+          const lns=doc.splitTextToSize(txt,maxW-8);doc.text(lns,x+7,cy2+2.5);
+          cy2+=lns.length*3.6+0.8;
+        });
+        curY2+=estH;
+      }
+    }
+
+    // ── ÚLTIMA PÁGINA: HOJA DOCENTE ───────────────────────────────
+    const key=qs.map(q=>q.key).join('');
+    const qrData=`CT|${qs.length}|${key}`;
+    const qrDU=makeQRDataURL(qrData);
+    doc.addPage(); hdr('Hoja Docente — '+titulo);
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(40,40,40);
+    doc.text('CONFIDENCIAL — NO DISTRIBUIR AL ALUMNO', PW/2, M+17, {align:'center'});
+    const QR_SZ=60, qrX=(PW-QR_SZ)/2, qrYY=M+22;
+    doc.addImage(qrDU,'PNG',qrX,qrYY,QR_SZ,QR_SZ);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRY);
+    doc.text('Escanear con app Charly Táctico → Escáner Cartilla', PW/2, qrYY+QR_SZ+5, {align:'center'});
+    const kyY=qrYY+QR_SZ+14;
+    doc.setDrawColor(...LGT);doc.setLineWidth(0.25);doc.line(M,kyY,PW-M,kyY);
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...BLK);
+    doc.text('CLAVE DE RESPUESTAS', PW/2, kyY+6, {align:'center'});
+    const KPL=10, cellWk=(PW-2*M)/KPL;
+    qs.forEach((q,ki)=>{
+      const row=Math.floor(ki/KPL),c2=ki%KPL;
+      const kx=M+c2*cellWk,ky2=kyY+10+row*5.5;
+      doc.setFont('helvetica','normal');doc.setTextColor(...GRY);doc.text(`${ki+1}.`,kx,ky2+3);
+      doc.setFont('helvetica','bold');doc.setTextColor(...BLK);doc.text(q.key,kx+8,ky2+3);
+    });
+    ftr();
+    _pdfSave(doc,`prueba_vocabulario_${fechaVal}.pdf`);
   }
 
   /* ── Activar badge al cargar panel ── */
