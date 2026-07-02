@@ -461,6 +461,105 @@
       font-size: 12px;
     }
 
+    /* ── AUTOCOMPLETE ── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-dropdown {
+      display: none;
+      position: absolute; top: 100%; left: 0; right: 0;
+      background: var(--navy2);
+      border: 1px solid var(--gold); border-top: none;
+      z-index: 50; max-height: 260px; overflow-y: auto;
+    }
+    .ac-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; cursor: pointer;
+      border-bottom: 1px solid var(--border); gap: 10px;
+    }
+    .ac-item:hover { background: rgba(201,168,76,.1); }
+    .ac-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 600;
+      letter-spacing: .04em; color: var(--chalk);
+      text-transform: uppercase;
+    }
+    .ac-dni {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; color: var(--muted); flex-shrink: 0;
+    }
+    .ac-clear {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; padding: 4px 6px; display: none;
+    }
+    .ac-clear.visible { display: block; }
+
+    /* ── NOTA /20 ── */
+    .nota-wrap { text-align: center; }
+    .nota-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 72px; line-height: 1; letter-spacing: .04em;
+    }
+    .nota-denom {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px; font-weight: 700;
+      color: var(--muted); letter-spacing: .08em;
+      display: block; margin-top: -6px;
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body::before, .topbar, .proc-overlay, .toast { display: none !important; }
+      .screen { display: none !important; }
+      #print-report { display: block !important; }
+      @page { margin: 18mm 15mm; size: A4 portrait; }
+    }
+    #print-report {
+      display: none;
+      font-family: 'Barlow Condensed', sans-serif;
+      color: #111;
+    }
+    .pr-header { border-bottom: 3px solid #111; padding-bottom: 10px; margin-bottom: 16px; }
+    .pr-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; letter-spacing: .08em; line-height: 1;
+    }
+    .pr-sub {
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: #444; margin-top: 4px;
+    }
+    .pr-date { font-size: 12px; color: #666; letter-spacing: .06em; margin-top: 3px; }
+    .pr-student {
+      display: flex; gap: 40px; margin-bottom: 16px;
+      background: #f5f5f5; padding: 10px 14px;
+    }
+    .pr-field { display: flex; flex-direction: column; gap: 1px; }
+    .pr-lbl { font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #888; }
+    .pr-val { font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #111; }
+    .pr-nota-box {
+      display: inline-flex; align-items: baseline; gap: 10px;
+      margin-bottom: 16px; border: 2px solid #111; padding: 10px 22px;
+    }
+    .pr-nota-lbl { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #666; }
+    .pr-nota-val { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: .04em; line-height: 1; }
+    .pr-nota-det { font-size: 12px; color: #666; }
+    .pr-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    .pr-table th {
+      background: #111; color: #fff; padding: 5px 8px; text-align: left;
+      font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    }
+    .pr-table td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; }
+    .pr-table tr:nth-child(even) td { background: #fafafa; }
+    .pr-ok  { color: #1a7a1a; font-weight: 700; }
+    .pr-err { color: #c0392b; font-weight: 700; }
+    .pr-dud { color: #c07800; font-weight: 700; }
+    .pr-sum-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    .pr-sum-table th { background: #111; color: #fff; padding: 5px 8px; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .pr-sum-table td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+    .pr-sum-table tr:nth-child(even) td { background: #fafafa; }
+    .pr-footer { margin-top: 20px; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 8px; }
+
     /* Responsive helpers */
     @media (max-width: 480px) {
       .score-big { font-size: 42px; }
@@ -490,6 +589,39 @@
 
 <!-- TOAST -->
 <div class="toast hidden" id="toast"></div>
+
+<!-- PRINT REPORT (oculto en pantalla, visible solo al imprimir) -->
+<div id="print-report">
+  <div class="pr-header">
+    <div class="pr-brand">ACADEMIA CHARLY TÁCTICO · TEDAX</div>
+    <div class="pr-sub">Práctica de Significados</div>
+    <div class="pr-date" id="pr-date"></div>
+  </div>
+  <div class="pr-student">
+    <div class="pr-field">
+      <span class="pr-lbl">Alumno</span>
+      <span class="pr-val" id="pr-nombre">—</span>
+    </div>
+    <div class="pr-field">
+      <span class="pr-lbl">DNI</span>
+      <span class="pr-val" id="pr-dni">—</span>
+    </div>
+  </div>
+  <div>
+    <div class="pr-nota-box">
+      <span class="pr-nota-lbl">Nota</span>
+      <span class="pr-nota-val" id="pr-nota">—</span>
+      <span class="pr-nota-det" id="pr-det"></span>
+    </div>
+  </div>
+  <table class="pr-table">
+    <thead>
+      <tr><th>#</th><th>Respuesta</th><th>Clave</th><th></th></tr>
+    </thead>
+    <tbody id="pr-tbody"></tbody>
+  </table>
+  <div class="pr-footer" id="pr-footer"></div>
+</div>
 
 <!-- ══════════════════════════════════════════════════
      SCREEN 0: CONFIG SERVIDOR
@@ -609,14 +741,26 @@
       <div class="sc-eye">Resultado</div>
       <div class="sc-title">CORRECCIÓN</div>
     </div>
-    <input class="name-input" id="alumno-nombre" type="text" placeholder="Nombre del alumno (opcional)"/>
+    <div class="autocomplete-wrap">
+      <input class="name-input" id="student-search" type="text"
+             placeholder="Buscar alumno por apellido o DNI (opcional)"
+             autocomplete="off"
+             oninput="filterStudents(this.value)"
+             onfocus="onStudentSearchFocus()"/>
+      <button class="ac-clear" id="ac-clear-btn" onclick="clearStudent()">✕</button>
+      <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+    </div>
     <div class="score-block" id="score-block">
-      <div class="score-big" id="score-text">—</div>
+      <div class="nota-wrap">
+        <div class="nota-num" id="score-nota">—</div>
+        <span class="nota-denom">/20</span>
+      </div>
       <div class="score-pct" id="score-pct">—</div>
-      <div class="score-bar-wrap">
+      <div class="score-bar-wrap" style="margin-top:10px">
         <div class="score-bar" id="score-bar" style="width:0%"></div>
       </div>
     </div>
+    <div id="score-text" style="display:none">—</div>
     <div style="overflow-x:auto">
       <table class="resp-table" id="resp-table">
         <thead>
@@ -631,9 +775,14 @@
       </table>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="nextStudent()">
-        SIGUIENTE ALUMNO
-      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-gold" style="font-size:14px;padding:14px" onclick="nextStudent()">
+          SIGUIENTE ALUMNO
+        </button>
+        <button class="btn btn-lime" style="font-size:14px;padding:14px" onclick="printReport()">
+          IMPRIMIR REPORTE
+        </button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
         <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="showSummary()">Ver resumen</button>
@@ -660,9 +809,10 @@
     <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="showScreen('screen-scan')">
       Continuar escaneando
     </button>
-    <button class="btn btn-outline" style="width:100%;font-size:12px;padding:10px" onclick="goToQR()">
-      Nueva prueba
-    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
+      <button class="btn btn-lime" style="font-size:12px;padding:10px" onclick="printSummary()">Imprimir lista</button>
+    </div>
   </div>
 </div>
 
@@ -697,7 +847,11 @@ let mediaStream = null;
 let qrLoopActive = false;
 let qrAnimFrame  = null;
 let session     = [];    // [{nombre, correct, total}]
-let lastResults = null;  // array de {q, detected, status, brights}
+let lastResults = null;  // array de {q, detected, status, counts}
+let studentsList = [];
+let studentsLoaded = false;
+let selectedStudent = null;
+let _autocompleteMatches = [];
 
 // Si el celular abrió directamente el Flask (192.168.x.x / 10.x.x.x)
 // usamos URLs relativas y saltamos config + auth.
@@ -1017,6 +1171,7 @@ async function sendOMR() {
     if (!resp.ok || data.error) throw new Error(data.error || 'Error del servidor');
     lastResults = data.results;
     hideProc();
+    loadStudents(); // cargar lista de alumnos en background (no bloquea)
     // Volver a mostrar cámara para el próximo escaneo
     document.getElementById('omr-preview-view').style.display = 'none';
     document.getElementById('omr-camera-view').style.display = 'block';
@@ -1026,6 +1181,164 @@ async function sendOMR() {
     hideProc();
     showToast('Error: ' + e.message, false);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STUDENTS — AUTOCOMPLETE
+═══════════════════════════════════════════════════════════════════ */
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadStudents() {
+  if (studentsLoaded) return;
+  studentsLoaded = true;
+  try {
+    const { data, error } = await sb
+      .from('alumnos')
+      .select('id, perfiles(nombre, apellido, dni)');
+    if (error) throw error;
+    studentsList = (data || [])
+      .filter(a => a.perfiles)
+      .map(a => ({
+        id:       a.id,
+        nombre:   a.perfiles.nombre   || '',
+        apellido: a.perfiles.apellido || '',
+        dni:      a.perfiles.dni      || ''
+      }))
+      .sort((a, b) => a.apellido.localeCompare(b.apellido, 'es'));
+  } catch(e) {
+    console.warn('No se pudieron cargar alumnos:', e.message);
+  }
+}
+
+function onStudentSearchFocus() {
+  loadStudents();
+}
+
+function filterStudents(query) {
+  const q = query.trim().toLowerCase();
+  const dropdown = document.getElementById('autocomplete-dropdown');
+  const clearBtn = document.getElementById('ac-clear-btn');
+  clearBtn.classList.toggle('visible', query.length > 0);
+  selectedStudent = null;
+  if (!q || q.length < 2) { dropdown.style.display = 'none'; return; }
+  _autocompleteMatches = studentsList.filter(s =>
+    s.apellido.toLowerCase().includes(q) ||
+    s.nombre.toLowerCase().includes(q)   ||
+    s.dni.includes(q)
+  ).slice(0, 8);
+  if (_autocompleteMatches.length === 0) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = _autocompleteMatches.map((s, i) => `
+    <div class="ac-item" onclick="selectStudent(${i})">
+      <span class="ac-name">${escHtml(s.apellido)} ${escHtml(s.nombre)}</span>
+      <span class="ac-dni">${escHtml(s.dni)}</span>
+    </div>`).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectStudent(idx) {
+  const s = _autocompleteMatches[idx];
+  if (!s) return;
+  selectedStudent = s;
+  document.getElementById('student-search').value = `${s.apellido} ${s.nombre}`;
+  document.getElementById('autocomplete-dropdown').style.display = 'none';
+  document.getElementById('ac-clear-btn').classList.add('visible');
+}
+
+function clearStudent() {
+  selectedStudent = null;
+  document.getElementById('student-search').value = '';
+  document.getElementById('autocomplete-dropdown').style.display = 'none';
+  document.getElementById('ac-clear-btn').classList.remove('visible');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRINT REPORT
+═══════════════════════════════════════════════════════════════════ */
+function _buildPrintHeader() {
+  const now   = new Date();
+  const fecha = now.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+  document.getElementById('pr-date').textContent = fecha;
+}
+
+function printReport() {
+  if (!lastResults || !examKey) { showToast('Sin resultados para imprimir', false); return; }
+  const search = document.getElementById('student-search');
+  const nombre = selectedStudent
+    ? `${selectedStudent.apellido} ${selectedStudent.nombre}`
+    : (search.value.trim() || 'Sin nombre');
+  const dni = selectedStudent ? selectedStudent.dni : '';
+
+  const scoreRaw = document.getElementById('score-text').textContent;
+  const [c, t]   = scoreRaw.split('/').map(Number);
+  const nota     = Math.round(c / t * 20);
+  const pct      = Math.round(c / t * 100);
+  const pass     = nota >= 12;
+
+  _buildPrintHeader();
+  document.getElementById('pr-nombre').textContent = nombre.toUpperCase();
+  document.getElementById('pr-dni').textContent    = dni || '—';
+  document.getElementById('pr-nota').textContent   = nota + '/20';
+  document.getElementById('pr-nota').style.color   = pass ? '#1a7a1a' : '#c0392b';
+  document.getElementById('pr-det').textContent    =
+    `${c}/${t} correctas · ${pct}% · ${pass ? 'APROBADO' : 'DESAPROBADO'}`;
+  document.getElementById('pr-footer').textContent =
+    `Generado el ${new Date().toLocaleString('es-PE')} · Academia Charly Táctico TEDAX`;
+
+  const tbody = document.getElementById('pr-tbody');
+  tbody.innerHTML = '';
+  lastResults.forEach(r => {
+    const expec = examKey[r.q - 1] || '?';
+    const ok    = r.status === 'ok' && r.detected === expec;
+    let mark, cls;
+    if      (r.status === 'blank')  { mark = '○';  cls = 'pr-dud'; }
+    else if (r.status === 'double') { mark = '2x'; cls = 'pr-dud'; }
+    else if (ok)                    { mark = '✓';  cls = 'pr-ok';  }
+    else                            { mark = '✗';  cls = 'pr-err'; }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.q}</td><td>${r.detected||'—'}</td><td>${expec}</td><td class="${cls}">${mark}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  window.print();
+}
+
+function printSummary() {
+  if (session.length === 0) { showToast('Sin alumnos en la sesión', false); return; }
+  const notas  = session.map(s => s.nota);
+  const prom   = Math.round(notas.reduce((a,b) => a+b,0) / notas.length);
+  const sorted = [...session].map((s,i)=>({...s,idx:i})).sort((a,b)=>b.nota-a.nota);
+
+  _buildPrintHeader();
+  document.getElementById('pr-nombre').textContent = `LISTA DE RESULTADOS — ${session.length} alumnos`;
+  document.getElementById('pr-dni').textContent    = '';
+  document.getElementById('pr-nota').textContent   = prom + '/20';
+  document.getElementById('pr-nota').style.color   = '#111';
+  document.getElementById('pr-det').textContent    = 'promedio de la sección';
+  document.getElementById('pr-footer').textContent =
+    `Generado el ${new Date().toLocaleString('es-PE')} · Academia Charly Táctico TEDAX`;
+
+  const tbody = document.getElementById('pr-tbody');
+  tbody.innerHTML = '';
+  sorted.forEach((s, rank) => {
+    const pass = s.nota >= 12;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${rank+1}</td><td>${escHtml(s.nombre)}</td><td>${escHtml(s.dni||'—')}</td>
+      <td style="font-weight:700;color:${pass?'#1a7a1a':'#c0392b'}">${s.nota}/20</td>
+      <td>${s.correct}/${s.total} (${Math.round(s.correct/s.total*100)}%)</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Swap table headers temporarily for summary
+  document.querySelector('#print-report .pr-table thead tr').innerHTML =
+    '<th>#</th><th>Alumno</th><th>DNI</th><th>Nota</th><th>Correctas</th>';
+
+  window.print();
+
+  // Restore headers for individual report
+  document.querySelector('#print-report .pr-table thead tr').innerHTML =
+    '<th>#</th><th>Respuesta</th><th>Clave</th><th></th>';
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1051,25 +1364,33 @@ function renderResult(results) {
     tbody.appendChild(tr);
   });
 
-  const total = examN;
-  const pct   = Math.round(correct / total * 100);
-  const pass  = pct >= 60;
+  const total   = examN;
+  const pct     = Math.round(correct / total * 100);
+  const notaRaw = correct / total * 20;
+  const nota    = Math.round(notaRaw);   // ≥.5 sube, <.5 baja
+  const pass    = nota >= 12;            // 60% → 12/20
 
   document.getElementById('score-text').textContent = `${correct}/${total}`;
-  document.getElementById('score-pct').textContent  = `${pct}% — ${pass ? 'APROBADO' : 'DESAPROBADO'}`;
-  document.getElementById('score-text').style.color = pass ? 'var(--lime)' : 'var(--red)';
+  document.getElementById('score-nota').textContent = nota;
+  document.getElementById('score-nota').style.color = pass ? 'var(--lime)' : 'var(--red)';
+  document.getElementById('score-pct').textContent  =
+    `${correct}/${total} correctas · ${pct}% — ${pass ? 'APROBADO' : 'DESAPROBADO'}`;
   const bar = document.getElementById('score-bar');
   bar.style.width = pct + '%';
   bar.className   = 'score-bar ' + (pass ? 'pass' : 'fail');
 }
 
 function nextStudent() {
-  // Save current student to session
-  const nombre   = document.getElementById('alumno-nombre').value.trim() || `Alumno ${session.length + 1}`;
-  const scoreText = document.getElementById('score-text').textContent;
-  const [c, t] = scoreText.split('/').map(Number);
-  session.push({ nombre, correct: c, total: t });
-  document.getElementById('alumno-nombre').value = '';
+  const search   = document.getElementById('student-search');
+  const nombre   = selectedStudent
+    ? `${selectedStudent.apellido} ${selectedStudent.nombre}`
+    : (search.value.trim() || `Alumno ${session.length + 1}`);
+  const dni      = selectedStudent ? selectedStudent.dni : '';
+  const scoreRaw = document.getElementById('score-text').textContent;
+  const [c, t]   = scoreRaw.split('/').map(Number);
+  const nota     = Math.round(c / t * 20);
+  session.push({ nombre, dni, correct: c, total: t, nota });
+  clearStudent();
   showScreen('screen-scan');
 }
 
@@ -1086,23 +1407,23 @@ function renderSummary() {
     document.getElementById('st-min').textContent  = '—';
     return;
   }
-  const pcts = session.map(s => Math.round(s.correct / s.total * 100));
-  const prom = Math.round(pcts.reduce((a,b) => a+b, 0) / pcts.length);
-  const max  = Math.max(...pcts);
-  const min  = Math.min(...pcts);
-  document.getElementById('st-prom').textContent = prom + '%';
-  document.getElementById('st-max').textContent  = max  + '%';
-  document.getElementById('st-min').textContent  = min  + '%';
+  const notas = session.map(s => s.nota);
+  const prom  = Math.round(notas.reduce((a,b) => a+b, 0) / notas.length);
+  const max   = Math.max(...notas);
+  const min   = Math.min(...notas);
+  document.getElementById('st-prom').textContent = prom + '/20';
+  document.getElementById('st-max').textContent  = max  + '/20';
+  document.getElementById('st-min').textContent  = min  + '/20';
 
-  session.forEach((s, i) => {
-    const pct  = pcts[i];
-    const pass = pct >= 60;
+  const sorted = [...session].map((s,i)=>({...s,idx:i})).sort((a,b)=>b.nota-a.nota);
+  sorted.forEach((s, rank) => {
+    const pass = s.nota >= 12;
     const div  = document.createElement('div');
     div.className = 'summary-item';
     div.innerHTML = `
-      <div class="si-rank">${i+1}</div>
-      <div class="si-name">${s.nombre}</div>
-      <div class="si-score ${pass?'pass':'fail'}">${s.correct}/${s.total} <span style="font-size:13px;font-family:'Barlow Condensed',sans-serif">(${pct}%)</span></div>
+      <div class="si-rank">${rank + 1}</div>
+      <div class="si-name">${escHtml(s.nombre)}</div>
+      <div class="si-score ${pass?'pass':'fail'}">${s.nota}<span style="font-size:13px;font-family:'Barlow Condensed',sans-serif">/20</span></div>
     `;
     list.appendChild(div);
   });

@@ -42,10 +42,11 @@ MM_TO_PX = DPI / 25.4
 A4_W     = int(210 * MM_TO_PX)
 A4_H     = int(297 * MM_TO_PX)
 
-# Con umbral binario ~185, el borde impreso del círculo (~120-150 gray) queda en 255.
-# Burbuja vacía (solo borde): pct ~20-30%. Burbuja con lápiz: pct ~45-80%.
-# FILL_THRESH=0.35 separa lápiz (>35%) de borde solo (<30%).
-FILL_THRESH = 0.30
+# Evaluación ArgMax: la burbuja con mayor densidad de píxeles oscuros gana.
+# Blanco si max < BLANK_THRESH; doble si 2do/1ro >= DOUBLE_RATIO.
+BLANK_PX      = 280    # máx burbuja debe superar esto para no ser blanco
+MIN_MARK_GAP  = 80     # el ganador debe superar al 2do por ≥80px → respuesta clara
+DOUBLE_MIN_PX = 350    # doble marca: el 2do también debe superar esto
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -183,10 +184,10 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
         warped_gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
-        blockSize=31, C=14
+        blockSize=31, C=6
     )
     # Cierre morfológico: fusiona trazos finos del lapicero en masa sólida.
-    # Kernel 7×7 cierra huecos de hasta ~1.2mm entre trazos de lapicero.
+    # Kernel 7×7 elipse: cierra huecos sin fusionar burbujas adyacentes.
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     warped_bin = cv2.morphologyEx(warped_bin, cv2.MORPH_CLOSE, kernel)
     return warped_bin
@@ -196,16 +197,14 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
 #  CONTEO DE PÍXELES OSCUROS EN BURBUJA
 # ══════════════════════════════════════════════════════════════════
 
-def count_filled_pct(warped_bin: np.ndarray, cx_px: float, cy_px: float, r_px: float) -> float:
+def count_filled_px(warped_bin: np.ndarray, cx_px: float, cy_px: float, r_px: float) -> int:
     """
-    Porcentaje de píxeles oscuros (=255 en binario invertido) dentro del círculo.
-    0.0 = completamente vacía, 1.0 = completamente rellena.
+    Cantidad absoluta de píxeles oscuros (=255 en binario invertido) dentro del círculo.
+    Usado para ArgMax: burbuja con más píxeles = respuesta elegida.
     """
     mask = np.zeros(warped_bin.shape, dtype=np.uint8)
     cv2.circle(mask, (int(round(cx_px)), int(round(cy_px))), int(round(r_px)), 255, -1)
-    total  = cv2.countNonZero(mask)
-    filled = cv2.countNonZero(cv2.bitwise_and(warped_bin, mask))
-    return filled / total if total > 0 else 0.0
+    return cv2.countNonZero(cv2.bitwise_and(warped_bin, mask))
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -214,9 +213,10 @@ def count_filled_pct(warped_bin: np.ndarray, cx_px: float, cy_px: float, r_px: f
 
 def process_omr(warped_bin: np.ndarray, N: int) -> list:
     """
-    Detecta respuestas contando % de píxeles oscuros por burbuja.
-    status: 'ok' | 'blank' | 'double' | 'low_conf'
-    pcts: porcentaje de relleno de cada burbuja [A, B, C, D]
+    Detecta respuestas con lógica ArgMax (Evaluación Relativa).
+    Para cada pregunta: cuenta píxeles oscuros en cada burbuja y elige la mayor.
+    status: 'ok' | 'blank' | 'double'
+    counts: píxeles oscuros de cada burbuja [A, B, C, D]
     """
     N_GRP  = 1 if N <= 25 else 2 if N <= 50 else 3 if N <= 75 else 4
     CONT_W = CL['GW'] - 2 * CL['RM']
@@ -232,30 +232,39 @@ def process_omr(warped_bin: np.ndarray, N: int) -> list:
         gx_mm = CX0 + g * (GRP_W + CL['GAP'])
         cy_mm = CL['GY'] + CL['RM'] + CL['HDR'] + row * CL['RH'] + CL['RH'] / 2
 
-        pcts = []
+        counts = []
         for c in range(4):
             bx_mm = gx_mm + CL['BA'] + c * CL['BS']
-            pct = count_filled_pct(warped_bin,
-                                   bx_mm * MM_TO_PX,
-                                   cy_mm * MM_TO_PX,
-                                   b_rad_px)
-            pcts.append(round(pct, 3))
+            px_count = count_filled_px(warped_bin,
+                                       bx_mm * MM_TO_PX,
+                                       cy_mm * MM_TO_PX,
+                                       b_rad_px)
+            counts.append(px_count)
 
-        chosen = pcts.index(max(pcts))
-        marked = [i for i, p in enumerate(pcts) if p > FILL_THRESH]
+        max_px = max(counts)
+        chosen = counts.index(max_px)
 
-        if len(marked) == 0:
+        if max_px < BLANK_PX:
+            # Ninguna burbuja supera el ruido del borde impreso → blanco
             status, detected = 'blank', None
-        elif len(marked) >= 2:
-            status, detected = 'double', None
         else:
-            status, detected = 'ok', LTRS[chosen]
+            sorted_c = sorted(counts, reverse=True)
+            gap = sorted_c[0] - sorted_c[1]
+            if gap >= MIN_MARK_GAP:
+                # Ganador claro: supera al 2do por ≥100px
+                status, detected = 'ok', LTRS[chosen]
+            elif sorted_c[1] >= DOUBLE_MIN_PX:
+                # Dos burbujas claramente marcadas y muy similares → doble marca
+                status, detected = 'double', None
+            else:
+                # Max ≥300 pero gap pequeño y 2do bajo → ruido del borde → blanco
+                status, detected = 'blank', None
 
         results.append({
             'q':        q + 1,
             'detected': detected,
             'status':   status,
-            'pcts':     pcts,
+            'counts':   counts,   # píxeles absolutos por burbuja
         })
 
     return results
@@ -394,8 +403,8 @@ def process():
     for r in results:
         counts[r.get('status', 'blank')] = counts.get(r.get('status', 'blank'), 0) + 1
     print(f"  ok:{counts['ok']}  blank:{counts['blank']}  double:{counts['double']}")
-    for r in results[:10]:
-        print(f"  Q{r['q']:2d}: {r['status']:8s} {r['detected'] or '—'}  pcts={r['pcts']}")
+    for r in results:
+        print(f"  Q{r['q']:2d}: {r['status']:8s} {r['detected'] or '—'}  px={r['counts']}")
 
     return jsonify({'results': results})
 
