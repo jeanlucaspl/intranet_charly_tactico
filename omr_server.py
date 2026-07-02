@@ -58,13 +58,14 @@ def enhance_contrast(gray: np.ndarray) -> np.ndarray:
 
 def preprocess(gray: np.ndarray) -> np.ndarray:
     """
-    Gaussian Blur → Otsu threshold (invertido).
-    Sin CLAHE: la imagen ya viene recortada al papel (fondo blanco uniforme),
-    el CLAHE amplifica ruido JPEG y degrada el Otsu.
+    Gaussian Blur → threshold adaptativo.
+    Otsu falla en imágenes casi uniformes (papel blanco); usamos umbral fijo
+    conservador: todo lo más oscuro que el papel (< 160) se considera marca.
     """
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-    _, binary = cv2.threshold(blurred, 0, 255,
-                              cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    # Umbral fijo: marca oscura (~30-120) vs papel blanco (~170-240)
+    # 150 es punto medio seguro para fotos de papel bajo cualquier iluminación
+    _, binary = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY_INV)
     return binary
 
 
@@ -112,12 +113,21 @@ def find_registration_marks(gray: np.ndarray):
         best, best_score = None, 0
         top_cands = []
 
+        # Margen de borde: la marca real está a ~6% del borde; excluir objetos al 4%
+        edge_x = W * 0.04
+        edge_y = H * 0.04
+
         for cnt in contours:
             M = cv2.moments(cnt)
             if M['m00'] < 20:
                 continue
             cx_c = M['m10'] / M['m00']
             cy_c = M['m01'] / M['m00']
+            # Coords en imagen completa
+            gx, gy = x0 + cx_c, y0 + cy_c
+            # Excluir si está pegado al borde de la imagen (falsos positivos por aristas del papel)
+            if gx < edge_x or gx > W - edge_x or gy < edge_y or gy > H - edge_y:
+                continue
             area = cv2.contourArea(cnt)
             # Filtro de área: entre 20% y 400% del tamaño esperado de la marca
             if area < expected_area * 0.20 or area > expected_area * 4.0:
@@ -126,8 +136,7 @@ def find_registration_marks(gray: np.ndarray):
             squareness = min(bw, bh) / max(bw, bh) if max(bw, bh) > 0 else 0
             if squareness < 0.40:
                 continue
-            # Distancia del centroide (en coords de imagen completa) a la esquina
-            gx, gy = x0 + cx_c, y0 + cy_c
+            # Distancia del centroide a la esquina
             dist = ((gx - cx_ref) ** 2 + (gy - cy_ref) ** 2) ** 0.5
             # Score: favorece cuadrado grande y CERCANO a la esquina
             score = area * (squareness ** 2) / (1.0 + dist / 30.0)
