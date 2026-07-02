@@ -86,9 +86,9 @@ def find_registration_marks(gray: np.ndarray):
     Retorna [(cx, cy), ...] en píxeles, orden [TL, TR, BL, BR].
     """
     H, W = gray.shape
-    # Z=0.30: el papel puede no llenar toda la imagen cropped (espacio arriba/abajo).
-    # El score penaliza por distancia a la esquina → marcas reales siempre ganan a burbujas.
-    Z = 0.30
+    # Imagen ya recortada al papel. Marcas a ~3% del borde, burbujas desde ~13%.
+    # Z=0.12 cubre solo la esquina real, excluye área de burbujas.
+    Z = 0.12
     quadrants = [
         (0,            0,            int(W * Z),       int(H * Z)),   # TL
         (int(W*(1-Z)), 0,            W,                int(H * Z)),   # TR
@@ -145,7 +145,7 @@ def find_registration_marks(gray: np.ndarray):
             # Distancia del centroide a la esquina
             dist = ((gx - cx_ref) ** 2 + (gy - cy_ref) ** 2) ** 0.5
             # Score: favorece cuadrado grande y CERCANO a la esquina
-            score = area * (squareness ** 2) / (1.0 + dist / 30.0)
+            score = area * (squareness ** 2) / (1.0 + dist / 15.0)
             top_cands.append((round(score, 1), round(area), round(squareness, 2),
                               round(cx_c), round(cy_c), round(dist)))
             if score > best_score:
