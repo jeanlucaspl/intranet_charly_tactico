@@ -88,7 +88,7 @@ def find_registration_marks(gray: np.ndarray):
     H, W = gray.shape
     # Imagen ya recortada al papel. Marcas a ~3% del borde, burbujas desde ~13%.
     # Z=0.09 cubre solo la esquina real (~19mm en A4), lejos del área de burbujas.
-    Z = 0.09
+    Z = 0.12
     quadrants = [
         (0,            0,            int(W * Z),       int(H * Z)),   # TL
         (int(W*(1-Z)), 0,            W,                int(H * Z)),   # TR
