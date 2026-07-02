@@ -45,7 +45,7 @@ A4_H     = int(297 * MM_TO_PX)
 # Con umbral binario ~185, el borde impreso del círculo (~120-150 gray) queda en 255.
 # Burbuja vacía (solo borde): pct ~20-30%. Burbuja con lápiz: pct ~45-80%.
 # FILL_THRESH=0.35 separa lápiz (>35%) de borde solo (<30%).
-FILL_THRESH = 0.42
+FILL_THRESH = 0.30
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -186,8 +186,8 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
         blockSize=31, C=14
     )
     # Cierre morfológico: fusiona trazos finos del lapicero en masa sólida.
-    # Kernel 5×5 cierra huecos de hasta ~0.8mm entre trazos.
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    # Kernel 7×7 cierra huecos de hasta ~1.2mm entre trazos de lapicero.
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     warped_bin = cv2.morphologyEx(warped_bin, cv2.MORPH_CLOSE, kernel)
     return warped_bin
 
@@ -362,7 +362,9 @@ def process():
     if img is None:
         return jsonify({'error': 'No se pudo decodificar la imagen'}), 400
 
-    gray  = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Canal rojo (BGR índice 2): lapicero azul absorbe luz roja → aparece negro puro.
+    # Mucho mejor contraste que escala de grises para tinta azul.
+    gray  = img[:, :, 2]
 
     marks = find_registration_marks(gray)
     valid = [m for m in marks if m is not None]
