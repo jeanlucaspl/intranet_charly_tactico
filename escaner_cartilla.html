@@ -847,6 +847,24 @@ function applyManualCode() {
 /* ═══════════════════════════════════════════════════════════════════
    OMR — CAPTURE & SEND AL SERVIDOR
 ═══════════════════════════════════════════════════════════════════ */
+/* Mide nitidez de un frame: suma de gradientes al cuadrado (muestrea 1 de cada 5px) */
+function frameSharpness(ctx, W, H) {
+  const imgData = ctx.getImageData(0, 0, W, H).data;
+  let sum = 0;
+  for (let y = 1; y < H - 1; y += 5) {
+    for (let x = 1; x < W - 1; x += 5) {
+      const i  = (y * W + x) * 4;
+      const ir = (y * W + x + 1) * 4;
+      const id = ((y + 1) * W + x) * 4;
+      const g  = 0.299*imgData[i]  + 0.587*imgData[i+1]  + 0.114*imgData[i+2];
+      const gr = 0.299*imgData[ir] + 0.587*imgData[ir+1] + 0.114*imgData[ir+2];
+      const gd = 0.299*imgData[id] + 0.587*imgData[id+1] + 0.114*imgData[id+2];
+      sum += (g - gr) ** 2 + (g - gd) ** 2;
+    }
+  }
+  return sum;
+}
+
 async function captureOMR() {
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
   if (!serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
@@ -854,17 +872,26 @@ async function captureOMR() {
   const W = video.videoWidth, H = video.videoHeight;
   if (!W || !H) { showToast('La cámara aún no está lista', false); return; }
 
-  showProc('Enviando al servidor OMR...');
-  await new Promise(r => setTimeout(r, 40));
-
   const canvas = document.getElementById('omr-canvas');
   canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, W, H);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.90));
+  // Captura 5 frames, elige el más nítido
+  showProc('Capturando 5 frames...');
+  let bestBlob = null, bestScore = -1;
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    ctx.drawImage(video, 0, 0, W, H);
+    const score = frameSharpness(ctx, W, H);
+    if (score > bestScore) {
+      bestScore = score;
+      bestBlob  = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+    }
+  }
+
+  showProc('Enviando al servidor OMR...');
   const fd = new FormData();
-  fd.append('image', blob, 'cartilla.jpg');
+  fd.append('image', bestBlob, 'cartilla.jpg');
   fd.append('n', examN);
 
   try {
