@@ -10,11 +10,14 @@ Uso:
 El celular y la PC deben estar en la misma red WiFi.
 """
 
+import os
 import socket
 import numpy as np
 import cv2
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 CORS(app)
@@ -201,6 +204,19 @@ def process_omr(warped: np.ndarray, N: int) -> list:
 # ══════════════════════════════════════════════════════════════════
 #  ENDPOINTS
 # ══════════════════════════════════════════════════════════════════
+
+@app.route('/')
+@app.route('/escaner_cartilla.html')
+def scanner_page():
+    return send_from_directory(BASE_DIR, 'escaner_cartilla.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(BASE_DIR, 'favicon.ico')
+
+@app.route('/icons/<path:filename>')
+def icons(filename):
+    return send_from_directory(os.path.join(BASE_DIR, 'icons'), filename)
 
 @app.route('/health', methods=['GET'])
 def health():

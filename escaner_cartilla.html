@@ -657,28 +657,37 @@ const REG_MM = [
 ═══════════════════════════════════════════════════════════════════ */
 let examKey     = null;   // array de chars ['A','B','C',...]
 let examN       = 0;
-let serverIP    = '';     // ip:puerto del servidor OMR
+let serverIP    = '';     // ip:puerto del servidor OMR (vacío = mismo origen)
 let mediaStream = null;
 let qrLoopActive = false;
 let qrAnimFrame  = null;
 let session     = [];    // [{nombre, correct, total}]
 let lastResults = null;  // array de {q, detected, status, brights}
 
+// Si el celular abrió directamente el Flask (192.168.x.x / 10.x.x.x)
+// usamos URLs relativas y saltamos config + auth.
+const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.test(window.location.hostname);
+
 /* ═══════════════════════════════════════════════════════════════════
    INIT — auth check
 ═══════════════════════════════════════════════════════════════════ */
 (async function init() {
-  const { data: { session: s } } = await sb.auth.getSession();
-  if (!s) {
-    window.location.href = './login.html?next=escaner_cartilla.html';
-    return;
+  if (!IS_LOCAL) {
+    const { data: { session: s } } = await sb.auth.getSession();
+    if (!s) {
+      window.location.href = './login.html?next=escaner_cartilla.html';
+      return;
+    }
+    // Restaurar IP guardada
+    const saved = localStorage.getItem('omr_server_ip');
+    if (saved) document.getElementById('cfg-ip').value = saved;
+    showScreen('screen-config');
+  } else {
+    // Acceso directo desde el servidor Flask — no necesita config
+    serverIP = '';
+    startCamera();
+    showScreen('screen-qr');
   }
-  // Restaurar IP guardada
-  const saved = localStorage.getItem('omr_server_ip');
-  if (saved) {
-    document.getElementById('cfg-ip').value = saved;
-  }
-  showScreen('screen-config');
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -691,7 +700,7 @@ async function connectServer() {
   const ip = raw.includes(':') ? raw : raw + ':5000';
   setCfgStatus('Conectando...', '');
   try {
-    const resp = await fetch(`https://${ip}/health`, { signal: AbortSignal.timeout(4000) });
+    const resp = await fetch(`https://${ip}/health`, { signal: AbortSignal.timeout(6000) });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
     if (!data.ok) throw new Error('Respuesta inesperada');
@@ -868,7 +877,7 @@ function frameSharpness(ctx, W, H) {
 
 async function captureOMR() {
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
-  if (!serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
+  if (!IS_LOCAL && !serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
   const video = document.getElementById('omr-video');
   const W = video.videoWidth, H = video.videoHeight;
   if (!W || !H) { showToast('La cámara aún no está lista', false); return; }
@@ -896,7 +905,8 @@ async function captureOMR() {
   fd.append('n', examN);
 
   try {
-    const resp = await fetch(`https://${serverIP}/process`, {
+    const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
+    const resp = await fetch(`${apiBase}/process`, {
       method: 'POST',
       body: fd,
       signal: AbortSignal.timeout(15000),
