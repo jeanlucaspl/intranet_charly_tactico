@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1254,12 +1256,66 @@ function clearStudent() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   PRINT REPORT
+   PDF ENGINE  (mismo patrón que admin.html)
 ═══════════════════════════════════════════════════════════════════ */
-function _buildPrintHeader() {
-  const now   = new Date();
-  const fecha = now.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-  document.getElementById('pr-date').textContent = fecha;
+const _PDF = {
+  W:210, PL:14, PR:14,
+  GOLD:[201,168,76], DARK:[9,12,16], WHITE:[240,244,248], MUTED:[128,140,160],
+  tbl:{ fontSize:9, cellPadding:2.5, textColor:[20,20,20], fillColor:[255,255,255] },
+  head:{ fillColor:[255,255,255], textColor:[20,20,20], fontStyle:'bold', lineWidth:0.3, lineColor:[180,180,180] },
+  body:{ lineWidth:0.2, lineColor:[210,210,210] }
+};
+
+function _pdfHeader(doc, subtitulo) {
+  const {W, PL, GOLD, DARK, WHITE} = _PDF;
+  doc.setFillColor(...DARK); doc.rect(0, 0, W, 20, 'F');
+  doc.setTextColor(...GOLD); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('Academia Charly Táctico TEDAX', PL, 11);
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(...WHITE);
+  doc.text(subtitulo.toUpperCase(), PL, 17);
+  doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0, 20, W, 20);
+  return 20;
+}
+
+function _pdfMeta(doc, y, linea) {
+  const {W, PL, MUTED} = _PDF;
+  doc.setFillColor(20, 28, 36); doc.rect(0, y, W, 8, 'F');
+  doc.setTextColor(...MUTED); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.text(linea, PL, y + 5.5);
+  return y + 8;
+}
+
+function _pdfFooter(doc) {
+  const {W, PL, MUTED} = _PDF;
+  doc.setTextColor(...MUTED); doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text(`Generado: ${new Date().toLocaleString('es-PE')}`, PL, 289);
+  doc.text('CHARLY TÁCTICO — SISTEMA INTRANET', W/2, 289, {align:'center'});
+}
+
+function _pdfSave(doc, filename) {
+  const base64 = doc.output('datauristring').split(',')[1];
+  if (window.AndroidNative && typeof window.AndroidNative.savePdfBase64 === 'function') {
+    window.AndroidNative.savePdfBase64(base64, filename);
+    return;
+  }
+  const blob = doc.output('blob');
+  const url  = URL.createObjectURL(blob);
+  if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
+    const w = window.open(url, '_blank');
+    if (!w) window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+    showToast('Toca Compartir → Guardar en Archivos para guardar el PDF', true);
+    return;
+  }
+  if (/Android/i.test(navigator.userAgent)) {
+    window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
 function printReport() {
@@ -1268,77 +1324,103 @@ function printReport() {
   const nombre = selectedStudent
     ? `${selectedStudent.apellido} ${selectedStudent.nombre}`
     : (search.value.trim() || 'Sin nombre');
-  const dni = selectedStudent ? selectedStudent.dni : '';
+  const dni    = selectedStudent ? selectedStudent.dni : '';
 
   const scoreRaw = document.getElementById('score-text').textContent;
   const [c, t]   = scoreRaw.split('/').map(Number);
   const nota     = Math.round(c / t * 20);
   const pct      = Math.round(c / t * 100);
   const pass     = nota >= 12;
+  const fecha    = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'long', year:'numeric'});
 
-  _buildPrintHeader();
-  document.getElementById('pr-nombre').textContent = nombre.toUpperCase();
-  document.getElementById('pr-dni').textContent    = dni || '—';
-  document.getElementById('pr-nota').textContent   = nota + '/20';
-  document.getElementById('pr-nota').style.color   = pass ? '#1a7a1a' : '#c0392b';
-  document.getElementById('pr-det').textContent    =
-    `${c}/${t} correctas · ${pct}% · ${pass ? 'APROBADO' : 'DESAPROBADO'}`;
-  document.getElementById('pr-footer').textContent =
-    `Generado el ${new Date().toLocaleString('es-PE')} · Academia Charly Táctico TEDAX`;
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  let y = _pdfHeader(doc, 'Práctica de Significados');
+  y = _pdfMeta(doc, y, `Fecha: ${fecha}   ·   Alumno: ${nombre.toUpperCase()}   ·   DNI: ${dni || '—'}`);
 
-  const tbody = document.getElementById('pr-tbody');
-  tbody.innerHTML = '';
-  lastResults.forEach(r => {
+  // Nota destacada
+  y += 8;
+  const passColor = pass ? [26,122,26] : [192,57,43];
+  doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...passColor);
+  doc.text(`${nota}/20`, _PDF.PL, y);
+  doc.setFontSize(10); doc.setTextColor(80,80,80); doc.setFont('helvetica','normal');
+  doc.text(`${c}/${t} correctas · ${pct}% · ${pass ? 'APROBADO' : 'DESAPROBADO'}`, _PDF.PL + 30, y);
+  y += 10;
+
+  // Tabla de respuestas
+  const rows = lastResults.map(r => {
     const expec = examKey[r.q - 1] || '?';
     const ok    = r.status === 'ok' && r.detected === expec;
-    let mark, cls;
-    if      (r.status === 'blank')  { mark = '○';  cls = 'pr-dud'; }
-    else if (r.status === 'double') { mark = '2x'; cls = 'pr-dud'; }
-    else if (ok)                    { mark = '✓';  cls = 'pr-ok';  }
-    else                            { mark = '✗';  cls = 'pr-err'; }
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.q}</td><td>${r.detected||'—'}</td><td>${expec}</td><td class="${cls}">${mark}</td>`;
-    tbody.appendChild(tr);
+    let estado;
+    if      (r.status === 'blank')  estado = 'En blanco';
+    else if (r.status === 'double') estado = 'Doble marca';
+    else                            estado = ok ? 'Correcto' : 'Incorrecto';
+    return [r.q, r.detected || '—', expec, estado];
   });
 
-  window.print();
+  doc.autoTable({
+    startY: y,
+    margin: {left: _PDF.PL, right: _PDF.PR},
+    head: [['#', 'Respuesta', 'Clave', 'Estado']],
+    body: rows,
+    styles: _PDF.tbl,
+    headStyles: _PDF.head,
+    bodyStyles: _PDF.body,
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        const v = data.cell.raw;
+        if      (v === 'Correcto')   data.cell.styles.textColor = [26,122,26];
+        else if (v === 'Incorrecto') data.cell.styles.textColor = [192,57,43];
+        else                         data.cell.styles.textColor = [160,100,0];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    }
+  });
+
+  _pdfFooter(doc);
+  const slug = nombre.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+  _pdfSave(doc, `reporte_${slug}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 function printSummary() {
   if (session.length === 0) { showToast('Sin alumnos en la sesión', false); return; }
   const notas  = session.map(s => s.nota);
-  const prom   = Math.round(notas.reduce((a,b) => a+b,0) / notas.length);
-  const sorted = [...session].map((s,i)=>({...s,idx:i})).sort((a,b)=>b.nota-a.nota);
+  const prom   = Math.round(notas.reduce((a,b) => a+b, 0) / notas.length);
+  const sorted = [...session].sort((a,b) => b.nota - a.nota);
+  const fecha  = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'long', year:'numeric'});
 
-  _buildPrintHeader();
-  document.getElementById('pr-nombre').textContent = `LISTA DE RESULTADOS — ${session.length} alumnos`;
-  document.getElementById('pr-dni').textContent    = '';
-  document.getElementById('pr-nota').textContent   = prom + '/20';
-  document.getElementById('pr-nota').style.color   = '#111';
-  document.getElementById('pr-det').textContent    = 'promedio de la sección';
-  document.getElementById('pr-footer').textContent =
-    `Generado el ${new Date().toLocaleString('es-PE')} · Academia Charly Táctico TEDAX`;
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  let y = _pdfHeader(doc, 'Práctica de Significados — Lista de Resultados');
+  y = _pdfMeta(doc, y, `Fecha: ${fecha}   ·   ${session.length} alumnos   ·   Promedio: ${prom}/20`);
+  y += 6;
 
-  const tbody = document.getElementById('pr-tbody');
-  tbody.innerHTML = '';
-  sorted.forEach((s, rank) => {
-    const pass = s.nota >= 12;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${rank+1}</td><td>${escHtml(s.nombre)}</td><td>${escHtml(s.dni||'—')}</td>
-      <td style="font-weight:700;color:${pass?'#1a7a1a':'#c0392b'}">${s.nota}/20</td>
-      <td>${s.correct}/${s.total} (${Math.round(s.correct/s.total*100)}%)</td>`;
-    tbody.appendChild(tr);
+  doc.autoTable({
+    startY: y,
+    margin: {left: _PDF.PL, right: _PDF.PR},
+    head: [['#', 'Alumno', 'DNI', 'Nota', 'Correctas', '%']],
+    body: sorted.map((s, i) => [
+      i + 1,
+      s.nombre.toUpperCase(),
+      s.dni || '—',
+      `${s.nota}/20`,
+      `${s.correct}/${s.total}`,
+      `${Math.round(s.correct / s.total * 100)}%`
+    ]),
+    styles: _PDF.tbl,
+    headStyles: _PDF.head,
+    bodyStyles: _PDF.body,
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        const nota = sorted[data.row.index]?.nota;
+        data.cell.styles.textColor = nota >= 12 ? [26,122,26] : [192,57,43];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    }
   });
 
-  // Swap table headers temporarily for summary
-  document.querySelector('#print-report .pr-table thead tr').innerHTML =
-    '<th>#</th><th>Alumno</th><th>DNI</th><th>Nota</th><th>Correctas</th>';
-
-  window.print();
-
-  // Restore headers for individual report
-  document.querySelector('#print-report .pr-table thead tr').innerHTML =
-    '<th>#</th><th>Respuesta</th><th>Clave</th><th></th>';
+  _pdfFooter(doc);
+  _pdfSave(doc, `lista_resultados_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
