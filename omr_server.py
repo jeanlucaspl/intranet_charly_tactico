@@ -58,11 +58,11 @@ def enhance_contrast(gray: np.ndarray) -> np.ndarray:
 
 def preprocess(gray: np.ndarray) -> np.ndarray:
     """
-    CLAHE → Gaussian Blur → Otsu threshold (invertido).
-    Retorna imagen binaria donde píxeles oscuros = 255 (burbujas rellenas y marcas).
+    Gaussian Blur → Otsu threshold (invertido).
+    Sin CLAHE: la imagen ya viene recortada al papel (fondo blanco uniforme),
+    el CLAHE amplifica ruido JPEG y degrada el Otsu.
     """
-    enhanced = enhance_contrast(gray)
-    blurred  = cv2.GaussianBlur(enhanced, (5, 5), 0)
+    blurred = cv2.GaussianBlur(gray, (7, 7), 0)
     _, binary = cv2.threshold(blurred, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binary
