@@ -45,7 +45,7 @@ A4_H     = int(297 * MM_TO_PX)
 # Con umbral binario ~185, el borde impreso del círculo (~120-150 gray) queda en 255.
 # Burbuja vacía (solo borde): pct ~20-30%. Burbuja con lápiz: pct ~45-80%.
 # FILL_THRESH=0.35 separa lápiz (>35%) de borde solo (<30%).
-FILL_THRESH = 0.35
+FILL_THRESH = 0.42
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -183,7 +183,7 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
         warped_gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
-        blockSize=31, C=8
+        blockSize=31, C=14
     )
     return warped_bin
 
