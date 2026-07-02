@@ -9189,12 +9189,13 @@ async function wn_save() {
     doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRY);
     doc.text('Rellene completamente el círculo de la alternativa elegida. Use lapicero negro o azul.', M, M+16.5);
 
-    // Marcas de registro (4 esquinas)
+    // Marcas de registro — esquinas del papel A4 (3mm del borde, 7x7mm)
+    const MK=7, MP=3;
     doc.setFillColor(0,0,0);
-    doc.rect(GX,       GY,       RM, RM, 'F');
-    doc.rect(GX+GW-RM, GY,       RM, RM, 'F');
-    doc.rect(GX,       GY+GH-RM, RM, RM, 'F');
-    doc.rect(GX+GW-RM, GY+GH-RM, RM, RM, 'F');
+    doc.rect(MP,         MP,         MK, MK, 'F');  // TL
+    doc.rect(210-MP-MK,  MP,         MK, MK, 'F');  // TR
+    doc.rect(MP,         297-MP-MK,  MK, MK, 'F');  // BL
+    doc.rect(210-MP-MK,  297-MP-MK,  MK, MK, 'F');  // BR
 
     // Borde del área de la grilla
     doc.setDrawColor(...LGT); doc.setLineWidth(0.2); doc.rect(GX, GY, GW, GH, 'S');

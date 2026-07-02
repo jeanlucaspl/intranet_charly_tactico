@@ -29,12 +29,14 @@ CL = {
     'BA': 11, 'BS': 6.5, 'BR': 2.5, 'GAP': 5,
 }
 
-# Centros de marcas de registro en mm (orden: TL, TR, BL, BR)
+# Marcas de registro en esquinas del papel A4 (3mm del borde, 7x7mm)
+# Centro de cada marca en mm (TL, TR, BL, BR)
+MK_M, MK_S = 3.0, 7.0
 REG_MM = [
-    (CL['GX'] + CL['RM'] / 2,            CL['GY'] + CL['RM'] / 2),
-    (CL['GX'] + CL['GW'] - CL['RM'] / 2, CL['GY'] + CL['RM'] / 2),
-    (CL['GX'] + CL['RM'] / 2,            CL['GY'] + CL['GH'] - CL['RM'] / 2),
-    (CL['GX'] + CL['GW'] - CL['RM'] / 2, CL['GY'] + CL['GH'] - CL['RM'] / 2),
+    (MK_M + MK_S/2,        MK_M + MK_S/2),         # TL: (6.5,   6.5)
+    (210 - MK_M - MK_S/2,  MK_M + MK_S/2),          # TR: (203.5, 6.5)
+    (MK_M + MK_S/2,        297 - MK_M - MK_S/2),    # BL: (6.5,   290.5)
+    (210 - MK_M - MK_S/2,  297 - MK_M - MK_S/2),    # BR: (203.5, 290.5)
 ]
 
 # Resolución interna del warp (150 dpi sobre A4)
@@ -43,9 +45,9 @@ MM_TO_PX = DPI / 25.4
 A4_W     = int(210 * MM_TO_PX)
 A4_H     = int(297 * MM_TO_PX)
 
-# Umbrales de detección de burbujas
-BLANK_THRESH = 145   # burbuja más oscura > esto → en blanco
-CONF_DIFF    = 35    # diferencia mínima entre 1.° y 2.° más oscuro para "ok"
+# Umbral relativo: burbuja marcada si su brillo < max_brillo_fila * FILL_RATIO
+# Esto adapta automáticamente a diferentes condiciones de iluminación.
+FILL_RATIO = 0.55
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -95,9 +97,18 @@ def find_registration_marks(gray: np.ndarray):
             cy = M['m01'] / M['m00']
             if not (x0 <= cx <= x1 and y0 <= cy <= y1):
                 continue
+            # No puede estar pegado al borde de la imagen
+            if cx < 4 or cx > W - 4 or cy < 4 or cy > H - 4:
+                continue
             area = cv2.contourArea(cnt)
+            # Filtro de tamaño: marca de 7x7mm esperada según escala
+            # A escala típica (papel llenando 70-100% del frame) → 200-15000 px²
+            if area < 150 or area > 15000:
+                continue
             x, y, w, h = cv2.boundingRect(cnt)
             squareness = min(w, h) / max(w, h) if max(w, h) > 0 else 0
+            if squareness < 0.3:   # descartar formas muy alargadas
+                continue
             score = area * (squareness ** 2)
             if score > best_score:
                 best_score = score
@@ -176,20 +187,17 @@ def process_omr(warped: np.ndarray, N: int) -> list:
             b = sample_bubble(warped, bx_mm * MM_TO_PX, cy_mm * MM_TO_PX, b_rad_px)
             brights.append(round(b, 1))
 
-        sorted_b     = sorted(brights)
-        darkest      = sorted_b[0]
-        second       = sorted_b[1]
+        brightest    = max(brights)
+        threshold    = brightest * FILL_RATIO
         chosen       = brights.index(min(brights))
-        marked_count = sum(1 for b in brights if b < BLANK_THRESH)
+        marked_idxs  = [i for i, b in enumerate(brights) if b < threshold]
 
-        if marked_count == 0:
+        if len(marked_idxs) == 0:
             status, detected = 'blank', None
-        elif marked_count >= 2:
+        elif len(marked_idxs) >= 2:
             status, detected = 'double', None
-        elif (second - darkest) >= CONF_DIFF:
-            status, detected = 'ok', LTRS[chosen]
         else:
-            status, detected = 'low_conf', LTRS[chosen]
+            status, detected = 'ok', LTRS[chosen]
 
         results.append({
             'q':        q + 1,
@@ -204,6 +212,50 @@ def process_omr(warped: np.ndarray, N: int) -> list:
 # ══════════════════════════════════════════════════════════════════
 #  ENDPOINTS
 # ══════════════════════════════════════════════════════════════════
+
+def _save_debug(warped: np.ndarray, results: list, N: int):
+    """Guarda imagen de debug con círculos sobre cada burbuja muestreada."""
+    dbg = cv2.cvtColor(warped, cv2.COLOR_GRAY2BGR)
+
+    N_GRP  = 1 if N <= 25 else 2 if N <= 50 else 3 if N <= 75 else 4
+    CONT_W = CL['GW'] - 2 * CL['RM']
+    GRP_W  = (CONT_W - (N_GRP - 1) * CL['GAP']) / N_GRP
+    CX0    = CL['GX'] + CL['RM']
+    b_rad_px = int(CL['BR'] * MM_TO_PX * 1.1)
+
+    STATUS_COLOR = {
+        'ok':       (0, 220, 80),    # verde
+        'blank':    (60, 60, 220),   # rojo
+        'double':   (0, 165, 255),   # naranja
+        'low_conf': (0, 220, 220),   # amarillo
+    }
+    LTRS = ['A', 'B', 'C', 'D']
+
+    for r in results:
+        q   = r['q'] - 1
+        g   = q // 25
+        row = q % 25
+        gx_mm = CX0 + g * (GRP_W + CL['GAP'])
+        cy_mm = CL['GY'] + CL['RM'] + CL['HDR'] + row * CL['RH'] + CL['RH'] / 2
+        color = STATUS_COLOR.get(r['status'], (200, 200, 200))
+
+        for c in range(4):
+            bx_mm = gx_mm + CL['BA'] + c * CL['BS']
+            px = int(bx_mm * MM_TO_PX)
+            py = int(cy_mm * MM_TO_PX)
+            # Círculo fino en todas las burbujas
+            cv2.circle(dbg, (px, py), b_rad_px, (180, 180, 180), 1)
+            # Círculo grueso en la detectada
+            if r['detected'] == LTRS[c]:
+                cv2.circle(dbg, (px, py), b_rad_px, color, 2)
+            # Número de pregunta al inicio de cada fila
+            if c == 0:
+                cv2.putText(dbg, str(r['q']), (px - b_rad_px - 18, py + 4),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.28, (120, 120, 120), 1)
+
+    cv2.imwrite('/tmp/omr_debug.jpg', dbg)
+    print(f"  Debug guardado en /tmp/omr_debug.jpg")
+
 
 @app.route('/')
 @app.route('/escaner_cartilla.html')
@@ -249,8 +301,12 @@ def process():
     marks = find_registration_marks(gray)
     valid = [m for m in marks if m is not None]
 
+    print(f"\n[OMR] Imagen: {gray.shape[1]}x{gray.shape[0]}px  N={n}")
+    names = ['TL', 'TR', 'BL', 'BR']
+    for i, m in enumerate(marks):
+        print(f"  Marca {names[i]}: {f'({m[0]:.0f}, {m[1]:.0f})' if m else 'NO DETECTADA'}")
+
     if len(valid) < 4:
-        names = ['TL', 'TR', 'BL', 'BR']
         missing = [names[i] for i, m in enumerate(marks) if m is None]
         return jsonify({
             'error': (
@@ -265,6 +321,16 @@ def process():
 
     # Detectar respuestas
     results = process_omr(warped, n)
+    _save_debug(warped, results, n)
+
+    # Resumen de detección
+    counts = {'ok': 0, 'blank': 0, 'double': 0, 'low_conf': 0}
+    for r in results:
+        counts[r['status']] += 1
+    print(f"  Resultados → ok:{counts['ok']}  blank:{counts['blank']}  double:{counts['double']}  low_conf:{counts['low_conf']}")
+    # Mostrar brights de las primeras 10 preguntas para calibración
+    for r in results[:10]:
+        print(f"  Q{r['q']}: {r['status']} detected={r['detected']} brights={r['brights']}")
 
     return jsonify({'results': results})
 
