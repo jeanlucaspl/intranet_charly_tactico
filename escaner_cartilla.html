@@ -409,6 +409,45 @@
       animation: spin .7s linear infinite;
     }
 
+    /* ── CONFIG SCREEN ── */
+    .cfg-input-row {
+      display: flex; gap: 8px;
+    }
+    .cfg-input {
+      flex: 1;
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      color: var(--chalk);
+      padding: 11px 14px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 15px;
+      outline: none;
+      border-radius: 2px;
+      letter-spacing: .03em;
+    }
+    .cfg-input:focus { border-color: var(--gold); }
+    .cfg-input::placeholder { color: var(--muted); }
+    .cfg-status {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; letter-spacing: .08em;
+      color: var(--muted); min-height: 18px;
+    }
+    .cfg-status.ok  { color: var(--lime); }
+    .cfg-status.err { color: var(--red); }
+    .cfg-note {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; line-height: 1.6;
+      color: var(--muted);
+    }
+    .cfg-note code {
+      color: var(--gold);
+      font-family: monospace;
+      font-size: 12px;
+    }
+
     /* Responsive helpers */
     @media (max-width: 480px) {
       .score-big { font-size: 42px; }
@@ -440,9 +479,39 @@
 <div class="toast hidden" id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════
+     SCREEN 0: CONFIG SERVIDOR
+══════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-config">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Configuración inicial</div>
+      <div class="sc-title">SERVIDOR OMR</div>
+    </div>
+    <div class="cfg-note">
+      En la PC del admin, ejecuta:<br>
+      <code>python omr_server.py</code><br><br>
+      La consola mostrará la IP local. Ingrésala aquí.<br>
+      El celular y la PC deben estar en la misma red WiFi.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">
+        IP del servidor
+      </label>
+      <div class="cfg-input-row">
+        <input id="cfg-ip" class="cfg-input" type="text"
+          placeholder="192.168.X.X:5000"
+          autocomplete="off" inputmode="url"/>
+        <button class="btn btn-gold" onclick="connectServer()">Conectar</button>
+      </div>
+      <div class="cfg-status" id="cfg-status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      SCREEN 1: QR SCAN
 ══════════════════════════════════════════════════ -->
-<div class="screen active" id="screen-qr">
+<div class="screen" id="screen-qr">
   <div class="sc-inner">
     <div>
       <div class="sc-eye">Paso 1 de 2</div>
@@ -586,13 +655,14 @@ const REG_MM = [
 /* ═══════════════════════════════════════════════════════════════════
    APP STATE
 ═══════════════════════════════════════════════════════════════════ */
-let examKey    = null;   // array de chars ['A','B','C',...]
-let examN      = 0;
+let examKey     = null;   // array de chars ['A','B','C',...]
+let examN       = 0;
+let serverIP    = '';     // ip:puerto del servidor OMR
 let mediaStream = null;
 let qrLoopActive = false;
 let qrAnimFrame  = null;
 let session     = [];    // [{nombre, correct, total}]
-let lastResults = null;  // array de {q, detected, confident, brights}
+let lastResults = null;  // array de {q, detected, status, brights}
 
 /* ═══════════════════════════════════════════════════════════════════
    INIT — auth check
@@ -603,8 +673,44 @@ let lastResults = null;  // array de {q, detected, confident, brights}
     window.location.href = './login.html?next=escaner_cartilla.html';
     return;
   }
-  startCamera();
+  // Restaurar IP guardada
+  const saved = localStorage.getItem('omr_server_ip');
+  if (saved) {
+    document.getElementById('cfg-ip').value = saved;
+  }
+  showScreen('screen-config');
 })();
+
+/* ═══════════════════════════════════════════════════════════════════
+   CONFIG SERVIDOR
+═══════════════════════════════════════════════════════════════════ */
+async function connectServer() {
+  const raw = document.getElementById('cfg-ip').value.trim();
+  if (!raw) { setCfgStatus('Ingresa la IP del servidor', 'err'); return; }
+  const ip = raw.includes(':') ? raw : raw + ':5000';
+  setCfgStatus('Conectando...', '');
+  try {
+    const resp = await fetch(`http://${ip}/health`, { signal: AbortSignal.timeout(4000) });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data.ok) throw new Error('Respuesta inesperada');
+    serverIP = ip;
+    localStorage.setItem('omr_server_ip', ip);
+    setCfgStatus('✓ Conectado — ' + (data.server || ip), 'ok');
+    setTimeout(() => {
+      startCamera();
+      showScreen('screen-qr');
+    }, 700);
+  } catch(e) {
+    setCfgStatus('No se pudo conectar: ' + e.message, 'err');
+  }
+}
+
+function setCfgStatus(msg, cls) {
+  const el = document.getElementById('cfg-status');
+  el.textContent = msg;
+  el.className = 'cfg-status' + (cls ? ' ' + cls : '');
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    NAVIGATION
@@ -739,157 +845,44 @@ function applyManualCode() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   OMR — CAPTURE & PROCESS
+   OMR — CAPTURE & SEND AL SERVIDOR
 ═══════════════════════════════════════════════════════════════════ */
 async function captureOMR() {
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
+  if (!serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
   const video = document.getElementById('omr-video');
   const W = video.videoWidth, H = video.videoHeight;
   if (!W || !H) { showToast('La cámara aún no está lista', false); return; }
 
-  showProc('Procesando cartilla...');
-  // Small delay so UI updates
-  await new Promise(r => setTimeout(r, 60));
+  showProc('Enviando al servidor OMR...');
+  await new Promise(r => setTimeout(r, 40));
 
   const canvas = document.getElementById('omr-canvas');
   canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, W, H);
-  const imgData = ctx.getImageData(0, 0, W, H);
 
-  // Detect registration marks
-  const marks = detectMarks(imgData.data, W, H);
-  const validMarks = marks.filter(Boolean);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.90));
+  const fd = new FormData();
+  fd.append('image', blob, 'cartilla.jpg');
+  fd.append('n', examN);
 
-  if (validMarks.length < 4) {
+  try {
+    const resp = await fetch(`http://${serverIP}/process`, {
+      method: 'POST',
+      body: fd,
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'Error del servidor');
+    lastResults = data.results;
     hideProc();
-    showToast(`Solo se detectaron ${validMarks.length}/4 marcas. Mejora la iluminación e inténtalo de nuevo.`, false);
-    return;
+    renderResult(data.results);
+    showScreen('screen-result');
+  } catch(e) {
+    hideProc();
+    showToast('Error: ' + e.message, false);
   }
-
-  // Process OMR
-  const results = processOMR(imgData.data, W, H, examN, marks);
-  lastResults = results;
-  hideProc();
-  renderResult(results);
-  showScreen('screen-result');
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   GAUSSIAN ELIMINATION — para homografía
-═══════════════════════════════════════════════════════════════════ */
-function gaussElim(A, b) {
-  const n = b.length;
-  const M = A.map((row, i) => [...row, b[i]]);
-  for (let c = 0; c < n; c++) {
-    let mx = c;
-    for (let r = c+1; r < n; r++)
-      if (Math.abs(M[r][c]) > Math.abs(M[mx][c])) mx = r;
-    [M[c], M[mx]] = [M[mx], M[c]];
-    for (let r = c+1; r < n; r++) {
-      const f = M[r][c] / M[c][c];
-      for (let j = c; j <= n; j++) M[r][j] -= f * M[c][j];
-    }
-  }
-  const x = new Array(n).fill(0);
-  for (let i = n-1; i >= 0; i--) {
-    x[i] = M[i][n] / M[i][i];
-    for (let j = i+1; j < n; j++) x[i] -= M[i][j] * x[j] / M[i][i];
-  }
-  return x;
-}
-
-/* ─── Homografía DLT: mm → pixel ─── */
-function computeH(mmPts, pxPts) {
-  const A = [], b = [];
-  for (let i = 0; i < 4; i++) {
-    const {x, y} = mmPts[i], {x:u, y:v} = pxPts[i];
-    A.push([x, y, 1, 0, 0, 0, -u*x, -u*y]); b.push(u);
-    A.push([0, 0, 0, x, y, 1, -v*x, -v*y]); b.push(v);
-  }
-  const h = gaussElim(A, b);
-  return [[h[0],h[1],h[2]], [h[3],h[4],h[5]], [h[6],h[7],1]];
-}
-
-function applyH(H, x, y) {
-  const w = H[2][0]*x + H[2][1]*y + H[2][2];
-  return { x: (H[0][0]*x + H[0][1]*y + H[0][2]) / w,
-           y: (H[1][0]*x + H[1][1]*y + H[1][2]) / w };
-}
-
-/* ─── Detectar marcas de registro ─── */
-function detectMarks(data, W, H) {
-  const Z = 0.25;
-  const ZW = Math.round(W * Z), ZH = Math.round(H * Z);
-  const zones = [
-    [0,     0,     ZW,   ZH],
-    [W-ZW,  0,     W,    ZH],
-    [0,     H-ZH,  ZW,   H],
-    [W-ZW,  H-ZH,  W,    H],
-  ];
-  return zones.map(([x0, y0, x1, y1]) => {
-    let sx = 0, sy = 0, n = 0;
-    for (let y = y0; y < y1; y++) {
-      for (let x = x0; x < x1; x++) {
-        const i = (y * W + x) * 4;
-        const g = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
-        if (g < 80) { sx += x; sy += y; n++; }
-      }
-    }
-    return n > 200 ? { x: sx/n, y: sy/n } : null;
-  });
-}
-
-/* ─── Muestrear burbuja circular ─── */
-function sampleBubble(data, W, cx, cy, r) {
-  let sum = 0, cnt = 0;
-  const ri = Math.round(r);
-  for (let dy = -ri; dy <= ri; dy++) {
-    for (let dx = -ri; dx <= ri; dx++) {
-      if (dx*dx + dy*dy > ri*ri) continue;
-      const px = Math.round(cx+dx), py = Math.round(cy+dy);
-      if (px < 0 || px >= W || py < 0) continue;
-      const i = (py * W + px) * 4;
-      sum += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
-      cnt++;
-    }
-  }
-  return cnt ? sum/cnt : 255;
-}
-
-/* ─── OMR principal ─── */
-function processOMR(data, W, H, N, marks) {
-  const Hmat = computeH(REG_MM, marks);
-  const N_GRP = N<=25 ? 1 : N<=50 ? 2 : N<=75 ? 3 : 4;
-  const CONT_W = CL.GW - 2*CL.RM;
-  const GRP_W  = (CONT_W - (N_GRP-1)*CL.GAP) / N_GRP;
-  const CX0 = CL.GX + CL.RM;
-
-  // Escala mm→px usando distancia entre marcas TL y TR
-  const scalePx = Math.hypot(marks[1].x - marks[0].x, marks[1].y - marks[0].y) / (CL.GW - CL.RM);
-  const bRadPx  = CL.BR * scalePx * 1.1;
-  const LTRS = ['A','B','C','D'];
-  const results = [];
-
-  for (let q = 0; q < N; q++) {
-    const g  = Math.floor(q / 25);
-    const r  = q % 25;
-    const gx_mm = CX0 + g * (GRP_W + CL.GAP);
-    const cy_mm = CL.GY + CL.RM + CL.HDR + r*CL.RH + CL.RH/2;
-    let minB = 255, chosen = -1;
-    const brights = [];
-    for (let c = 0; c < 4; c++) {
-      const bx_mm = gx_mm + CL.BA + c*CL.BS;
-      const {x: bxPx, y: byPx} = applyH(Hmat, bx_mm, cy_mm);
-      const b = sampleBubble(data, W, bxPx, byPx, bRadPx);
-      brights.push(b);
-      if (b < minB) { minB = b; chosen = c; }
-    }
-    const sorted = [...brights].sort((a, b) => a - b);
-    const confident = (sorted[1] - sorted[0]) > 18;
-    results.push({ q: q+1, detected: LTRS[chosen], confident, brights });
-  }
-  return results;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -903,11 +896,13 @@ function renderResult(results) {
 
   results.forEach(r => {
     const expec = examKey[r.q - 1] || '?';
-    const ok    = r.detected === expec;
+    const ok    = r.status === 'ok' && r.detected === expec;
     if (ok) correct++;
-    const mark = !r.confident ? '<span class="mark-dud">?</span>'
-               : ok           ? '<span class="mark-ok">✓</span>'
-                              : '<span class="mark-err">✗</span>';
+    let mark;
+    if      (r.status === 'blank')    mark = '<span class="mark-dud" title="Sin marcar">○</span>';
+    else if (r.status === 'double')   mark = '<span class="mark-dud" title="Doble marca">2x</span>';
+    else if (r.status === 'low_conf') mark = '<span class="mark-dud" title="Baja confianza">?</span>';
+    else mark = ok ? '<span class="mark-ok">✓</span>' : '<span class="mark-err">✗</span>';
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${r.q}</td><td>${r.detected||'—'}</td><td>${expec}</td><td>${mark}</td>`;
     tbody.appendChild(tr);
