@@ -713,6 +713,9 @@
       <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Cambiar prueba</button>
       <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="showSummary()">Ver resumen</button>
     </div>
+    <button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px;color:var(--muted)" onclick="showScreen('screen-config')">
+      Cambiar servidor
+    </button>
   </div>
 </div>
 
@@ -900,19 +903,55 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
       window.location.href = './login.html?next=escaner_cartilla.html';
       return;
     }
-    // Restaurar IP guardada
-    const saved = localStorage.getItem('omr_server_ip');
-    if (saved) document.getElementById('cfg-ip').value = saved;
     loadSession();
     loadMateria();
-    showScreen('screen-config');
+
+    const savedIP = localStorage.getItem('omr_server_ip');
+    if (savedIP) {
+      document.getElementById('cfg-ip').value = savedIP;
+      // Intentar auto-conexión silenciosa
+      setCfgStatus('Reconectando al servidor...', '');
+      showScreen('screen-config');
+      try {
+        const resp = await fetch(`https://${savedIP}/health`, { signal: AbortSignal.timeout(5000) });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error();
+        serverIP = savedIP;
+        // Conectado — ver si hay clave guardada
+        const hasKey = loadExamKey();
+        if (hasKey) {
+          updateBadge();
+          const badgeHtml = `<div class="badge badge-lime">✓ Clave activa: ${examN} preguntas</div>`;
+          document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
+          document.getElementById('student-key-badge').innerHTML = badgeHtml;
+          await startCamera();
+          showScreen('screen-student');
+        } else {
+          await startCamera();
+          showScreen('screen-qr');
+        }
+      } catch(_) {
+        // Auto-conexión falló → mostrar config con mensaje
+        setCfgStatus('No se pudo reconectar. Verifica la IP.', 'err');
+        showScreen('screen-config');
+      }
+    } else {
+      showScreen('screen-config');
+    }
   } else {
     // Acceso directo desde el servidor Flask — no necesita config
     serverIP = '';
     loadSession();
     loadMateria();
+    const hasKey = loadExamKey();
+    if (hasKey) {
+      updateBadge();
+      const badgeHtml = `<div class="badge badge-lime">✓ Clave activa: ${examN} preguntas</div>`;
+      document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
+      document.getElementById('student-key-badge').innerHTML = badgeHtml;
+    }
     startCamera();
-    showScreen('screen-qr');
+    showScreen(hasKey ? 'screen-student' : 'screen-qr');
   }
 })();
 
@@ -957,6 +996,7 @@ function showScreen(id) {
 }
 
 function goToQR() {
+  clearExamKey();
   stopQRLoop();
   showScreen('screen-qr');
   // restart QR loop
@@ -1070,6 +1110,7 @@ function onQRDetected(data) {
 function loadKey(n, keyStr) {
   examN   = n;
   examKey = keyStr.slice(0, n).split('');
+  saveExamKey();
   updateBadge();
   // Flash success status
   const st = document.getElementById('qr-status');
@@ -1577,6 +1618,32 @@ function clearSession() {
   try { localStorage.removeItem(SESSION_KEY()); } catch(_) {}
   renderSummary();
   showToast('Sesión borrada', true);
+}
+
+function saveExamKey() {
+  try {
+    if (examKey && examN) {
+      localStorage.setItem('omr_exam_key', JSON.stringify({ n: examN, key: examKey }));
+    }
+  } catch(_) {}
+}
+
+function loadExamKey() {
+  try {
+    const saved = localStorage.getItem('omr_exam_key');
+    if (!saved) return false;
+    const { n, key } = JSON.parse(saved);
+    if (!n || !key || !key.length) return false;
+    examN   = n;
+    examKey = key;
+    return true;
+  } catch(_) { return false; }
+}
+
+function clearExamKey() {
+  try { localStorage.removeItem('omr_exam_key'); } catch(_) {}
+  examKey = null;
+  examN   = 0;
 }
 
 async function loadMateria() {
