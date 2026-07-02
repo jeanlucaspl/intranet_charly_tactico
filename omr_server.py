@@ -42,8 +42,10 @@ MM_TO_PX = DPI / 25.4
 A4_W     = int(210 * MM_TO_PX)
 A4_H     = int(297 * MM_TO_PX)
 
-# Umbral de relleno: burbuja marcada si >35% de sus píxeles son oscuros
-FILL_THRESH = 0.18   # lápiz da ~20-40%, contorno vacío da ~2-8%
+# Con umbral binario ~185, el borde impreso del círculo (~120-150 gray) queda en 255.
+# Burbuja vacía (solo borde): pct ~20-30%. Burbuja con lápiz: pct ~45-80%.
+# FILL_THRESH=0.35 separa lápiz (>35%) de borde solo (<30%).
+FILL_THRESH = 0.35
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -58,14 +60,18 @@ def enhance_contrast(gray: np.ndarray) -> np.ndarray:
 
 def preprocess(gray: np.ndarray) -> np.ndarray:
     """
-    Gaussian Blur → threshold adaptativo.
-    Otsu falla en imágenes casi uniformes (papel blanco); usamos umbral fijo
-    conservador: todo lo más oscuro que el papel (< 160) se considera marca.
+    Gaussian Blur → Otsu con umbral mínimo garantizado.
+    Otsu funciona bien cuando hay marcas de lápiz (bimodal papel/lápiz).
+    Si da umbral muy bajo (imagen casi uniforme sin marcas), forzamos 185
+    para capturar lápiz (~140-185 gray) sin confundir papel (~200-240 gray).
     """
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-    # Umbral fijo: marca oscura (~30-120) vs papel blanco (~170-240)
-    # 150 es punto medio seguro para fotos de papel bajo cualquier iluminación
-    _, binary = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY_INV)
+    otsu_val, binary = cv2.threshold(blurred, 0, 255,
+                                     cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    if otsu_val < 170:
+        _, binary = cv2.threshold(blurred, 185, 255, cv2.THRESH_BINARY_INV)
+        otsu_val = 185
+    print(f"  Umbral binario: {otsu_val:.0f}")
     return binary
 
 
@@ -158,19 +164,28 @@ def find_registration_marks(gray: np.ndarray):
 #  CORRECCIÓN DE PERSPECTIVA
 # ══════════════════════════════════════════════════════════════════
 
-def warp_perspective(binary: np.ndarray, marks_px: list) -> np.ndarray:
+def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
     """
-    Aplica warpPerspective sobre la imagen binaria usando las 4 marcas.
-    Retorna imagen binaria A4 a DPI interno.
+    Warpea la imagen EN GRIS (no binaria) usando las 4 marcas.
+    Luego aplica adaptive threshold sobre el papel ya plano y limpio.
+    Así se evita que sombras/bordes contaminen la binarización.
     """
     src = np.float32([list(m) for m in marks_px])
     dst = np.float32([
         [m[0] * MM_TO_PX, m[1] * MM_TO_PX] for m in REG_MM
     ])
-    H_mat  = cv2.getPerspectiveTransform(src, dst)
-    warped = cv2.warpPerspective(binary, H_mat, (A4_W, A4_H),
-                                 flags=cv2.INTER_LINEAR)
-    return warped
+    H_mat      = cv2.getPerspectiveTransform(src, dst)
+    warped_gray = cv2.warpPerspective(gray, H_mat, (A4_W, A4_H),
+                                      flags=cv2.INTER_LINEAR)
+    # Adaptive threshold sobre papel plano: detecta lápiz claro y tinta oscura
+    # por igual sin importar iluminación no uniforme de la foto.
+    warped_bin = cv2.adaptiveThreshold(
+        warped_gray, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        blockSize=31, C=8
+    )
+    return warped_bin
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -343,8 +358,7 @@ def process():
     if img is None:
         return jsonify({'error': 'No se pudo decodificar la imagen'}), 400
 
-    gray   = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    binary = preprocess(gray)
+    gray  = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     marks = find_registration_marks(gray)
     valid = [m for m in marks if m is not None]
@@ -365,7 +379,8 @@ def process():
             )
         }), 422
 
-    warped_bin = warp_perspective(binary, marks)
+    # Warp en gris → binarización adaptativa sobre papel plano (ver warp_perspective)
+    warped_bin = warp_perspective(gray, marks)
     results    = process_omr(warped_bin, n)
     _save_debug(warped_bin, results, n)
 
