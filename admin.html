@@ -375,6 +375,7 @@
       <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
       <button class="sb-link" onclick="showPanel('armar-practica',this)">Armar Práctica</button>
       <button class="sb-link" onclick="showPanel('banco',this)">Banco de Preguntas</button>
+      <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
     </div>
   </div>
   <div class="sb-section sb-collapsible collapsed" id="sec-comunicacion">
@@ -811,6 +812,53 @@
 <!-- ══ BANCO DE PREGUNTAS ══ -->
 <div class="panel" id="panel-banco">
   <div id="bp-root"><div class="empty"><div class="ei"></div><div class="et">Cargando banco de preguntas...</div></div></div>
+</div>
+
+<!-- ══ PRUEBA VOCABULARIO ══ -->
+<div class="panel" id="panel-vocabulario">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="eye">Académico</div>
+      <div class="ttl">PRUEBA DE VOCABULARIO</div>
+    </div>
+  </div>
+
+  <div style="max-width:520px">
+
+    <!-- Config card -->
+    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px;margin-bottom:12px">
+
+      <div class="fg" style="margin-bottom:14px">
+        <label style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px">Número de preguntas</label>
+        <div id="voc-qty-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+          <button class="voc-qty" data-n="10"  onclick="vocSetQty(10,this)">10</button>
+          <button class="voc-qty" data-n="20"  onclick="vocSetQty(20,this)">20</button>
+          <button class="voc-qty" data-n="30"  onclick="vocSetQty(30,this)">30</button>
+          <button class="voc-qty" data-n="50"  onclick="vocSetQty(50,this)">50</button>
+          <button class="voc-qty sel" data-n="100" onclick="vocSetQty(100,this)">100</button>
+        </div>
+      </div>
+
+      <div class="fg" style="margin-bottom:14px">
+        <label>Fecha de la prueba</label>
+        <input type="date" id="voc-fecha" style="max-width:200px"/>
+      </div>
+
+      <div class="fg" style="margin-bottom:0">
+        <label>Título personalizado <span style="color:var(--muted);font-size:11px;font-weight:400">(opcional)</span></label>
+        <input type="text" id="voc-titulo" placeholder="ej. Práctica N° 1 — Vocabulario" maxlength="80"/>
+      </div>
+    </div>
+
+    <!-- Layout preview badge -->
+    <div id="voc-badge" style="margin-bottom:14px"></div>
+
+    <!-- Generate button -->
+    <button class="btn btn-gold" style="width:100%;font-size:15px;padding:14px" onclick="vocGenerar()">
+      GENERAR PDF →
+    </button>
+
+  </div>
 </div>
 
 <!-- ══ NOTIFICACIONES ══ -->
@@ -8742,5 +8790,387 @@ async function wn_save() {
     </div>
   </div>
 </div>
+<style>
+.voc-qty{
+  background:var(--navy3);border:1px solid var(--border);
+  padding:10px 4px;cursor:pointer;text-align:center;
+  font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--white);
+  letter-spacing:.04em;transition:all .15s;position:relative;
+}
+.voc-qty::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .15s}
+.voc-qty:hover{border-color:rgba(201,168,76,.4);color:var(--gold)}
+.voc-qty:hover::after,.voc-qty.sel::after{transform:scaleX(1)}
+.voc-qty.sel{border-color:var(--gold);color:var(--gold);background:var(--navy2)}
+</style>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   PRUEBA DE VOCABULARIO — generador PDF
+═══════════════════════════════════════════════════════════════════════ */
+(function(){
+
+  /* ── Estado ── */
+  const VOC = { n: 100, dict: null };
+
+  /* ── Init cuando se abre el panel ── */
+  const _origShowPanel = window.showPanel;
+  window.showPanel = function(id, btn){
+    _origShowPanel(id, btn);
+    if(id === 'vocabulario') vocInit();
+  };
+
+  function vocInit(){
+    // fecha default = hoy
+    const fi = document.getElementById('voc-fecha');
+    if(fi && !fi.value) fi.value = new Date().toISOString().slice(0,10);
+    vocUpdateBadge();
+    // precarga diccionario en background
+    if(!VOC.dict) vocLoadDict().catch(()=>{});
+  }
+
+  /* ── Botones cantidad ── */
+  window.vocSetQty = function(n, el){
+    VOC.n = n;
+    document.querySelectorAll('.voc-qty').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+    vocUpdateBadge();
+  };
+
+  /* ── Layout óptimo ── */
+  // Retorna { cols, pagesQ, pagesTotal }
+  function vocLayout(n){
+    const M  = 8;                  // margen mm
+    const PW = 210 - M*2;          // ancho útil = 194mm
+    const PH = 297 - M*2;          // alto útil  = 281mm
+    const HDR= 13;                  // encabezado
+    const FTR= 6;                   // pie
+    const CH = PH - HDR - FTR;     // zona de contenido = 262mm
+    const QH = 24;                  // altura estimada por pregunta (mm)
+
+    let best = null;
+    for(let c = 1; c <= 3; c++){
+      const colW   = (PW - (c-1)*4) / c;  // ancho por columna
+      const perPg  = Math.floor(CH / QH) * c;
+      const pagesQ = Math.ceil(n / perPg);
+      // clave de respuestas: cuánto ocupa
+      const keyPerLine = Math.floor(PW / 18);  // ~18mm por celda "1-A"
+      const keyLines   = Math.ceil(n / keyPerLine);
+      const keyH       = 6 + keyLines * 4.5;
+      // ¿cabe la clave en el espacio sobrante de la última pág de preguntas?
+      const usedLast   = ((n % perPg) || perPg) * QH / c;
+      const spaceLeft  = CH - usedLast;
+      const pagesKey   = keyH <= spaceLeft ? 0 : 1;
+      const total      = pagesQ + pagesKey;
+      if(!best || total < best.total || (total === best.total && c < best.cols)){
+        best = { cols:c, pagesQ, pagesKey, total, perPg, colW };
+      }
+    }
+    return best;
+  }
+
+  function vocUpdateBadge(){
+    const lay = vocLayout(VOC.n);
+    const icons = Array.from({length:3},(_,i)=>
+      `<div style="width:8px;height:26px;background:${i<lay.cols?'var(--gold)':'var(--border)'}"></div>`
+    ).join('');
+    document.getElementById('voc-badge').innerHTML =
+      `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--navy3);border:1px solid var(--border)">
+        <div style="display:flex;gap:3px">${icons}</div>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--white);text-transform:uppercase">
+            ${lay.cols} columna${lay.cols>1?'s':''} · ${lay.total} página${lay.total>1?'s':''}
+          </div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">
+            ${lay.pagesQ} pág. preguntas${lay.pagesKey?' + 1 pág. clave':'  · clave en última página'}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ── Cargar y parsear diccionario ── */
+  async function vocLoadDict(){
+    if(VOC.dict) return VOC.dict;
+    const r = await fetch('./diccionario.txt');
+    if(!r.ok) throw new Error('No se pudo cargar el diccionario');
+    const text = await r.text();
+    const entries = [];
+    for(const line of text.split('\n')){
+      const t = line.trim();
+      if(!t) continue;
+      const ci = t.indexOf(':');
+      if(ci < 0) continue;
+      const word = t.slice(0,ci).trim();
+      const def  = t.slice(ci+1).split('//')[0].trim().replace(/\.$/,'');
+      if(word && def && word.length < 40) entries.push({word, def});
+    }
+    VOC.dict = entries;
+    return entries;
+  }
+
+  /* ── Fisher-Yates ── */
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  /* ── Capitalizar primera letra ── */
+  function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+
+  /* ── Generar preguntas ── */
+  function vocBuildQuestions(dict, n){
+    const idx = shuffle(Array.from({length:dict.length},(_,i)=>i)).slice(0, Math.min(n, dict.length));
+    return idx.map(wi => {
+      const correct = dict[wi];
+      const dist = [];
+      const used = new Set([wi]);
+      const pool = shuffle(Array.from({length:dict.length},(_,i)=>i));
+      for(const di of pool){
+        if(used.has(di)) continue;
+        if(dict[di].def === correct.def) continue;
+        dist.push(dict[di].def);
+        used.add(di);
+        if(dist.length === 3) break;
+      }
+      const alts = shuffle([correct.def, ...dist]);
+      return { word: correct.word.toUpperCase(), alts, key: String.fromCharCode(65 + alts.indexOf(correct.def)) };
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     GENERADOR PDF
+  ══════════════════════════════════════════════════════════ */
+  window.vocGenerar = async function(){
+    const btn = document.querySelector('#panel-vocabulario .btn-gold');
+    btn.disabled = true; btn.textContent = 'Generando…';
+    try {
+      const dict = await vocLoadDict();
+      if(dict.length < 4) throw new Error('Diccionario insuficiente');
+      const qs   = vocBuildQuestions(dict, VOC.n);
+      vocPDF(qs);
+    } catch(e){
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'GENERAR PDF →';
+    }
+  };
+
+  function vocPDF(qs){
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+
+    /* ── Constantes ── */
+    const M    = 8;          // margen uniforme
+    const PW   = 210;
+    const PH   = 297;
+    const CW   = PW - M*2;  // 194mm
+    const GOLD = [201,168,76];
+    const BLK  = [8,12,16];
+    const DARK = [30,40,35];
+    const MUT  = [130,148,140];
+    const CHALK= [240,244,248];
+
+    const lay  = vocLayout(qs.length);
+    const COLS = lay.cols;
+    const GAP  = COLS > 1 ? 4 : 0;
+    const COLW = (CW - GAP*(COLS-1)) / COLS;
+
+    /* ── Fecha formateada ── */
+    const fechaEl = document.getElementById('voc-fecha');
+    const fechaVal = fechaEl && fechaEl.value ? fechaEl.value : new Date().toISOString().slice(0,10);
+    const [fy,fm,fd] = fechaVal.split('-');
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const fechaStr = `${parseInt(fd)} de ${meses[parseInt(fm)-1]} de ${fy}`;
+
+    const tituloExtra = (document.getElementById('voc-titulo').value || '').trim();
+
+    /* ── Header ── */
+    function drawHeader(){
+      // Franja negra delgada
+      doc.setFillColor(...BLK); doc.rect(0,0,PW,14,'F');
+      // Institución (izq) + fecha (der)
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      doc.setTextColor(...GOLD);
+      doc.text('Academia Charly Táctico TEDAX', M, 6);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.setTextColor(...CHALK);
+      doc.text(fechaStr, PW-M, 6, {align:'right'});
+      // Subtítulo
+      doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.setTextColor(...CHALK);
+      const titulo = tituloExtra || 'PRUEBA DE SIGNIFICADOS';
+      doc.text(titulo.toUpperCase(), M, 11.5);
+      // Línea dorada
+      doc.setDrawColor(...GOLD); doc.setLineWidth(0.35);
+      doc.line(0, 14, PW, 14);
+    }
+
+    /* ── Footer ── */
+    function drawFooter(pg, total){
+      doc.setFont('helvetica','normal'); doc.setFontSize(6);
+      doc.setTextColor(...MUT);
+      doc.text(`Página ${pg} de ${total}`, PW-M, PH-3, {align:'right'});
+      doc.text('Academia Charly Táctico TEDAX — Sistema Intranet', M, PH-3);
+    }
+
+    /* ── Dibujar una pregunta en (x,y), retorna altura usada ── */
+    function drawQuestion(pg, colIdx, x, y, q, num){
+      const maxW = COLW - 2;
+      const ALTRS = ['A','B','C','D'];
+      const FS_NUM  = 8;
+      const FS_WORD = 9.5;
+      const FS_ALT  = 7.5;
+
+      // Número + palabra
+      doc.setFont('helvetica','bold'); doc.setFontSize(FS_NUM);
+      doc.setTextColor(...MUT);
+      doc.text(`${num}.`, x, y + 3);
+      doc.setFontSize(FS_WORD);
+      doc.setTextColor(...DARK);
+      doc.text(q.word, x + 6, y + 3.3);
+
+      let cy = y + 7;
+
+      // Línea separadora ligera bajo la palabra
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.15);
+      doc.line(x, cy - 1.5, x + maxW, cy - 1.5);
+
+      // Alternativas
+      doc.setFont('helvetica','normal'); doc.setFontSize(FS_ALT);
+      for(let i=0;i<4;i++){
+        const altText = cap(q.alts[i]);
+        // Letra
+        doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+        doc.text(ALTRS[i]+'.', x+1, cy+2.5);
+        // Texto (puede romper línea)
+        doc.setFont('helvetica','normal'); doc.setTextColor(...DARK);
+        const lines = doc.splitTextToSize(altText, maxW - 8);
+        doc.text(lines, x+7, cy+2.5);
+        cy += lines.length * 3.6 + 0.8;
+      }
+      return cy - y + 2;   // altura total usada
+    }
+
+    /* ══ Render preguntas ══ */
+    const HDR_H  = 16;  // altura header + small gap
+    const FTR_TOP= PH - M - 4;
+    const COL_TOP= M + HDR_H;
+    const COL_BOT= FTR_TOP - 2;
+
+    let page   = 1;
+    let col    = 0;
+    let curY   = COL_TOP;
+    const totalPages = lay.total;
+
+    drawHeader();
+    drawFooter(page, totalPages);
+
+    // ─ Nombre / DNI line al inicio (solo pág 1) ─
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.setTextColor(...MUT);
+    const labelY = M + HDR_H - 3;
+    doc.text('Nombre: _________________________________   DNI: __________   Puntaje: ___ / ' + qs.length, M, labelY);
+    // pequeña raya bajo labels
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.2);
+    doc.line(M, labelY+1.5, PW-M, labelY+1.5);
+    curY = labelY + 4;
+
+    function colX(c){ return M + c*(COLW + GAP); }
+
+    for(let qi=0; qi<qs.length; qi++){
+      const q = qs[qi];
+      // Estimar altura de esta pregunta
+      const maxW = COLW - 2;
+      let estH = 7;
+      for(let i=0;i<4;i++){
+        const lines = doc.splitTextToSize(cap(q.alts[i]), maxW-8);
+        estH += lines.length * 3.6 + 0.8;
+      }
+      estH += 2;
+
+      // ¿Cabe en la columna actual?
+      if(curY + estH > COL_BOT){
+        col++;
+        if(col >= COLS){
+          col = 0;
+          page++;
+          doc.addPage();
+          drawHeader();
+          drawFooter(page, totalPages);
+        }
+        curY = COL_TOP;
+      }
+
+      drawQuestion(page, col, colX(col), curY, q, qi+1);
+      curY += estH;
+    }
+
+    /* ══ Clave de respuestas ══ */
+    // ¿Cabe en el espacio restante?
+    const KPL   = Math.floor(CW / 18);          // claves por línea
+    const KLines = Math.ceil(qs.length / KPL);
+    const KH    = 8 + KLines * 4.5 + 4;
+
+    let keyY;
+    if(curY + KH + 8 <= COL_BOT && col === COLS-1){
+      // Forzar a la base de la última columna usada no aplica bien — nueva sección
+      keyY = null; // se calcula abajo
+    }
+
+    // Siempre intentar poner la clave en el espacio libre de la última columna de la última página
+    // Si no cabe: nueva página
+    const spaceLeft = COL_BOT - curY;
+    if(KH + 6 > spaceLeft){
+      // avanzar a próxima columna/página
+      col++;
+      if(col >= COLS){ col=0; page++; doc.addPage(); drawHeader(); drawFooter(page, totalPages); curY = COL_TOP; }
+      else { curY = COL_TOP; }
+    } else {
+      curY += 5;
+    }
+
+    // Encabezado clave
+    doc.setFillColor(...BLK); doc.rect(colX(col), curY-1, COLW, 6, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7);
+    doc.setTextColor(...GOLD);
+    doc.text('CLAVE DE RESPUESTAS', colX(col)+2, curY+3.5);
+    curY += 7;
+
+    // Grid de claves
+    const kx0  = colX(col);
+    const cellW = CW / KPL;   // usa ancho total si es última columna, sino colW
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+
+    for(let ki=0; ki<qs.length; ki++){
+      const row = Math.floor(ki / KPL);
+      const c2  = ki % KPL;
+      const kx  = kx0 + c2 * (COLW / Math.min(KPL, COLW > 60 ? KPL : Math.floor(COLW/12)));
+      const ky  = curY + row * 4.5;
+
+      // número
+      doc.setFont('helvetica','normal'); doc.setTextColor(...MUT);
+      doc.text(`${ki+1}.`, kx, ky+3);
+      // letra (dorada)
+      doc.setFont('helvetica','bold'); doc.setTextColor(...GOLD);
+      doc.text(qs[ki].key, kx+7, ky+3);
+    }
+
+    /* ── Guardar ── */
+    const fname = `prueba_vocabulario_${fechaVal}.pdf`;
+    _pdfSave(doc, fname);
+  }
+
+  /* ── Activar badge al cargar panel ── */
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // Preset fecha
+    const fi = document.getElementById('voc-fecha');
+    if(fi) fi.value = new Date().toISOString().slice(0,10);
+    vocUpdateBadge();
+  });
+
+})();
+</script>
 </body>
 </html>
