@@ -185,6 +185,10 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
         cv2.THRESH_BINARY_INV,
         blockSize=31, C=14
     )
+    # Cierre morfológico: fusiona trazos finos del lapicero en masa sólida.
+    # Kernel 5×5 cierra huecos de hasta ~0.8mm entre trazos.
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    warped_bin = cv2.morphologyEx(warped_bin, cv2.MORPH_CLOSE, kernel)
     return warped_bin
 
 
