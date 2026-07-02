@@ -79,15 +79,20 @@ def find_registration_marks(gray: np.ndarray):
     Retorna [(cx, cy), ...] en píxeles, orden [TL, TR, BL, BR].
     """
     H, W = gray.shape
-    Z = 0.40   # zona de búsqueda más amplia
+    # Zona pequeña: solo las esquinas reales del papel.
+    # Las marcas están a 3mm del borde; burbujas empiezan a ~GY=36mm del borde superior.
+    # Z=0.18 en imagen recortada al papel cubre ~39mm → incluye marcas, excluye burbujas.
+    Z = 0.18
     quadrants = [
-        (0,            0,            int(W * Z),       int(H * Z)),
-        (int(W*(1-Z)), 0,            W,                int(H * Z)),
-        (0,            int(H*(1-Z)), int(W * Z),       H),
-        (int(W*(1-Z)), int(H*(1-Z)), W,                H),
+        (0,            0,            int(W * Z),       int(H * Z)),   # TL
+        (int(W*(1-Z)), 0,            W,                int(H * Z)),   # TR
+        (0,            int(H*(1-Z)), int(W * Z),       H),            # BL
+        (int(W*(1-Z)), int(H*(1-Z)), W,                H),            # BR
     ]
+    # Esquina de imagen de referencia para cada cuadrante (para penalizar distancia)
+    corners = [(0, 0), (W, 0), (0, H), (W, H)]
     names_q = ['TL', 'TR', 'BL', 'BR']
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    kernel  = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
     marks = []
     for qi, (x0, y0, x1, y1) in enumerate(quadrants):
@@ -101,15 +106,12 @@ def find_registration_marks(gray: np.ndarray):
         contours, _ = cv2.findContours(bin_crop, cv2.RETR_EXTERNAL,
                                         cv2.CHAIN_APPROX_SIMPLE)
 
+        # Tamaño esperado de la marca: ~7mm sobre imagen que representa 210mm de ancho
+        expected_area = (W * 7 / 210) ** 2   # píxeles²
+        cx_ref, cy_ref = corners[qi]          # esquina de referencia
+
         best, best_score = None, 0
         top_cands = []
-        cH, cW = crop.shape[:2]
-        # Margen de borde: ignorar contornos en el 8% exterior de la imagen completa
-        # (convierte el margen a coordenadas del crop)
-        ex0 = max(0, int(W * 0.08) - x0)
-        ey0 = max(0, int(H * 0.08) - y0)
-        ex1 = min(cW, int(W * 0.92) - x0)
-        ey1 = min(cH, int(H * 0.92) - y0)
 
         for cnt in contours:
             M = cv2.moments(cnt)
@@ -117,26 +119,28 @@ def find_registration_marks(gray: np.ndarray):
                 continue
             cx_c = M['m10'] / M['m00']
             cy_c = M['m01'] / M['m00']
-            # Rechazar si está en el margen exterior de la imagen completa
-            if not (ex0 < cx_c < ex1 and ey0 < cy_c < ey1):
-                continue
             area = cv2.contourArea(cnt)
-            if area < 80 or area > 25000:
+            # Filtro de área: entre 20% y 400% del tamaño esperado de la marca
+            if area < expected_area * 0.20 or area > expected_area * 4.0:
                 continue
             bx, by, bw, bh = cv2.boundingRect(cnt)
             squareness = min(bw, bh) / max(bw, bh) if max(bw, bh) > 0 else 0
-            if squareness < 0.25:
+            if squareness < 0.40:
                 continue
-            score = area * (squareness ** 2)
-            top_cands.append((round(score), round(area), round(squareness, 2),
-                              round(cx_c), round(cy_c)))
+            # Distancia del centroide (en coords de imagen completa) a la esquina
+            gx, gy = x0 + cx_c, y0 + cy_c
+            dist = ((gx - cx_ref) ** 2 + (gy - cy_ref) ** 2) ** 0.5
+            # Score: favorece cuadrado grande y CERCANO a la esquina
+            score = area * (squareness ** 2) / (1.0 + dist / 30.0)
+            top_cands.append((round(score, 1), round(area), round(squareness, 2),
+                              round(cx_c), round(cy_c), round(dist)))
             if score > best_score:
                 best_score = score
-                best = (x0 + cx_c, y0 + cy_c)   # coords en imagen completa
+                best = (gx, gy)
 
         top_cands.sort(reverse=True)
-        print(f"  {names_q[qi]}: {'OK ({:.0f},{:.0f}) score={:.0f}'.format(*best, best_score) if best else 'NO DETECTADA'}  "
-              f"cands_top3={top_cands[:3]}")
+        print(f"  {names_q[qi]}: {'OK ({:.0f},{:.0f}) score={:.1f}'.format(*best, best_score) if best else 'NO DETECTADA'}  "
+              f"exp_area={expected_area:.0f}  top3={top_cands[:3]}")
         marks.append(best)
 
     return marks
