@@ -9024,10 +9024,6 @@ async function wn_save() {
 
       let cy = y+7;
 
-      // Línea fina bajo la palabra
-      doc.setDrawColor(...RULE); doc.setLineWidth(0.15);
-      doc.line(x, cy-1.5, x+maxW, cy-1.5);
-
       // Alternativas
       doc.setFontSize(7.5);
       for(let i=0;i<4;i++){
@@ -9053,13 +9049,7 @@ async function wn_save() {
 
     drawHeader(); drawFooter();
 
-    // Línea Nombre / DNI (sin puntaje)
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-    doc.setTextColor(...DARK);
-    doc.text('Nombre: ________________________________________   DNI: ___________', M, COL_TOP+1);
-    doc.setDrawColor(...RULE); doc.setLineWidth(0.2);
-    doc.line(M, COL_TOP+3, PW-M, COL_TOP+3);
-    curY = COL_TOP+6;
+    curY = COL_TOP;
 
     function colX(c){ return M + c*(COLW+GAP); }
 
