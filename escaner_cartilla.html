@@ -664,22 +664,37 @@
       <div class="sc-eye">Paso 1 de 3</div>
       <div class="sc-title">ESCANEAR QR DE CLAVE</div>
     </div>
-    <div class="cam-wrap" id="qr-cam-wrap">
-      <video id="qr-video" autoplay muted playsinline></video>
-      <div class="cam-overlay">
-        <div class="qr-frame"><div class="c3"></div><div class="c4"></div></div>
+
+    <!-- Banner: clave activa guardada -->
+    <div id="qr-resume-banner" style="display:none;background:rgba(163,228,52,.12);border:1.5px solid var(--lime);border-radius:10px;padding:14px 16px;display:none;flex-direction:column;gap:10px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--lime)">CLAVE ACTIVA GUARDADA</div>
+      <div id="qr-resume-desc" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:var(--fg)"></div>
+      <button class="btn btn-gold" style="width:100%;font-size:15px;padding:14px" onclick="resumeExamKey()">
+        CONTINUAR CON ESTA CLAVE →
+      </button>
+      <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="dismissResume()">
+        Escanear nuevo QR
+      </button>
+    </div>
+
+    <div id="qr-scanner-wrap">
+      <div class="cam-wrap" id="qr-cam-wrap">
+        <video id="qr-video" autoplay muted playsinline></video>
+        <div class="cam-overlay">
+          <div class="qr-frame"><div class="c3"></div><div class="c4"></div></div>
+        </div>
       </div>
-    </div>
-    <div class="qr-status" id="qr-status">
-      <span class="spinner"></span> Apunta al código QR de la Hoja Docente
-    </div>
-    <button class="btn btn-outline" style="width:100%" onclick="toggleManual()">
-      Ingresar código manualmente
-    </button>
-    <div class="manual-wrap" id="manual-wrap">
-      <label>Código de la prueba (formato: CT|N|ABCD...)</label>
-      <input type="text" id="manual-input" placeholder="Ej: CT|20|ABCDABCDABCDABCDABCD" autocomplete="off" autocapitalize="characters"/>
-      <button class="btn btn-gold" style="width:100%" onclick="applyManualCode()">CARGAR CLAVE</button>
+      <div class="qr-status" id="qr-status">
+        <span class="spinner"></span> Apunta al código QR de la Hoja Docente
+      </div>
+      <button class="btn btn-outline" style="width:100%" onclick="toggleManual()">
+        Ingresar código manualmente
+      </button>
+      <div class="manual-wrap" id="manual-wrap">
+        <label>Código de la prueba (formato: CT|N|ABCD...)</label>
+        <input type="text" id="manual-input" placeholder="Ej: CT|20|ABCDABCDABCDABCDABCD" autocomplete="off" autocapitalize="characters"/>
+        <button class="btn btn-gold" style="width:100%" onclick="applyManualCode()">CARGAR CLAVE</button>
+      </div>
     </div>
   </div>
 </div>
@@ -917,18 +932,14 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error();
         serverIP = savedIP;
+        await startCamera();
         // Conectado — ver si hay clave guardada
         const hasKey = loadExamKey();
+        showScreen('screen-qr');
         if (hasKey) {
-          updateBadge();
-          const badgeHtml = `<div class="badge badge-lime">✓ Clave activa: ${examN} preguntas</div>`;
-          document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
-          document.getElementById('student-key-badge').innerHTML = badgeHtml;
-          await startCamera();
-          showScreen('screen-student');
+          _showQRResume();   // pregunta si continuar o escanear nuevo
         } else {
-          await startCamera();
-          showScreen('screen-qr');
+          _showQRScanner();
         }
       } catch(_) {
         // Auto-conexión falló → mostrar config con mensaje
@@ -944,14 +955,13 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
     loadSession();
     loadMateria();
     const hasKey = loadExamKey();
-    if (hasKey) {
-      updateBadge();
-      const badgeHtml = `<div class="badge badge-lime">✓ Clave activa: ${examN} preguntas</div>`;
-      document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
-      document.getElementById('student-key-badge').innerHTML = badgeHtml;
-    }
     startCamera();
-    showScreen(hasKey ? 'screen-student' : 'screen-qr');
+    showScreen('screen-qr');
+    if (hasKey) {
+      _showQRResume();
+    } else {
+      _showQRScanner();
+    }
   }
 })();
 
@@ -997,11 +1007,36 @@ function showScreen(id) {
 
 function goToQR() {
   clearExamKey();
-  stopQRLoop();
+  _showQRScanner();
   showScreen('screen-qr');
-  // restart QR loop
+}
+
+function _showQRResume() {
+  document.getElementById('qr-resume-banner').style.display = 'flex';
+  document.getElementById('qr-scanner-wrap').style.display  = 'none';
+  document.getElementById('qr-resume-desc').textContent     = `${examN} preguntas — cargada anteriormente`;
+  stopQRLoop();
+}
+
+function _showQRScanner() {
+  document.getElementById('qr-resume-banner').style.display = 'none';
+  document.getElementById('qr-scanner-wrap').style.display  = '';
+  stopQRLoop();
   qrLoopActive = true;
   qrLoop();
+}
+
+function resumeExamKey() {
+  updateBadge();
+  const badgeHtml = `<div class="badge badge-lime">✓ Clave activa: ${examN} preguntas</div>`;
+  document.getElementById('scan-key-badge').innerHTML    = badgeHtml;
+  document.getElementById('student-key-badge').innerHTML = badgeHtml;
+  showScreen('screen-student');
+}
+
+function dismissResume() {
+  clearExamKey();
+  _showQRScanner();
 }
 
 function showSummary() {
