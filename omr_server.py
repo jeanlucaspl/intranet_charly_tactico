@@ -79,10 +79,9 @@ def find_registration_marks(gray: np.ndarray):
     Retorna [(cx, cy), ...] en píxeles, orden [TL, TR, BL, BR].
     """
     H, W = gray.shape
-    # Zona pequeña: solo las esquinas reales del papel.
-    # Las marcas están a 3mm del borde; burbujas empiezan a ~GY=36mm del borde superior.
-    # Z=0.18 en imagen recortada al papel cubre ~39mm → incluye marcas, excluye burbujas.
-    Z = 0.18
+    # Z=0.30: el papel puede no llenar toda la imagen cropped (espacio arriba/abajo).
+    # El score penaliza por distancia a la esquina → marcas reales siempre ganan a burbujas.
+    Z = 0.30
     quadrants = [
         (0,            0,            int(W * Z),       int(H * Z)),   # TL
         (int(W*(1-Z)), 0,            W,                int(H * Z)),   # TR
