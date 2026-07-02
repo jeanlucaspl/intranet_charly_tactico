@@ -661,7 +661,7 @@
 <div class="screen" id="screen-qr">
   <div class="sc-inner">
     <div>
-      <div class="sc-eye">Paso 1 de 2</div>
+      <div class="sc-eye">Paso 1 de 3</div>
       <div class="sc-title">ESCANEAR QR DE CLAVE</div>
     </div>
     <div class="cam-wrap" id="qr-cam-wrap">
@@ -685,15 +685,48 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     SCREEN 1.5: SELECCIONAR ALUMNO
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-student">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Paso 2 de 3</div>
+      <div class="sc-title">SELECCIONAR ALUMNO</div>
+    </div>
+    <div id="student-key-badge"></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Buscar alumno</label>
+      <div class="autocomplete-wrap">
+        <input class="name-input" id="student-search" type="text"
+               placeholder="Apellido o DNI..."
+               autocomplete="off"
+               oninput="filterStudents(this.value)"
+               onfocus="onStudentSearchFocus()"/>
+        <button class="ac-clear" id="ac-clear-btn" onclick="clearStudent()">✕</button>
+        <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+      </div>
+    </div>
+    <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="goToScan()">
+      ESCANEAR CARTILLA →
+    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Cambiar prueba</button>
+      <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="showSummary()">Ver resumen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      SCREEN 2: OMR SCAN
 ══════════════════════════════════════════════════ -->
 <div class="screen" id="screen-scan">
   <div class="sc-inner">
     <div>
-      <div class="sc-eye">Paso 2 de 2</div>
+      <div class="sc-eye">Paso 3 de 3</div>
       <div class="sc-title">ESCANEAR CARTILLA</div>
     </div>
     <div id="scan-key-badge"></div>
+    <div id="scan-student-badge" style="margin-top:4px"></div>
     <!-- Vista cámara -->
     <div id="omr-camera-view">
       <div class="cam-wrap" id="omr-cam-wrap" style="position:relative">
@@ -743,14 +776,9 @@
       <div class="sc-eye">Resultado</div>
       <div class="sc-title">CORRECCIÓN</div>
     </div>
-    <div class="autocomplete-wrap">
-      <input class="name-input" id="student-search" type="text"
-             placeholder="Buscar alumno por apellido o DNI (opcional)"
-             autocomplete="off"
-             oninput="filterStudents(this.value)"
-             onfocus="onStudentSearchFocus()"/>
-      <button class="ac-clear" id="ac-clear-btn" onclick="clearStudent()">✕</button>
-      <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+    <div style="background:var(--navy3);border:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Alumno:</span>
+      <span id="result-student-name" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--chalk);text-transform:uppercase">—</span>
     </div>
     <div class="score-block" id="score-block">
       <div class="nota-wrap">
@@ -777,13 +805,12 @@
       </table>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-lime" style="width:100%;font-size:15px;padding:15px" onclick="confirmarNota()">
+        CONFIRMAR Y GUARDAR NOTA
+      </button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn btn-gold" style="font-size:14px;padding:14px" onclick="nextStudent()">
-          SIGUIENTE ALUMNO
-        </button>
-        <button class="btn btn-lime" style="font-size:14px;padding:14px" onclick="printReport()">
-          IMPRIMIR REPORTE
-        </button>
+        <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="reintentarEscaneo()">Reintentar escaneo</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="printReport()">Imprimir</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
@@ -808,13 +835,16 @@
       <div class="stat-box"><div class="stat-val" id="st-min">—</div><div class="stat-lbl">Peor</div></div>
     </div>
     <div class="summary-list" id="summary-list"></div>
-    <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="showScreen('screen-scan')">
+    <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="showScreen('screen-student')">
       Continuar escaneando
     </button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
       <button class="btn btn-lime" style="font-size:12px;padding:10px" onclick="printSummary()">Imprimir lista</button>
     </div>
+    <button class="btn btn-red" style="width:100%;font-size:12px;padding:10px" onclick="clearSession()">
+      BORRAR SESIÓN DE HOY
+    </button>
   </div>
 </div>
 
@@ -854,6 +884,7 @@ let studentsList = [];
 let studentsLoaded = false;
 let selectedStudent = null;
 let _autocompleteMatches = [];
+let materiaVocabId = null;  // ID de la materia "vocabulario"
 
 // Si el celular abrió directamente el Flask (192.168.x.x / 10.x.x.x)
 // usamos URLs relativas y saltamos config + auth.
@@ -872,10 +903,14 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
     // Restaurar IP guardada
     const saved = localStorage.getItem('omr_server_ip');
     if (saved) document.getElementById('cfg-ip').value = saved;
+    loadSession();
+    loadMateria();
     showScreen('screen-config');
   } else {
     // Acceso directo desde el servidor Flask — no necesita config
     serverIP = '';
+    loadSession();
+    loadMateria();
     startCamera();
     showScreen('screen-qr');
   }
@@ -1040,10 +1075,11 @@ function loadKey(n, keyStr) {
   const st = document.getElementById('qr-status');
   st.className = 'qr-status success';
   st.textContent = `✓ Clave cargada — ${n} preguntas`;
-  document.getElementById('scan-key-badge').innerHTML =
-    `<div class="badge badge-lime">✓ Clave cargada: ${n} preguntas</div>`;
+  const badgeHtml = `<div class="badge badge-lime">✓ Clave cargada: ${n} preguntas</div>`;
+  document.getElementById('scan-key-badge').innerHTML = badgeHtml;
+  document.getElementById('student-key-badge').innerHTML = badgeHtml;
   setTimeout(() => {
-    showScreen('screen-scan');
+    showScreen('screen-student');
   }, 900);
 }
 
@@ -1320,10 +1356,9 @@ function _pdfSave(doc, filename) {
 
 function printReport() {
   if (!lastResults || !examKey) { showToast('Sin resultados para imprimir', false); return; }
-  const search = document.getElementById('student-search');
   const nombre = selectedStudent
     ? `${selectedStudent.apellido} ${selectedStudent.nombre}`
-    : (search.value.trim() || 'Sin nombre');
+    : (document.getElementById('result-student-name')?.textContent?.trim() || 'Sin nombre');
   const dni    = selectedStudent ? selectedStudent.dni : '';
 
   const scoreRaw = document.getElementById('score-text').textContent;
@@ -1428,6 +1463,11 @@ function printSummary() {
 ═══════════════════════════════════════════════════════════════════ */
 function renderResult(results) {
   if (!examKey) return;
+  // Mostrar nombre del alumno en el bloque de resultado
+  const studentNameEl = document.getElementById('result-student-name');
+  if (studentNameEl && selectedStudent) {
+    studentNameEl.textContent = `${selectedStudent.apellido} ${selectedStudent.nombre}`;
+  }
   let correct = 0;
   const tbody = document.getElementById('resp-tbody');
   tbody.innerHTML = '';
@@ -1462,18 +1502,96 @@ function renderResult(results) {
   bar.className   = 'score-bar ' + (pass ? 'pass' : 'fail');
 }
 
-function nextStudent() {
-  const search   = document.getElementById('student-search');
-  const nombre   = selectedStudent
-    ? `${selectedStudent.apellido} ${selectedStudent.nombre}`
-    : (search.value.trim() || `Alumno ${session.length + 1}`);
-  const dni      = selectedStudent ? selectedStudent.dni : '';
+function goToScan() {
+  if (!selectedStudent) { showToast('Selecciona un alumno primero', false); return; }
+  document.getElementById('scan-student-badge').innerHTML =
+    `<div class="badge badge-gold">👤 ${selectedStudent.apellido} ${selectedStudent.nombre}</div>`;
+  showScreen('screen-scan');
+}
+
+function reintentarEscaneo() {
+  document.getElementById('omr-preview-view').style.display = 'none';
+  document.getElementById('omr-camera-view').style.display = 'block';
+  showScreen('screen-scan');
+}
+
+async function confirmarNota() {
+  if (!selectedStudent) { showToast('Sin alumno seleccionado', false); return; }
+  if (!lastResults) { showToast('Sin resultados para guardar', false); return; }
+  if (!materiaVocabId) { showToast('Materia Vocabulario no encontrada', false); return; }
+
   const scoreRaw = document.getElementById('score-text').textContent;
   const [c, t]   = scoreRaw.split('/').map(Number);
   const nota     = Math.round(c / t * 20);
-  session.push({ nombre, dni, correct: c, total: t, nota });
+  const periodo  = new Date().toISOString().slice(0, 10);  // YYYY-MM-DD
+
+  showProc('Guardando nota...');
+  const { error } = await sb.from('notas').upsert(
+    {
+      alumno_id: selectedStudent.id,
+      materia_id: materiaVocabId,
+      periodo,
+      nota_1: nota,
+      nota_2: null,
+      nota_3: null,
+      promedio: nota
+    },
+    { onConflict: 'alumno_id,materia_id,periodo' }
+  );
+  hideProc();
+
+  if (error) { showToast('Error al guardar: ' + error.message, false); return; }
+
+  // Guardar en sesión local
+  const entry = {
+    nombre:  `${selectedStudent.apellido} ${selectedStudent.nombre}`,
+    dni:     selectedStudent.dni,
+    correct: c,
+    total:   t,
+    nota
+  };
+  session.push(entry);
+  saveSession();
+
+  showToast(`Nota ${nota}/20 guardada para ${entry.nombre}`, true);
   clearStudent();
-  showScreen('screen-scan');
+  showScreen('screen-student');
+}
+
+const SESSION_KEY = () => `omr_session_${new Date().toISOString().slice(0,10)}`;
+
+function saveSession() {
+  try { localStorage.setItem(SESSION_KEY(), JSON.stringify(session)); } catch(_) {}
+}
+
+function loadSession() {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY());
+    if (saved) session = JSON.parse(saved);
+  } catch(_) {}
+}
+
+function clearSession() {
+  if (!confirm('¿Borrar toda la sesión de hoy? Los registros ya guardados en la base de datos permanecerán.')) return;
+  session = [];
+  try { localStorage.removeItem(SESSION_KEY()); } catch(_) {}
+  renderSummary();
+  showToast('Sesión borrada', true);
+}
+
+async function loadMateria() {
+  if (materiaVocabId) return;
+  // Buscar por nombre
+  const { data } = await sb.from('materias')
+    .select('id')
+    .ilike('nombre', 'vocabulario')
+    .maybeSingle();
+  if (data) { materiaVocabId = data.id; return; }
+  // No existe → crearla
+  const { data: created, error } = await sb.from('materias')
+    .insert({ nombre: 'Vocabulario', codigo: 'VOC', creditos: 3, sector: 'aptitud_academica' })
+    .select('id').single();
+  if (!error && created) materiaVocabId = created.id;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
