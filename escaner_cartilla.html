@@ -560,21 +560,43 @@
       <div class="sc-title">ESCANEAR CARTILLA</div>
     </div>
     <div id="scan-key-badge"></div>
-    <div class="cam-wrap" id="omr-cam-wrap" style="position:relative">
-      <video id="omr-video" autoplay muted playsinline style="width:100%;display:block;max-height:65vh;object-fit:cover"></video>
-      <div id="a4-guide" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
-        <div style="border:2px solid var(--gold);border-radius:2px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);width:72%;aspect-ratio:210/297"></div>
+    <!-- Vista cámara -->
+    <div id="omr-camera-view">
+      <div class="cam-wrap" id="omr-cam-wrap" style="position:relative">
+        <video id="omr-video" autoplay muted playsinline style="width:100%;display:block;max-height:65vh;object-fit:cover"></video>
+        <div id="a4-guide" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="border:2px solid var(--gold);border-radius:2px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);width:72%;aspect-ratio:210/297"></div>
+        </div>
       </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.5">
+        Alinea la cartilla dentro del marco dorado.<br>Las 4 marcas negras deben ser visibles.
+      </div>
+      <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="captureOMR()">
+        CAPTURAR
+      </button>
+      <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="goToQR()">
+        Cambiar prueba (nuevo QR)
+      </button>
     </div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.5">
-      Alinea la cartilla dentro del marco dorado.<br>Las 4 marcas negras deben ser visibles.
+
+    <!-- Vista preview: se muestra tras capturar, antes de enviar -->
+    <div id="omr-preview-view" style="display:none">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--gold);text-align:center;padding:6px 0">
+        ¿SE VE NÍTIDA? Si hay movimiento, reintenta.
+      </div>
+      <img id="omr-preview-img" style="width:100%;display:block;border-radius:4px;max-height:65vh;object-fit:contain" src="" alt="preview"/>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn btn-outline" style="flex:1;font-size:14px;padding:12px" onclick="retryCapture()">
+          REINTENTAR
+        </button>
+        <button class="btn btn-gold" style="flex:2;font-size:16px;padding:12px" onclick="sendOMR()">
+          ENVIAR ✓
+        </button>
+      </div>
+      <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px;margin-top:6px" onclick="goToQR()">
+        Cambiar prueba (nuevo QR)
+      </button>
     </div>
-    <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="captureOMR()">
-      CAPTURAR
-    </button>
-    <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="goToQR()">
-      Cambiar prueba (nuevo QR)
-    </button>
   </div>
 </div>
 
@@ -945,31 +967,45 @@ function getGuideCropRect(video) {
   return { x, y, w, h };
 }
 
-async function captureOMR() {
+let capturedBlob = null;
+
+function captureOMR() {
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
   if (!IS_LOCAL && !serverIP) { showToast('Sin servidor conectado — vuelve a configurar', false); showScreen('screen-config'); return; }
   const video = document.getElementById('omr-video');
   const vW = video.videoWidth, vH = video.videoHeight;
   if (!vW || !vH) { showToast('La cámara aún no está lista', false); return; }
 
-  // Recorte al marco guía (excluye fondo negro alrededor)
+  // Recorte al marco guía
   const crop = getGuideCropRect(video);
-
   const canvas = document.getElementById('omr-canvas');
   canvas.width = crop.w; canvas.height = crop.h;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  // Captura inmediata: 1 solo frame en el momento que el usuario presiona
-  // (evita blur de movimiento del loop de 5 frames)
-  showProc('Capturando...');
+  // Captura inmediata: 1 solo frame
   ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
-  const bestBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+  canvas.toBlob(blob => {
+    capturedBlob = blob;
+    // Mostrar preview para que el usuario decida si está nítida
+    const url = URL.createObjectURL(blob);
+    document.getElementById('omr-preview-img').src = url;
+    document.getElementById('omr-camera-view').style.display = 'none';
+    document.getElementById('omr-preview-view').style.display = 'block';
+  }, 'image/jpeg', 0.92);
+}
 
+function retryCapture() {
+  capturedBlob = null;
+  document.getElementById('omr-preview-view').style.display = 'none';
+  document.getElementById('omr-camera-view').style.display = 'block';
+}
+
+async function sendOMR() {
+  if (!capturedBlob) return;
   showProc('Enviando al servidor OMR...');
   const fd = new FormData();
-  fd.append('image', bestBlob, 'cartilla.jpg');
+  fd.append('image', capturedBlob, 'cartilla.jpg');
   fd.append('n', examN);
-
   try {
     const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
     const resp = await fetch(`${apiBase}/process`, {
@@ -981,6 +1017,9 @@ async function captureOMR() {
     if (!resp.ok || data.error) throw new Error(data.error || 'Error del servidor');
     lastResults = data.results;
     hideProc();
+    // Volver a mostrar cámara para el próximo escaneo
+    document.getElementById('omr-preview-view').style.display = 'none';
+    document.getElementById('omr-camera-view').style.display = 'block';
     renderResult(data.results);
     showScreen('screen-result');
   } catch(e) {
