@@ -409,6 +409,19 @@
       animation: spin .7s linear infinite;
     }
 
+    /* ── NEEDS TAP OVERLAY ── */
+    .cam-wrap.needs-tap::after {
+      content: '▶  Toca para activar la cámara';
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(8,12,16,.7);
+      color: var(--gold);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      cursor: pointer;
+    }
+
     /* ── CONFIG SCREEN ── */
     .cfg-input-row {
       display: flex; gap: 8px;
@@ -749,17 +762,31 @@ function showSummary() {
 ═══════════════════════════════════════════════════════════════════ */
 async function startCamera() {
   try {
+    // Si ya hay un stream activo, detenerlo primero
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(t => t.stop());
+      mediaStream = null;
+    }
     mediaStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
-    // Attach to both video elements (QR and OMR reuse same stream)
     const qrV  = document.getElementById('qr-video');
     const omrV = document.getElementById('omr-video');
     qrV.srcObject  = mediaStream;
     omrV.srcObject = mediaStream;
-    await qrV.play().catch(()=>{});
-    await omrV.play().catch(()=>{});
-    // Start QR loop
+
+    // Intentar play; si el browser bloquea el autoplay, esperar un toque
+    const tryPlay = async (v) => {
+      try { await v.play(); }
+      catch(_) {
+        // Mostrar overlay de "toca para activar"
+        v.closest('.cam-wrap')?.classList.add('needs-tap');
+        v.addEventListener('click', () => { v.play().catch(()=>{}); v.closest('.cam-wrap')?.classList.remove('needs-tap'); }, { once: true });
+      }
+    };
+    await tryPlay(qrV);
+    await tryPlay(omrV);
+
     qrLoopActive = true;
     qrLoop();
   } catch(e) {
@@ -768,6 +795,19 @@ async function startCamera() {
     document.getElementById('manual-wrap').classList.add('visible');
   }
 }
+
+// Reiniciar cámara si la app vuelve al frente con el stream perdido
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const qrV = document.getElementById('qr-video');
+    if (mediaStream && qrV.paused) {
+      qrV.play().catch(() => startCamera());
+      document.getElementById('omr-video').play().catch(()=>{});
+    } else if (!mediaStream) {
+      startCamera();
+    }
+  }
+});
 
 /* ═══════════════════════════════════════════════════════════════════
    QR SCAN LOOP
