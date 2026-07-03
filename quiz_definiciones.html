@@ -500,6 +500,36 @@
     @media (max-width: 360px) {
       .qty-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ── Ranking ── */
+    .ranking-wrap { width: 100%; margin-top: 8px; }
+    .ranking-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; margin-bottom: 6px;
+      background: var(--navy2); border: 1px solid var(--border);
+    }
+    .ranking-item.me { border-color: var(--gold); }
+    .ranking-pos {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px;
+      color: var(--muted); min-width: 24px; text-align: center;
+    }
+    .ranking-pos.gold { color: var(--gold); }
+    .ranking-name {
+      flex: 1; font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 600; letter-spacing: .05em;
+      text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ranking-racha {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--lime);
+    }
+    .ranking-racha-lbl {
+      font-family: 'Barlow Condensed', sans-serif; font-size: 9px;
+      letter-spacing: .2em; color: var(--muted); display: block; text-align: right;
+    }
+    .ranking-empty {
+      font-family: 'Barlow Condensed', sans-serif; font-size: 12px;
+      color: var(--muted); text-align: center; padding: 14px;
+    }
   </style>
 </head>
 <body>
@@ -555,6 +585,11 @@
         <button class="btn-start" id="btn-start" onclick="startQuiz()">
           COMENZAR →
         </button>
+
+        <div class="sec-label" style="margin-top:28px">RACHA MÁXIMA — TOP 5</div>
+        <div class="ranking-wrap" id="ranking-list">
+          <div class="ranking-empty">Cargando…</div>
+        </div>
       </div><!-- /setup-form -->
     </div>
   </div><!-- /screen-setup -->
@@ -662,7 +697,13 @@ const S = {
   ok: 0, bad: 0, streak: 0, maxStreak: 0,
   answered: false,
   t0: null,
+  qStartTime: null,
+  tabLeft: false,
 };
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) S.tabLeft = true;
+});
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    PARSE DICTIONARY
@@ -752,6 +793,7 @@ async function init() {
   $('total-words').textContent = S.dict.length;
   $('setup-loading').style.display = 'none';
   $('setup-form').style.display    = 'block';
+  loadRanking();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -786,7 +828,9 @@ function renderQ() {
   const q = S.pool[S.idx];
   if (!q) { showResults(); return; }
 
-  S.answered = false;
+  S.answered   = false;
+  S.qStartTime = Date.now();
+  S.tabLeft    = false;
   hideFb();
 
   // Progress
@@ -840,8 +884,14 @@ function answer(btn, chosen, correct, chosenDef, correctDef) {
   if (right) {
     btn.classList.add('correct');
     $(`aico-${chosen}`).textContent = '✓';
-    S.ok++; S.streak++;
-    if (S.streak > S.maxStreak) S.maxStreak = S.streak;
+    S.ok++;
+    const elapsed = Date.now() - (S.qStartTime || Date.now());
+    if (elapsed < 30000 && !S.tabLeft) {
+      S.streak++;
+      if (S.streak > S.maxStreak) S.maxStreak = S.streak;
+    } else {
+      S.streak = 0;
+    }
   } else {
     btn.classList.add('wrong');
     $(`aico-${chosen}`).textContent = '✗';
@@ -903,7 +953,7 @@ function nextQ() {
 /* ═══════════════════════════════════════════════════════════════════════════════
    RESULTS
 ═══════════════════════════════════════════════════════════════════════════════ */
-function showResults() {
+async function showResults() {
   hideFb();
   $('tb-live').style.display = 'none';
 
@@ -935,6 +985,24 @@ function showResults() {
 
   showScreen('results');
   window.scrollTo({ top: 0, behavior: 'instant' });
+
+  if (S.maxStreak > 0) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const uid = session.user.id;
+        const { data: ex } = await sb.from('quiz_rachas').select('racha')
+          .eq('perfil_id', uid).eq('quiz_tipo', 'definiciones').maybeSingle();
+        if (!ex || S.maxStreak > ex.racha) {
+          await sb.from('quiz_rachas').upsert(
+            { perfil_id: uid, quiz_tipo: 'definiciones', racha: S.maxStreak, updated_at: new Date().toISOString() },
+            { onConflict: 'perfil_id,quiz_tipo' }
+          );
+          loadRanking();
+        }
+      }
+    } catch(_) {}
+  }
 }
 
 function playAgain() {
@@ -963,6 +1031,44 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); nextQ();
   }
 });
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RANKING
+═══════════════════════════════════════════════════════════════════════════════ */
+async function loadRanking() {
+  const el = $('ranking-list');
+  if (!el) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const myId = session?.user?.id;
+    const { data, error } = await sb.from('quiz_rachas')
+      .select('racha, perfil_id, perfiles(nombre, apellido)')
+      .eq('quiz_tipo', 'definiciones')
+      .order('racha', { ascending: false })
+      .limit(5);
+    if (error || !data?.length) {
+      el.innerHTML = '<div class="ranking-empty">Sin registros aún. ¡Sé el primero!</div>';
+      return;
+    }
+    el.innerHTML = data.map((r, i) => {
+      const nombre = r.perfiles
+        ? `${r.perfiles.nombre} ${r.perfiles.apellido}`.trim()
+        : '—';
+      const isMe  = r.perfil_id === myId;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      return `<div class="ranking-item${isMe ? ' me' : ''}">
+        <div class="ranking-pos${i < 3 ? ' gold' : ''}">${medal}</div>
+        <div class="ranking-name">${nombre}${isMe ? ' <span style="color:var(--gold);font-size:10px">(tú)</span>' : ''}</div>
+        <div style="text-align:right">
+          <span class="ranking-racha">${r.racha}</span>
+          <span class="ranking-racha-lbl">racha</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(_) {
+    el.innerHTML = '<div class="ranking-empty">No se pudo cargar el ranking.</div>';
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    HELPERS
