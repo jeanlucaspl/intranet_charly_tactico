@@ -8417,7 +8417,7 @@ function bpToGpItems(preg){
         bpImgUrl:si.imagen_url||null,imgW:0,imgH:0,p:1,si:[],
         alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
         altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
-        numAlts:Math.max(alts.length,5),align:'left',
+        numAlts:alts.length||5,align:'left',
         bpId:preg.id,bpSiId:si.id,bpSubtema:preg.subtema||'',bpEsSubitem:true,
         bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
         bpSolDesarrollo:sol?.desarrollo_texto||''
@@ -8432,7 +8432,7 @@ function bpToGpItems(preg){
       bpImgUrl:preg.enunciado_imagen_url||null,imgW:0,imgH:0,p:1,si:[],
       alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
       altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
-      numAlts:Math.max(alts.length,5),align:'left',
+      numAlts:alts.length||5,align:'left',
       bpId:preg.id,bpSiId:null,bpSubtema:preg.subtema||'',
       bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
       bpSolDesarrollo:sol?.desarrollo_texto||''
