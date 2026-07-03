@@ -7277,37 +7277,39 @@ async function generarPracticaPDF(){
 
     const drawTexto=(item)=>{
       if(!item.texto?.trim()&&!item._textoImg)return;
-      const tw=gpCW(nc)-4;
+      // Usar gpTW(nc) como ancho del texto — igual que preguntas, garantiza no overflow
+      const tw=gpTW(nc);
+      const txX=2; // offset desde inicio de columna
       const lh=gpLHn(nc);
       const fs=gpFSn(nc)-0.5;
       // Imagen del texto (e.g. lectura escaneada subida como imagen)
       if(item._textoImg){
         const{b64,w,h}=item._textoImg;
-        const imgW=tw;
-        const imgH=Math.round((imgW/w)*h);
+        const imgH=Math.round((tw/w)*h);
         if(curY+imgH+2>gpFOOT)moveNext();
-        doc.addImage(b64,'PNG',colXs[curCol]+2,curY,imgW,imgH);
+        doc.addImage(b64,'PNG',colXs[curCol]+txX,curY,tw,imgH);
         curY+=imgH+4;
       }
-      // Texto de la lectura — usa interlineado real de jsPDF (fs*1.15*(25.4/72))
+      // Texto de la lectura
       if(item.texto?.trim()){
-        // Normalizar saltos de línea de copy-paste PDF: \n simple → espacio, \n\n → párrafo
+        // Normalizar: \n simple → espacio, \n\n → párrafo real
         const textoNorm=item.texto.trim()
           .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
           .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n');
-        // Setear font ANTES de splitTextToSize para que calcule el ancho correcto
+        // Setear font ANTES de splitTextToSize (usa métricas del font activo)
         doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
-        const alh=fs*1.15*(25.4/72); // line height real en mm
+        const alh=fs*1.15*(25.4/72);
         const allLines=doc.splitTextToSize(textoNorm,tw);
         let remaining=[...allLines];
         while(remaining.length){
-          // Re-aplicar font después de moveNext (drawMini cambia el tamaño)
+          // Re-aplicar font tras moveNext (drawMini cambia tamaño)
           doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
           const cx=colXs[curCol];
           const avail=gpFOOT-curY;
           const maxLines=Math.max(1,Math.floor((avail-alh)/alh));
           const chunk=remaining.splice(0,maxLines);
-          doc.text(chunk,cx+2,curY+alh*0.5);
+          // Renderizar línea por línea con Y explícita (evita drift de jsPDF)
+          chunk.forEach((line,i)=>doc.text(line,cx+txX,curY+alh*0.5+i*alh));
           curY+=chunk.length*alh+(remaining.length?0:0.5);
           if(remaining.length)moveNext();
         }
