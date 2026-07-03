@@ -7295,6 +7295,8 @@ async function generarPracticaPDF(){
         const textoNorm=item.texto.trim()
           .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
           .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n');
+        // Setear font ANTES de splitTextToSize para que calcule el ancho correcto
+        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
         const alh=fs*1.15*(25.4/72); // line height real en mm
         const allLines=doc.splitTextToSize(textoNorm,tw);
         let remaining=[...allLines];
