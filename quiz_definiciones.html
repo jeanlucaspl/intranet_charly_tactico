@@ -991,17 +991,19 @@ async function showResults() {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         const uid = session.user.id;
-        const { data: ex } = await sb.from('quiz_rachas').select('racha')
+        const { data: ex, error: exErr } = await sb.from('quiz_rachas').select('racha')
           .eq('perfil_id', uid).eq('quiz_tipo', 'definiciones').maybeSingle();
-        if (!ex || S.maxStreak > ex.racha) {
-          await sb.from('quiz_rachas').upsert(
+        if (exErr) console.error('[quiz_rachas] fetch existing:', exErr);
+        if (!ex || S.maxStreak > (ex?.racha ?? 0)) {
+          const { error: upsertErr } = await sb.from('quiz_rachas').upsert(
             { perfil_id: uid, quiz_tipo: 'definiciones', racha: S.maxStreak, updated_at: new Date().toISOString() },
             { onConflict: 'perfil_id,quiz_tipo' }
           );
-          loadRanking();
+          if (upsertErr) console.error('[quiz_rachas] upsert:', upsertErr);
+          else loadRanking();
         }
       }
-    } catch(_) {}
+    } catch(e) { console.error('[quiz_rachas] showResults save:', e); }
   }
 }
 
@@ -1041,21 +1043,31 @@ async function loadRanking() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     const myId = session?.user?.id;
-    const { data, error } = await sb.from('quiz_rachas')
-      .select('racha, perfil_id, perfiles(nombre, apellido)')
+
+    // Paso 1: top 5 rachas
+    const { data: rows, error } = await sb.from('quiz_rachas')
+      .select('racha, perfil_id')
       .eq('quiz_tipo', 'definiciones')
       .order('racha', { ascending: false })
       .limit(5);
-    if (error || !data?.length) {
+    if (error) { console.error('[loadRanking] fetch:', error); }
+    if (error || !rows?.length) {
       el.innerHTML = '<div class="ranking-empty">Sin registros aún. ¡Sé el primero!</div>';
       return;
     }
-    el.innerHTML = data.map((r, i) => {
-      const nombre = r.perfiles
-        ? `${r.perfiles.nombre} ${r.perfiles.apellido}`.trim()
-        : '—';
-      const isMe  = r.perfil_id === myId;
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+
+    // Paso 2: nombres de esos perfiles
+    const ids = rows.map(r => r.perfil_id);
+    const { data: perfs } = await sb.from('perfiles')
+      .select('id, nombre, apellido')
+      .in('id', ids);
+    const perfMap = {};
+    (perfs || []).forEach(p => { perfMap[p.id] = `${p.nombre} ${p.apellido}`.trim(); });
+
+    el.innerHTML = rows.map((r, i) => {
+      const nombre = perfMap[r.perfil_id] || '—';
+      const isMe   = r.perfil_id === myId;
+      const medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
       return `<div class="ranking-item${isMe ? ' me' : ''}">
         <div class="ranking-pos${i < 3 ? ' gold' : ''}">${medal}</div>
         <div class="ranking-name">${nombre}${isMe ? ' <span style="color:var(--gold);font-size:10px">(tú)</span>' : ''}</div>
@@ -1065,7 +1077,8 @@ async function loadRanking() {
         </div>
       </div>`;
     }).join('');
-  } catch(_) {
+  } catch(e) {
+    console.error('[loadRanking] exception:', e);
     el.innerHTML = '<div class="ranking-empty">No se pudo cargar el ranking.</div>';
   }
 }
