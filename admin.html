@@ -376,7 +376,7 @@
       <button class="sb-link" onclick="showPanel('armar-practica',this)">Armar Práctica</button>
       <button class="sb-link" onclick="showPanel('banco',this)">Banco de Preguntas</button>
       <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
-      <a class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none">Escáner Cartilla</a>
+      <a id="sb-escaner-link" class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none;display:none">Escáner Cartilla</a>
     </div>
   </div>
   <div class="sb-section sb-collapsible collapsed" id="sec-comunicacion">
@@ -1849,6 +1849,11 @@ async function init(){
   uid=_u.id;
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',uid).single();
   esDueno = (pf?.rol==='dueno');
+  // Escáner Cartilla solo para admin y dueno
+  if(pf?.rol==='admin' || pf?.rol==='dueno'){
+    const elEsc = document.getElementById('sb-escaner-link');
+    if(elEsc) elEsc.style.display='';
+  }
   // Show dueno-only sections
   if(esDueno){
     document.querySelectorAll('.sb-dueno').forEach(el=>el.style.display='flex');
