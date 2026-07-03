@@ -7291,11 +7291,16 @@ async function generarPracticaPDF(){
       }
       // Texto de la lectura — usa interlineado real de jsPDF (fs*1.15*(25.4/72))
       if(item.texto?.trim()){
-        doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+        // Normalizar saltos de línea de copy-paste PDF: \n simple → espacio, \n\n → párrafo
+        const textoNorm=item.texto.trim()
+          .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
+          .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n');
         const alh=fs*1.15*(25.4/72); // line height real en mm
-        const allLines=doc.splitTextToSize(item.texto.trim(),tw);
+        const allLines=doc.splitTextToSize(textoNorm,tw);
         let remaining=[...allLines];
         while(remaining.length){
+          // Re-aplicar font después de moveNext (drawMini cambia el tamaño)
+          doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
           const cx=colXs[curCol];
           const avail=gpFOOT-curY;
           const maxLines=Math.max(1,Math.floor((avail-alh)/alh));
@@ -8429,7 +8434,7 @@ function bpToGpItems(preg){
         bpImgUrl:si.imagen_url||null,imgW:0,imgH:0,p:1,si:[],
         alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
         altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
-        numAlts:alts.length||5,align:'left',
+        numAlts:alts.filter(a=>a.texto?.trim()).length||5,align:'left',
         bpId:preg.id,bpSiId:si.id,bpSubtema:preg.subtema||'',bpEsSubitem:true,
         bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
         bpSolDesarrollo:sol?.desarrollo_texto||''
@@ -8444,7 +8449,7 @@ function bpToGpItems(preg){
       bpImgUrl:preg.enunciado_imagen_url||null,imgW:0,imgH:0,p:1,si:[],
       alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
       altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
-      numAlts:alts.length||5,align:'left',
+      numAlts:alts.filter(a=>a.texto?.trim()).length||5,align:'left',
       bpId:preg.id,bpSiId:null,bpSubtema:preg.subtema||'',
       bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
       bpSolDesarrollo:sol?.desarrollo_texto||''
