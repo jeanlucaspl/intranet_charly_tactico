@@ -888,7 +888,10 @@ function answer(btn, chosen, correct, chosenDef, correctDef) {
     const elapsed = Date.now() - (S.qStartTime || Date.now());
     if (elapsed < 30000 && !S.tabLeft) {
       S.streak++;
-      if (S.streak > S.maxStreak) S.maxStreak = S.streak;
+      if (S.streak > S.maxStreak) {
+        S.maxStreak = S.streak;
+        saveRacha('definiciones', S.maxStreak); // guardar en tiempo real
+      }
     } else {
       S.streak = 0;
     }
@@ -986,25 +989,6 @@ async function showResults() {
   showScreen('results');
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  if (S.maxStreak > 0) {
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        const uid = session.user.id;
-        const { data: ex, error: exErr } = await sb.from('quiz_rachas').select('racha')
-          .eq('perfil_id', uid).eq('quiz_tipo', 'definiciones').maybeSingle();
-        if (exErr) console.error('[quiz_rachas] fetch existing:', exErr);
-        if (!ex || S.maxStreak > (ex?.racha ?? 0)) {
-          const { error: upsertErr } = await sb.from('quiz_rachas').upsert(
-            { perfil_id: uid, quiz_tipo: 'definiciones', racha: S.maxStreak, updated_at: new Date().toISOString() },
-            { onConflict: 'perfil_id,quiz_tipo' }
-          );
-          if (upsertErr) console.error('[quiz_rachas] upsert:', upsertErr);
-          else loadRanking();
-        }
-      }
-    } catch(e) { console.error('[quiz_rachas] showResults save:', e); }
-  }
 }
 
 function playAgain() {
@@ -1037,6 +1021,19 @@ document.addEventListener('keydown', e => {
 /* ═══════════════════════════════════════════════════════════════════════════════
    RANKING
 ═══════════════════════════════════════════════════════════════════════════════ */
+async function saveRacha(tipo, racha) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { error } = await sb.from('quiz_rachas').upsert(
+      { perfil_id: session.user.id, quiz_tipo: tipo, racha, updated_at: new Date().toISOString() },
+      { onConflict: 'perfil_id,quiz_tipo' }
+    );
+    if (error) console.error('[saveRacha]', error);
+    else loadRanking();
+  } catch(e) { console.error('[saveRacha]', e); }
+}
+
 async function loadRanking() {
   const el = $('ranking-list');
   if (!el) return;
