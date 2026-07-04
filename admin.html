@@ -8390,7 +8390,13 @@ async function bpCargarParaEditar(pregId){
 async function bpMandadAPractica(){
   if(!BP.sel.size){await myAlert('Selecciona al menos una pregunta.');return;}
   if(!allMaterias.length)await loadMaterias();
-  if(!GP.init){GP.cfg.fecha=new Date().toISOString().slice(0,10);GP.secciones=[];GP.init=true;}
+  if(!GP.init){
+    // Cargar borrador existente para no pisarlo al agregar preguntas
+    const _raw=localStorage.getItem('gp_draft');
+    if(_raw){try{const _d=JSON.parse(_raw);Object.assign(GP.cfg,_d.cfg||{});GP.targetPages=_d.targetPages||0;GP.secciones=_d.secciones||[];}catch(e){GP.secciones=[];}}
+    else{GP.cfg.fecha=new Date().toISOString().slice(0,10);GP.secciones=[];}
+    GP.init=true;
+  }
   const envBtn=document.getElementById('bp-btn-enviar');
   if(envBtn){envBtn.disabled=true;envBtn.textContent='Enviando...';}
   try{
