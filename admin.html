@@ -7416,52 +7416,13 @@ async function generarPracticaPDF(){
       });
     });
 
-    // Construir mapa de soluciones para solucionario
-    const solMap=[];let qn2=1;
-    GP.secciones.forEach(sec=>{
-      sec.items.forEach(it=>{
-        if(it.tipo!=='texto'){
-          if(it.bpSolTipo)solMap.push({num:qn2,secNombre:sec.nombre,bpSolTipo:it.bpSolTipo,bpSolAlt:it.bpSolAlt,bpSolDesarrollo:it.bpSolDesarrollo});
-          qn2++;
-        }
-      });
-    });
+    // ── 1. Registrar cuántas páginas tienen las preguntas ────────────────────
     const practicaPages=doc.getNumberOfPages();
-    if(solMap.length){
-      status.textContent='Generando solucionario...';
-      // Pre-renderizar desarrollos con MathJax (igual que las preguntas)
-      const devItems=solMap.filter(q=>q.bpSolTipo==='desarrollo'&&q.bpSolDesarrollo?.trim());
-      if(devItems.length){
-        await MathJax.startup.promise;
-        const mmToPx=3.7795,devW=Math.round(gpTW(1)*mmToPx);
-        const box=document.createElement('div');
-        box.style.cssText=`position:fixed;top:0;left:${-(devW+20)}px;width:${devW}px;background:#fff;z-index:9999;padding:4px 2px`;
-        document.body.appendChild(box);
-        for(const q of devItems){
-          box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:9px;line-height:15px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
-          await MathJax.typesetPromise([box]);
-          const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
-          q._devImg={url:canvas.toDataURL('image/png'),wMm:gpTW(1),hMm:canvas.height/(mmToPx*2)};
-        }
-        document.body.removeChild(box);
-      }
-      await gpGenerarSolucionario(doc,solMap,titulo,fechaHoy);
-    }
 
-    // Footer
-    const pc=doc.getNumberOfPages();
-    for(let i=1;i<=pc;i++){
+    // ── 2. Footer de las páginas de preguntas ────────────────────────────────
+    for(let i=1;i<=practicaPages;i++){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
-      if(i>practicaPages){
-        // Footer solucionario
-        doc.setDrawColor(160,160,160);doc.setLineWidth(.3);doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
-        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
-        doc.text('SOLUCIONARIO — Uso Interno',gpML,gpFOOT+7);
-        doc.text(`S${i-practicaPages}/${pc-practicaPages}`,gpPW/2,gpFOOT+7,{align:'center'});
-        doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
-        continue;
-      }
       if(wmB64){try{const wmW=GP.cfg.wmSize||75,wmH=wmW*(2286/1856);doc.addImage(wmB64,'PNG',(gpPW-wmW)/2,(297-wmH)/2,wmW,wmH);}catch(e){}}
       doc.setDrawColor(160,160,160);doc.setLineWidth(.3);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
@@ -7472,12 +7433,55 @@ async function generarPracticaPDF(){
       doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
     }
 
-    // Agregar páginas de plantilla al mismo PDF (después del footer loop)
+    // ── 3. Plantilla (cartilla de burbujas + hoja docente con QR) ────────────
     const _plKey=gpBuildPlantillaKey();
     if(_plKey.split('').some(c=>c!=='-')){
       status.textContent='Agregando plantilla de respuestas...';
       gpAgregarPaginasPlantilla(doc,titulo,fechaHoy,_plKey);
     }
+    const plantillaEndPage=doc.getNumberOfPages();
+
+    // ── 4. Solucionario: solo preguntas con desarrollo del banco ─────────────
+    // Construir mapa solo con bpSolTipo==='desarrollo' que tengan contenido
+    const devMap=[];let qn2=1;
+    GP.secciones.forEach(sec=>{
+      sec.items.forEach(it=>{
+        if(it.tipo!=='texto'){
+          if(it.bpSolTipo==='desarrollo'&&it.bpSolDesarrollo?.trim())
+            devMap.push({num:qn2,secNombre:sec.nombre,bpSolTipo:'desarrollo',bpSolDesarrollo:it.bpSolDesarrollo});
+          qn2++;
+        }
+      });
+    });
+    if(devMap.length){
+      status.textContent='Generando solucionario...';
+      // Pre-renderizar desarrollos con MathJax
+      await MathJax.startup.promise;
+      const mmToPx=3.7795,devW=Math.round(gpTW(1)*mmToPx);
+      const box=document.createElement('div');
+      box.style.cssText=`position:fixed;top:0;left:${-(devW+20)}px;width:${devW}px;background:#fff;z-index:9999;padding:4px 2px`;
+      document.body.appendChild(box);
+      for(const q of devMap){
+        box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:9px;line-height:15px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
+        await MathJax.typesetPromise([box]);
+        const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        q._devImg={url:canvas.toDataURL('image/png'),wMm:gpTW(1),hMm:canvas.height/(mmToPx*2)};
+      }
+      document.body.removeChild(box);
+      await gpGenerarSolucionario(doc,devMap,titulo,fechaHoy);
+      // Footer del solucionario
+      const pcTotal=doc.getNumberOfPages();
+      const solTotal=pcTotal-plantillaEndPage;
+      for(let i=plantillaEndPage+1;i<=pcTotal;i++){
+        doc.setPage(i);
+        doc.setDrawColor(160,160,160);doc.setLineWidth(.3);doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
+        doc.text('SOLUCIONARIO — Uso Interno',gpML,gpFOOT+7);
+        doc.text(`S${i-plantillaEndPage}/${solTotal}`,gpPW/2,gpFOOT+7,{align:'center'});
+        doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
+      }
+    }
+
     const slug=titulo.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
     doc.save(`practica_${slug}_${GP.cfg.fecha||new Date().toISOString().slice(0,10)}.pdf`);
     status.textContent='PDF generado.';
