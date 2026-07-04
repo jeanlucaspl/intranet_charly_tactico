@@ -7509,15 +7509,16 @@ function bpJoinLines(lines){
 }
 
 function bpParsearAlternativas(texto){
-  // Soporta A. B. C. D. E. y A) B) C) D) E)
+  // Soporta A. B. C. D. E. y A) B) C) D) E) — de 2 a 5 alternativas
   const lines=texto.split('\n').map(l=>l.trim()).filter(l=>l!=='');
   const altIdx={};
   for(let i=0;i<lines.length;i++){
     const m=lines[i].match(/^([A-E])[.)]\s*(.*)/);
     if(m)altIdx[m[1]]={line:i,first:m[2]};
   }
-  if(!altIdx['A']||!altIdx['E'])return null;
+  if(!altIdx['A'])return null;
   const letras=['A','B','C','D','E'].filter(l=>altIdx[l]);
+  if(letras.length<2)return null;
   const firstLine=altIdx['A'].line;
   // Quitar número inicial del enunciado (ej: "871 El tema..." → "El tema...")
   const enunciadoRaw=bpJoinLines(lines.slice(0,firstLine));
@@ -7531,19 +7532,40 @@ function bpParsearAlternativas(texto){
     const altLines=[altIdx[L].first,...lines.slice(start+1,end)].filter(l=>l!=='');
     alts[idx]=bpJoinLines(altLines);
   }
-  return{enunciado,alts};
+  return{enunciado,alts,numAlts:letras.length};
 }
 
+function bpNormalizarEnunciado(){
+  const ta=document.getElementById('bp-enunciado');
+  if(!ta)return;
+  ta.value=(ta.value||'')
+    .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
+    .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n').trim();
+  showToast('✓ Saltos de línea normalizados');
+}
 function bpOnPaste(e){
   const raw=e.clipboardData?.getData('text')||'';
   const parsed=bpParsearAlternativas(raw);
-  if(!parsed)return;
+  if(!parsed){
+    // No alternatives detected — normalize line breaks from PDF copy-paste
+    e.preventDefault();
+    const norm=(raw||'')
+      .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
+      .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n').trim();
+    const ta=e.target;
+    const s=ta.selectionStart,en=ta.selectionEnd;
+    ta.value=ta.value.slice(0,s)+norm+ta.value.slice(en);
+    ta.selectionStart=ta.selectionEnd=s+norm.length;
+    return;
+  }
   e.preventDefault();
   bpLeerForm();
   BP.ed.enunciado_texto=parsed.enunciado;
   parsed.alts.forEach((a,i)=>{BP.ed.alts[i]=a;});
+  if(parsed.numAlts)BP.ed.numAlts=parsed.numAlts;
   bpRenderUI();
-  showToast('✓ Enunciado y alternativas A–E detectadas y distribuidas automáticamente');
+  const n=parsed.numAlts||5;
+  showToast('✓ Enunciado y alternativas A–'+['','','B','C','D','E'][n]+' detectadas y distribuidas automáticamente');
 }
 
 function bpOnPasteSub(e,idx){
@@ -7665,7 +7687,10 @@ function bpRenderUI(){
       :`<label style="${BPLBL}">Enunciado &nbsp;<span style="font-weight:400;color:#8aaac8;font-size:10px">Acepta LaTeX: $x^2$ o $$formula$$</span></label>`
     }
     ${BP_FMT_BAR('bp-enunciado')}
-    <textarea id="bp-enunciado" rows="${ed.tipo==='texto_base'?8:4}" style="${BPINP};resize:vertical;margin-bottom:8px" onpaste="bpOnPaste(event)" placeholder="${ed.tipo==='texto_base'?'Pega aquí el texto completo de la lectura...':''}">${gpEsc(ed.enunciado_texto||'')}</textarea>
+    <textarea id="bp-enunciado" rows="${ed.tipo==='texto_base'?8:4}" style="${BPINP};resize:vertical;margin-bottom:4px" onpaste="bpOnPaste(event)" placeholder="${ed.tipo==='texto_base'?'Pega aquí el texto completo de la lectura...':''}">${gpEsc(ed.enunciado_texto||'')}</textarea>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button onclick="bpNormalizarEnunciado()" title="Elimina saltos de línea simples (útil cuando se pega texto de un PDF)" style="font-size:10px;padding:3px 10px;background:none;border:1px solid var(--border);color:#8aaac8;cursor:pointer;border-radius:4px">Normalizar ↵</button>
+    </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
       <label class="btn btn-outline" style="cursor:pointer;font-size:11px;padding:5px 12px;margin:0">
         📷 Imagen enunciado<input type="file" accept="image/*" style="display:none" onchange="bpUploadEnunciado(this)">
