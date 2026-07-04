@@ -796,7 +796,7 @@ function setQty(qty, el) {
   el.classList.add('sel');
 }
 
-function startQuiz() {
+async function startQuiz() {
   let src = [];
   if (S.mode === 'ambos') src = [...S.sino, ...S.ant];
   else if (S.mode === 'sino') src = [...S.sino];
@@ -818,6 +818,16 @@ function startQuiz() {
   S.streak = 0; S.maxStreak = 0;
   S.answered = false; S.loading = false;
   S.t0 = Date.now();
+
+  // Cargar récord histórico para no sobreescribirlo si el intento actual es menor
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: rec } = await sb.from('quiz_rachas')
+        .select('racha').eq('perfil_id', session.user.id).eq('quiz_tipo', 'rv').single();
+      if (rec?.racha) S.maxStreak = rec.racha;
+    }
+  } catch(_) {}
 
   $('q-tot').textContent = S.pool.length;
   $('tb-live').style.display = '';
