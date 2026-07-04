@@ -1117,7 +1117,7 @@ function qrLoop() {
     ctx.drawImage(video, 0, 0, W, H);
     const imgData = ctx.getImageData(0, 0, W, H);
     const code = jsQR(imgData.data, W, H, { inversionAttempts: 'dontInvert' });
-    if (code && code.data.startsWith('CT|')) {
+    if (code && (code.data.startsWith('CT|') || code.data.startsWith('CTP|'))) {
       stopQRLoop();
       onQRDetected(code.data);
       return;
