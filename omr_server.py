@@ -223,7 +223,7 @@ def process_omr(warped_bin: np.ndarray, N: int) -> list:
     GRP_W  = (CONT_W - (N_GRP - 1) * CL['GAP']) / N_GRP
     CX0    = CL['GX'] + CL['RM']
     b_rad_px = CL['BR'] * MM_TO_PX * 1.1
-    LTRS = ['A', 'B', 'C', 'D']
+    LTRS = ['A', 'B', 'C', 'D', 'E']
     results = []
 
     for q in range(N):
@@ -233,7 +233,7 @@ def process_omr(warped_bin: np.ndarray, N: int) -> list:
         cy_mm = CL['GY'] + CL['RM'] + CL['HDR'] + row * CL['RH'] + CL['RH'] / 2
 
         counts = []
-        for c in range(4):
+        for c in range(5):
             bx_mm = gx_mm + CL['BA'] + c * CL['BS']
             px_count = count_filled_px(warped_bin,
                                        bx_mm * MM_TO_PX,
@@ -307,7 +307,7 @@ def _save_debug(warped_bin: np.ndarray, results: list, N: int):
         'ok': (0, 220, 80), 'blank': (60, 60, 220),
         'double': (0, 165, 255), 'low_conf': (0, 220, 220),
     }
-    LTRS = ['A', 'B', 'C', 'D']
+    LTRS = ['A', 'B', 'C', 'D', 'E']
     for r in results:
         q   = r['q'] - 1
         g   = q // 25
@@ -315,7 +315,7 @@ def _save_debug(warped_bin: np.ndarray, results: list, N: int):
         gx_mm = CX0 + g * (GRP_W + CL['GAP'])
         cy_mm = CL['GY'] + CL['RM'] + CL['HDR'] + row * CL['RH'] + CL['RH'] / 2
         color = STATUS_COLOR.get(r['status'], (200, 200, 200))
-        for c in range(4):
+        for c in range(5):
             bx_mm = gx_mm + CL['BA'] + c * CL['BS']
             px = int(bx_mm * MM_TO_PX)
             py = int(cy_mm * MM_TO_PX)
