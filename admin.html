@@ -7474,9 +7474,127 @@ async function generarPracticaPDF(){
 
     const slug=titulo.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
     doc.save(`practica_${slug}_${GP.cfg.fecha||new Date().toISOString().slice(0,10)}.pdf`);
-    status.textContent='PDF generado correctamente.';
+    // Generar plantilla de respuestas automáticamente (usa bpSolAlt ya mezclado)
+    const _plKey=gpBuildPlantillaKey();
+    if(_plKey.split('').some(c=>c!=='-')){
+      status.textContent='Generando plantilla de respuestas...';
+      await new Promise(r=>setTimeout(r,700)); // pausa para que el primer download inicie
+      gpGenerarPlantillaRespuestas(titulo,fechaHoy,_plKey);
+    }
+    status.textContent='PDFs generados.';
   }catch(err){status.textContent='Error: '+err.message;console.error(err);}
   btn.disabled=false;
+}
+
+/* ── Plantilla de respuestas para Armar Práctica ──────────────────────────── */
+function gpBuildPlantillaKey(){
+  // Devuelve 100 chars: 'A'/'B'/'C'/'D' para preguntas con alternativa, '-' para el resto
+  const key=Array(100).fill('-');
+  let qNum=0;
+  GP.secciones.forEach(sec=>{
+    sec.items.forEach(item=>{
+      if(item.tipo==='texto')return;
+      if(qNum>=100)return;
+      if(item.tipo==='alternativas'){
+        const idx=item.bpSolAlt??item.altCorrecta??-1;
+        if(idx>=0&&idx<=3)key[qNum]='ABCD'[idx];
+      }
+      qNum++;
+    });
+  });
+  return key.join('');
+}
+
+function gpGenerarPlantillaRespuestas(titulo,fecha,key){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210,M=8;
+  const BLK=[0,0,0],GRY=[100,100,100],LGT=[180,180,180];
+  // Layout IDÉNTICO al de omr_server.py (CL) — NO modificar sin actualizar el servidor
+  const GX=10,GY=36,GW=190,RM=5,HDR=6,RH=7,QW=8,BA=11,BS=6.5,BR=2.5,GAP=5;
+  const CONT_W=GW-2*RM,GRP_W=(CONT_W-3*GAP)/4,CX0=GX+RM;
+  const activeCount=key.split('').filter(c=>c!=='-').length;
+  const slug=titulo.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+  // QR (qrcode-generator cargado globalmente)
+  function _qrDU(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createDataURL(5,0);}
+  const qrDU=_qrDU(`CTP|100|${key}`);
+  // ── PÁGINA 1: CARTILLA ──────────────────────────────────────────────────────
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...BLK);
+  doc.text('ACADEMIA CHARLY TÁCTICO TEDAX',PW/2,M+4,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GRY);
+  doc.text('PLANTILLA DE RESPUESTAS — '+titulo.toUpperCase(),PW/2,M+9,{align:'center'});
+  doc.setFontSize(7);doc.text(fecha,PW-M,M+4,{align:'right'});
+  doc.setDrawColor(...LGT);doc.setLineWidth(0.2);doc.line(M,M+11,PW-M,M+11);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...GRY);
+  doc.text('Rellene el círculo de la alternativa elegida. Solo marque las filas con fondo claro (con alternativa).',M,M+16.5);
+  // Marcas de registro 7×7mm a 3mm del borde (idénticas a cartilla vocabulario)
+  const MK=7,MP=3;
+  doc.setFillColor(0,0,0);
+  doc.rect(MP,MP,MK,MK,'F');doc.rect(210-MP-MK,MP,MK,MK,'F');
+  doc.rect(MP,297-MP-MK,MK,MK,'F');doc.rect(210-MP-MK,297-MP-MK,MK,MK,'F');
+  // Borde de la grilla
+  doc.setDrawColor(...LGT);doc.setLineWidth(0.2);doc.rect(GX,GY,GW,200,'S');
+  // 4 columnas × 25 filas
+  for(let g=0;g<4;g++){
+    const gx=CX0+g*(GRP_W+GAP);
+    const q0=g*25;
+    // Cabecera A B C D
+    const hY=GY+RM+HDR-1.5;
+    doc.setFont('helvetica','bold');doc.setFontSize(6);doc.setTextColor(...GRY);
+    ['A','B','C','D'].forEach((l,ci)=>doc.text(l,gx+BA+ci*BS,hY,{align:'center'}));
+    // Filas
+    for(let r=0;r<25;r++){
+      const qi=q0+r,ry=GY+RM+HDR+r*RH,cy=ry+RH/2;
+      const k=key[qi]||'-',active=k!=='-';
+      if(active){
+        if(r%2===0){doc.setFillColor(255,252,230);doc.rect(gx,ry,GRP_W,RH,'F');}
+      } else {
+        doc.setFillColor(242,242,242);doc.rect(gx,ry,GRP_W,RH,'F');
+      }
+      doc.setFont('helvetica',active?'bold':'normal');doc.setFontSize(6.5);
+      doc.setTextColor(...(active?BLK:[200,200,200]));
+      doc.text(`${qi+1}`,gx+QW-1.5,cy+2,{align:'right'});
+      if(active){
+        doc.setDrawColor(60,60,60);doc.setLineWidth(0.35);
+        for(let ci=0;ci<4;ci++)doc.circle(gx+BA+ci*BS,cy,BR,'S');
+      } else {
+        doc.setDrawColor(210,210,210);doc.setLineWidth(0.2);
+        doc.line(gx+BA-2,cy,gx+BA+3*BS+2,cy);
+      }
+    }
+  }
+  // ── PÁGINA 2: HOJA DOCENTE ──────────────────────────────────────────────────
+  const QR_SZ=60;
+  doc.addPage();
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...BLK);
+  doc.text('ACADEMIA CHARLY TÁCTICO TEDAX',PW/2,M+4,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GRY);
+  doc.text('HOJA DOCENTE — '+titulo.toUpperCase(),PW/2,M+9,{align:'center'});
+  doc.setFontSize(7);doc.text(fecha,PW-M,M+4,{align:'right'});
+  doc.setDrawColor(...LGT);doc.setLineWidth(0.2);doc.line(M,M+11,PW-M,M+11);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(40,40,40);
+  doc.text('CONFIDENCIAL — NO DISTRIBUIR AL ALUMNO',PW/2,M+17,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GRY);
+  doc.text(`${activeCount} preguntas con alternativas (A–D)`,PW/2,M+22,{align:'center'});
+  const qrX=(PW-QR_SZ)/2,qrYY=M+26;
+  doc.addImage(qrDU,'PNG',qrX,qrYY,QR_SZ,QR_SZ);
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRY);
+  doc.text('Escanear con app Charly Táctico → Escáner Cartilla',PW/2,qrYY+QR_SZ+5,{align:'center'});
+  const kyY=qrYY+QR_SZ+14;
+  doc.setDrawColor(...LGT);doc.setLineWidth(0.25);doc.line(M,kyY,PW-M,kyY);
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...BLK);
+  doc.text('CLAVE DE RESPUESTAS',PW/2,kyY+6,{align:'center'});
+  const KPL=10,cellWk=(PW-2*M)/KPL;
+  let numP=0;
+  key.split('').forEach((k,qi)=>{
+    if(k==='-')return;
+    const row=Math.floor(numP/KPL),c2=numP%KPL;
+    const kx=M+c2*cellWk,ky2=kyY+10+row*5.5;
+    doc.setFont('helvetica','normal');doc.setTextColor(...GRY);doc.text(`${qi+1}.`,kx,ky2+3);
+    doc.setFont('helvetica','bold');doc.setTextColor(...BLK);doc.text(k,kx+8,ky2+3);
+    numP++;
+  });
+  doc.save(`plantilla_${slug}_${GP.cfg.fecha||new Date().toISOString().slice(0,10)}.pdf`);
 }
 // ── Toast global ─────────────────────────────────────────────────────────────
 let _toastTimer=null;

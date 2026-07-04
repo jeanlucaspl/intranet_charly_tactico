@@ -890,8 +890,9 @@ const REG_MM = [
 /* ═══════════════════════════════════════════════════════════════════
    APP STATE
 ═══════════════════════════════════════════════════════════════════ */
-let examKey     = null;   // array de chars ['A','B','C',...]
-let examN       = 0;
+let examKey     = null;   // array de chars ['A','B','C',...] o '-' para práctica
+let examN       = 0;      // preguntas activas (con alternativa)
+let examMode    = 'vocab'; // 'vocab' | 'practica'
 let serverIP    = '';     // ip:puerto del servidor OMR (vacío = mismo origen)
 let mediaStream = null;
 let qrLoopActive = false;
@@ -1126,6 +1127,16 @@ function qrLoop() {
 }
 
 function onQRDetected(data) {
+  // Práctica: CTP|100|[100-char key, '-' = sin alternativa]
+  if (data.startsWith('CTP|')) {
+    const parts = data.split('|');
+    if (parts.length < 3) { showToast('QR de práctica inválido', false); qrLoopActive = true; qrLoop(); return; }
+    const key = parts[2].toUpperCase();
+    if (key.length < 100) { showToast('QR de práctica con formato incorrecto', false); qrLoopActive = true; qrLoop(); return; }
+    loadKeyPractica(key);
+    return;
+  }
+  // Vocabulario: CT|N|KEY
   const parts = data.split('|');
   if (parts.length < 3 || parts[0] !== 'CT') {
     showToast('QR inválido — no es una cartilla Charly Táctico', false);
@@ -1140,6 +1151,21 @@ function onQRDetected(data) {
     return;
   }
   loadKey(n, key);
+}
+
+function loadKeyPractica(key) {
+  examMode = 'practica';
+  examKey  = key.slice(0, 100).split('');
+  examN    = examKey.filter(c => c !== '-').length; // solo preguntas con alternativa
+  saveExamKey();
+  updateBadge();
+  const st = document.getElementById('qr-status');
+  st.className = 'qr-status success';
+  st.textContent = `✓ Clave práctica — ${examN} preguntas con alternativa`;
+  const badgeHtml = `<div class="badge badge-lime">✓ Práctica: ${examN} pregs A–D / 100</div>`;
+  document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
+  document.getElementById('student-key-badge').innerHTML = badgeHtml;
+  setTimeout(() => { showScreen('screen-student'); }, 900);
 }
 
 function loadKey(n, keyStr) {
@@ -1177,8 +1203,8 @@ function toggleManual() {
 
 function applyManualCode() {
   const val = document.getElementById('manual-input').value.trim().toUpperCase();
-  if (!val.startsWith('CT|')) {
-    showToast('El código debe empezar con CT|', false);
+  if (!val.startsWith('CT|') && !val.startsWith('CTP|')) {
+    showToast('El código debe empezar con CT| o CTP|', false);
     return;
   }
   onQRDetected(val);
@@ -1273,7 +1299,7 @@ async function sendOMR() {
   showProc('Enviando al servidor OMR...');
   const fd = new FormData();
   fd.append('image', capturedBlob, 'cartilla.jpg');
-  fd.append('n', examN);
+  fd.append('n', examMode === 'practica' ? 100 : examN);
   try {
     const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
     const resp = await fetch(`${apiBase}/process`, {
@@ -1550,6 +1576,8 @@ function renderResult(results) {
 
   results.forEach(r => {
     const expec = examKey[r.q - 1] || '?';
+    // Modo práctica: omitir preguntas sin alternativa
+    if (examMode === 'practica' && expec === '-') return;
     const ok    = r.status === 'ok' && r.detected === expec;
     if (ok) correct++;
     let mark;
@@ -1562,7 +1590,7 @@ function renderResult(results) {
     tbody.appendChild(tr);
   });
 
-  const total   = examN;
+  const total   = examN; // activeCount para práctica, examN para vocab
   const pct     = Math.round(correct / total * 100);
   const notaRaw = correct / total * 20;
   const nota    = Math.round(notaRaw);   // ≥.5 sube, <.5 baja
@@ -1658,7 +1686,7 @@ function clearSession() {
 function saveExamKey() {
   try {
     if (examKey && examN) {
-      localStorage.setItem('omr_exam_key', JSON.stringify({ n: examN, key: examKey }));
+      localStorage.setItem('omr_exam_key', JSON.stringify({ n: examN, key: examKey, mode: examMode }));
     }
   } catch(_) {}
 }
@@ -1667,18 +1695,20 @@ function loadExamKey() {
   try {
     const saved = localStorage.getItem('omr_exam_key');
     if (!saved) return false;
-    const { n, key } = JSON.parse(saved);
+    const { n, key, mode } = JSON.parse(saved);
     if (!n || !key || !key.length) return false;
-    examN   = n;
-    examKey = key;
+    examN    = n;
+    examKey  = key;
+    examMode = mode || 'vocab';
     return true;
   } catch(_) { return false; }
 }
 
 function clearExamKey() {
   try { localStorage.removeItem('omr_exam_key'); } catch(_) {}
-  examKey = null;
-  examN   = 0;
+  examKey  = null;
+  examN    = 0;
+  examMode = 'vocab';
 }
 
 async function loadMateria() {
