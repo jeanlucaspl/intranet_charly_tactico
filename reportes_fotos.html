@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Reportes con Fotos · Charly Táctico</title>
+  <link rel="icon" href="./favicon.ico" sizes="any"/>
+  <link rel="icon" href="./icons/icon-32.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="./icons/icon-180.png"/>
+  <meta name="theme-color" content="#080C10"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:  #080C10;
+      --gold:   #C9A84C;
+      --gold2:  #e5c46a;
+      --lime:   #9DD900;
+      --fern:   #1A4A16;
+      --chalk:  #F0F4F8;
+      --red:    #E05555;
+      --green:  #28a745;
+      --navy:   #0d1520;
+      --navy2:  #0d1117;
+      --navy3:  #13191f;
+      --border: rgba(201,168,76,.15);
+      --muted:  #8892a0;
+      --white:  #F0F4F8;
+    }
+
+    html { background: var(--black); }
+    body {
+      background: var(--black);
+      color: var(--chalk);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,.022) 1px, transparent 1px);
+      background-size: 52px 52px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 54px;
+      background: rgba(8,12,16,.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 18px; z-index: 100; gap: 10px;
+    }
+    .tb-back {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); background: none; border: none;
+      cursor: pointer; text-decoration: none;
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 10px; transition: color .2s;
+    }
+    .tb-back:hover { color: var(--gold); }
+    .tb-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 19px; letter-spacing: .05em; color: var(--gold);
+    }
+    .tb-brand span { color: var(--chalk); }
+    .tb-sep { flex: 1; }
+    .tb-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--muted); background: var(--navy3);
+      transition: all .3s;
+    }
+    .tb-badge.loaded { color: var(--lime); border-color: var(--lime); background: rgba(157,217,0,.08); }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      position: relative; z-index: 1;
+      padding: 74px 24px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── PAGE HEADER ── */
+    .ph {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .ph-eye {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .3em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .ph-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px; letter-spacing: .08em;
+      color: var(--chalk); line-height: 1;
+    }
+
+    /* ── GRID ── */
+    .rf-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .rf-col { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── FORM ELEMENTS ── */
+    .rf-card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .rf-label {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .rf-input {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .rf-input:focus { border-color: var(--gold); }
+    .rf-input::placeholder { color: var(--muted); }
+    select.rf-input { cursor: pointer; }
+    .rf-field { display: flex; flex-direction: column; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .15em; text-transform: uppercase;
+      border: none; cursor: pointer;
+      padding: 10px 18px;
+      transition: all .2s;
+    }
+    .btn-gold {
+      background: var(--gold); color: var(--black);
+    }
+    .btn-gold:hover { background: var(--gold2); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── PRÁCTICA CARD ── */
+    .rf-practica-card {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .rf-thumb {
+      height: 52px; width: auto; max-width: 90px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      cursor: pointer; border-radius: 2px;
+    }
+
+    /* ── AUTOCOMPLETE DROP ── */
+    .rf-drop-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      display: flex; flex-direction: column; gap: 2px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .rf-drop-item:hover { background: rgba(201,168,76,.08); }
+    .rf-drop-item:last-child { border-bottom: none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .rf-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .main { padding: 70px 14px 32px; }
+      .rf-input { font-size: 14px; padding: 11px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="tb-back" href="./admin.html">&#8592; ADMIN</a>
+  <div class="tb-brand">CHARLY TÁCTICO <span>TEDAX</span></div>
+  <div class="tb-sep"></div>
+  <div class="tb-badge" id="tb-status">Cargando...</div>
+</div>
+
+<div class="main">
+
+  <div class="ph">
+    <div>
+      <div class="ph-eye">Evaluaciones académicas</div>
+      <div class="ph-title">REPORTES CON FOTOS</div>
+    </div>
+    <button class="btn btn-outline" style="font-size:11px;padding:6px 16px;color:var(--red);border-color:rgba(224,85,85,.4);align-self:center" onclick="rfPurgarFotos()">
+      Purgar fotos de Supabase
+    </button>
+  </div>
+
+  <div class="rf-grid">
+
+    <!-- ── COLUMNA IZQUIERDA: datos del reporte ── -->
+    <div class="rf-col">
+      <div class="rf-card">
+
+        <div class="rf-field">
+          <label class="rf-label">Alumno</label>
+          <div style="position:relative">
+            <input id="rf-alumno-input" class="rf-input" type="text"
+                   placeholder="Buscar por apellido o DNI..."
+                   autocomplete="off"
+                   oninput="rfFiltrarAlumnos(this.value)"
+                   onfocus="rfFiltrarAlumnos(this.value)"/>
+            <div id="rf-alumno-drop"
+                 style="display:none;position:absolute;top:100%;left:0;right:0;
+                        background:var(--navy2);border:1px solid var(--gold);
+                        border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
+          </div>
+          <div id="rf-alumno-badge"
+               style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;
+                      font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--lime)"></div>
+          <input type="hidden" id="rf-alumno-id"/>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="rf-field">
+            <label class="rf-label">Fecha</label>
+            <input type="date" id="rf-fecha" class="rf-input" style="color-scheme:dark"/>
+          </div>
+          <div class="rf-field">
+            <label class="rf-label">Tipo</label>
+            <input type="text" id="rf-tipo" class="rf-input" placeholder="Ej: Examen mensual"/>
+          </div>
+        </div>
+
+        <div class="rf-field">
+          <label class="rf-label">Observaciones
+            <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">(opcional)</span>
+          </label>
+          <textarea id="rf-obs" class="rf-input" rows="3" placeholder="Notas adicionales..." style="resize:vertical"></textarea>
+        </div>
+
+        <div id="rf-msg" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;min-height:16px"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-gold" style="flex:1;min-width:140px;font-size:13px;padding:12px" onclick="rfGenerarPDF()">
+            ↓ Generar PDF
+          </button>
+          <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="rfLimpiar()">
+            Limpiar
+          </button>
+        </div>
+
+      </div>
+    </div><!-- /col izquierda -->
+
+    <!-- ── COLUMNA DERECHA: prácticas ── -->
+    <div class="rf-col">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <label class="rf-label" style="margin-bottom:0">Prácticas</label>
+        <button class="btn btn-outline" style="font-size:11px;padding:5px 14px" onclick="rfAgregarPractica()">+ Agregar práctica</button>
+      </div>
+      <div id="rf-practicas-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div><!-- /col derecha -->
+
+  </div><!-- /rf-grid -->
+</div><!-- /main -->
+
+<script>
+/* ── Supabase ── */
+const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let allAlumnos = [];
+
+async function initPage(){
+  const badge = document.getElementById('tb-status');
+  document.getElementById('rf-fecha').value = new Date().toISOString().slice(0,10);
+
+  const { data, error } = await sb.from('alumnos')
+    .select('*,perfiles(nombre,apellido,dni,telefono)')
+    .order('creado_en');
+
+  if(error){
+    badge.textContent = 'Error al cargar';
+    badge.style.color = 'var(--red)';
+    return;
+  }
+  allAlumnos = (data||[]).filter(a => a.activo !== false);
+  badge.textContent = `${allAlumnos.length} alumnos`;
+  badge.classList.add('loaded');
+
+  rfAgregarPractica();
+  rfRenderPracticas();
+}
+
+/* ── Estado ── */
+const RF = {
+  alumnoId: null,
+  alumnoNombre: '',
+  alumnoDni: '',
+  practicas: [],
+  _uploadedPaths: [],
+};
+
+function rfLoadPaths(){
+  try { RF._uploadedPaths = JSON.parse(localStorage.getItem('rf_uploaded_paths')||'[]'); } catch(_){}
+}
+function rfSavePaths(){
+  try { localStorage.setItem('rf_uploaded_paths', JSON.stringify(RF._uploadedPaths)); } catch(_){}
+}
+rfLoadPaths();
+
+/* ── Alumno autocomplete ── */
+function rfFiltrarAlumnos(q){
+  const drop = document.getElementById('rf-alumno-drop');
+  if(!q || q.length < 2){ drop.style.display='none'; return; }
+  const ql = q.toLowerCase();
+  const matches = allAlumnos.filter(a =>
+    (a.perfiles?.apellido||'').toLowerCase().includes(ql)||
+    (a.perfiles?.nombre||'').toLowerCase().includes(ql)||
+    (a.perfiles?.dni||'').includes(q)
+  ).slice(0,8);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML = matches.map((a,i) => `
+    <div class="rf-drop-item" onclick="rfSeleccionarAlumno(${i})">
+      <span style="font-weight:700;text-transform:uppercase">${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</span>
+      <span style="color:var(--muted);font-size:11px">${a.perfiles?.dni||''}</span>
+    </div>`).join('');
+  drop.dataset.matches = JSON.stringify(matches.map(a=>({
+    id: a.id,
+    nombre: `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`,
+    dni: a.perfiles?.dni||''
+  })));
+  drop.style.display = 'block';
+}
+
+function rfSeleccionarAlumno(idx){
+  const matches = JSON.parse(document.getElementById('rf-alumno-drop').dataset.matches||'[]');
+  const a = matches[idx]; if(!a) return;
+  RF.alumnoId     = a.id;
+  RF.alumnoNombre = a.nombre;
+  RF.alumnoDni    = a.dni;
+  document.getElementById('rf-alumno-input').value  = a.nombre.toUpperCase();
+  document.getElementById('rf-alumno-id').value     = a.id;
+  document.getElementById('rf-alumno-badge').textContent = `✓ ${a.nombre.toUpperCase()} · DNI ${a.dni}`;
+  document.getElementById('rf-alumno-badge').style.display = '';
+  document.getElementById('rf-alumno-drop').style.display  = 'none';
+}
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('#rf-alumno-input') && !e.target.closest('#rf-alumno-drop'))
+    document.getElementById('rf-alumno-drop').style.display = 'none';
+});
+
+/* ── Prácticas ── */
+function rfAgregarPractica(){
+  const idx = RF.practicas.length;
+  RF.practicas.push({ nombre:`Práctica ${idx+1}`, nota:'', notaMax:20, fotoUrl:null, fotoPath:null, _blobUrl:null });
+  rfRenderPracticas();
+}
+
+function rfEliminarPractica(idx){
+  RF.practicas.splice(idx, 1);
+  rfRenderPracticas();
+}
+
+function rfUpdatePractica(idx, campo, valor){
+  if(RF.practicas[idx]) RF.practicas[idx][campo] = valor;
+}
+
+function rfRenderPracticas(){
+  const list = document.getElementById('rf-practicas-list');
+  if(!RF.practicas.length){
+    list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:12px;padding:8px 0">Sin prácticas. Haz clic en + Agregar.</div>';
+    return;
+  }
+  list.innerHTML = RF.practicas.map((p,i) => `
+    <div class="rf-practica-card">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="text" value="${p.nombre}" placeholder="Nombre"
+          onchange="rfUpdatePractica(${i},'nombre',this.value)"
+          style="flex:1;background:var(--navy);border:1px solid var(--border);color:var(--white);
+                 padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;outline:none"/>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;color:var(--red);border-color:rgba(224,85,85,.4)"
+                onclick="rfEliminarPractica(${i})">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
+                        letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Nota</label>
+          <input type="number" value="${p.nota}" min="0" max="${p.notaMax}" step="0.5" placeholder="—"
+            oninput="rfUpdatePractica(${i},'nota',this.value)"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);
+                   padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;outline:none"/>
+        </div>
+        <div>
+          <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
+                        letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Puntaje máx.</label>
+          <input type="number" value="${p.notaMax}" min="1" step="1"
+            oninput="rfUpdatePractica(${i},'notaMax',this.value)"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);
+                   padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;outline:none"/>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline" style="font-size:11px;padding:6px 14px" onclick="rfAbrirCamara(${i})">
+          📷 Tomar foto
+        </button>
+        <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;
+                      letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;
+                      border:1px solid var(--border);padding:6px 14px;transition:all .2s"
+               onmouseenter="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+               onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+          Subir archivo
+          <input type="file" accept="image/*" style="display:none" onchange="rfSubirArchivoFoto(${i},this)"/>
+        </label>
+        ${p.fotoUrl
+          ? `<img src="${p._blobUrl||p.fotoUrl}" class="rf-thumb" onclick="rfVerFoto(${i})" title="Ver foto"/>
+             <button class="btn btn-outline" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(224,85,85,.3)"
+                     onclick="rfQuitarFoto(${i})">Quitar</button>`
+          : '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:var(--muted)">Sin foto</span>'
+        }
+      </div>
+    </div>`).join('');
+}
+
+/* ── Cámara ── */
+let _rfCamaraStream = null;
+let _rfCamaraIdx = -1;
+
+function rfAbrirCamara(idx){
+  _rfCamaraIdx = idx;
+  let modal = document.getElementById('rf-cam-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'rf-cam-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+    modal.innerHTML = `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">TOMAR FOTO — PRÁCTICA</div>
+      <video id="rf-cam-video" autoplay muted playsinline style="max-width:min(90vw,520px);max-height:60vh;object-fit:contain;border:1px solid var(--border)"></video>
+      <canvas id="rf-cam-canvas" style="display:none"></canvas>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-gold" style="font-size:14px;padding:12px 28px" onclick="rfCapturarFoto()">Capturar</button>
+        <button class="btn btn-outline" style="font-size:13px;padding:12px 20px" onclick="rfCerrarCamara()">Cancelar</button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } })
+    .then(stream => {
+      _rfCamaraStream = stream;
+      document.getElementById('rf-cam-video').srcObject = stream;
+    })
+    .catch(() => { modal.style.display='none'; rfMsg('No se pudo acceder a la cámara','err'); });
+}
+
+function rfCerrarCamara(){
+  if(_rfCamaraStream){ _rfCamaraStream.getTracks().forEach(t=>t.stop()); _rfCamaraStream=null; }
+  const m = document.getElementById('rf-cam-modal'); if(m) m.style.display='none';
+}
+
+async function rfCapturarFoto(){
+  const video  = document.getElementById('rf-cam-video');
+  const canvas = document.getElementById('rf-cam-canvas');
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  rfCerrarCamara();
+  canvas.toBlob(async blob => {
+    await rfAsignarFoto(_rfCamaraIdx, blob);
+  }, 'image/jpeg', 0.88);
+}
+
+async function rfSubirArchivoFoto(idx, input){
+  const file = input.files[0]; if(!file) return;
+  await rfAsignarFoto(idx, file);
+  input.value = '';
+}
+
+async function rfAsignarFoto(idx, blob){
+  rfMsg('Subiendo foto...','');
+  const path = `reportes-temp/${Date.now()}_${idx}.jpg`;
+  const { data, error } = await sb.storage.from('banco-preguntas').upload(path, blob, { contentType:'image/jpeg', upsert:true });
+  if(error){ rfMsg('Error al subir foto: '+error.message,'err'); return; }
+  const { data: urlData } = sb.storage.from('banco-preguntas').getPublicUrl(path);
+  RF.practicas[idx].fotoUrl  = urlData.publicUrl;
+  RF.practicas[idx].fotoPath = path;
+  RF.practicas[idx]._blobUrl = URL.createObjectURL(blob);
+  RF._uploadedPaths.push(path);
+  rfSavePaths();
+  rfRenderPracticas();
+  rfMsg('Foto subida','ok');
+}
+
+function rfQuitarFoto(idx){
+  if(RF.practicas[idx]._blobUrl) URL.revokeObjectURL(RF.practicas[idx]._blobUrl);
+  RF.practicas[idx].fotoUrl  = null;
+  RF.practicas[idx].fotoPath = null;
+  RF.practicas[idx]._blobUrl = null;
+  rfRenderPracticas();
+}
+
+function rfVerFoto(idx){
+  const p = RF.practicas[idx]; if(!p?.fotoUrl) return;
+  window.open(p._blobUrl||p.fotoUrl, '_blank');
+}
+
+/* ── Purgar fotos ── */
+async function rfPurgarFotos(){
+  if(!confirm('¿Eliminar todas las fotos temporales subidas a Supabase? Esta acción no se puede deshacer.')) return;
+  const paths = [...RF._uploadedPaths];
+  if(!paths.length){ rfMsg('No hay fotos registradas para purgar',''); return; }
+  let ok=0, fail=0;
+  for(const p of paths){
+    const {error} = await sb.storage.from('banco-preguntas').remove([p]);
+    error ? fail++ : ok++;
+  }
+  RF._uploadedPaths = [];
+  rfSavePaths();
+  RF.practicas.forEach(p=>{ p.fotoUrl=null; p.fotoPath=null; p._blobUrl=null; });
+  rfRenderPracticas();
+  rfMsg(`Purgado: ${ok} eliminadas${fail?', '+fail+' errores':''}`, fail?'err':'ok');
+}
+
+/* ── Limpiar ── */
+function rfLimpiar(){
+  RF.alumnoId=null; RF.alumnoNombre=''; RF.alumnoDni='';
+  RF.practicas=[{ nombre:'Práctica 1', nota:'', notaMax:20, fotoUrl:null, fotoPath:null, _blobUrl:null }];
+  document.getElementById('rf-alumno-input').value='';
+  document.getElementById('rf-alumno-id').value='';
+  document.getElementById('rf-alumno-badge').style.display='none';
+  document.getElementById('rf-obs').value='';
+  document.getElementById('rf-tipo').value='';
+  rfRenderPracticas();
+  rfMsg('','');
+}
+
+/* ── Generar PDF ── */
+async function rfGenerarPDF(){
+  if(!RF.alumnoId){ rfMsg('Selecciona un alumno','err'); return; }
+  if(!RF.practicas.length){ rfMsg('Agrega al menos una práctica','err'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210, M=10;
+  const BLACK=[8,12,16], GOLD=[201,168,76], CHALK=[240,244,248];
+  const MUTED=[100,110,120], DARK2=[20,28,36], OK=[26,122,26], ERR=[192,57,43];
+
+  const fecha    = document.getElementById('rf-fecha').value || new Date().toISOString().slice(0,10);
+  const tipo     = document.getElementById('rf-tipo').value.trim() || 'Evaluación académica';
+  const obs      = document.getElementById('rf-obs').value.trim();
+  const fechaFmt = new Date(fecha+'T12:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+
+  // HEADER
+  doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
+  doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
+  doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
+  doc.text(tipo.toUpperCase(),M,11.5);
+
+  // META
+  doc.setFillColor(...DARK2); doc.rect(0,13,PW,10,'F');
+  doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...MUTED);
+  doc.text('ALUMNO',M,16.5); doc.text('DNI',120,16.5); doc.text('FECHA',165,16.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220,224,228);
+  doc.text(RF.alumnoNombre.toUpperCase(),M,21.5);
+  doc.text(RF.alumnoDni||'—',120,21.5);
+  doc.text(fechaFmt,165,21.5);
+
+  let y = 27;
+
+  // TABLA NOTAS
+  const rows = RF.practicas.map(p=>{
+    const n = parseFloat(p.nota);
+    const m = parseFloat(p.notaMax)||20;
+    const ok = !isNaN(n);
+    return [p.nombre, ok?`${n}`:' — ', `${m}`, ok?`${Math.round(n/m*100)}%`:' — '];
+  });
+
+  doc.autoTable({
+    startY: y, margin:{left:M,right:M},
+    head:[['PRÁCTICA','NOTA','MÁXIMO','%']],
+    body: rows,
+    styles:{fontSize:8.5,cellPadding:2.5,textColor:[20,20,20]},
+    headStyles:{fillColor:BLACK,textColor:GOLD,fontStyle:'bold',fontSize:7.5,lineWidth:0},
+    bodyStyles:{lineWidth:0.1,lineColor:[210,210,210]},
+    alternateRowStyles:{fillColor:[248,249,250]},
+    columnStyles:{1:{halign:'center',fontStyle:'bold'},2:{halign:'center'},3:{halign:'center',fontStyle:'bold'}},
+    didParseCell: d=>{
+      if(d.section==='body' && d.column.index===3){
+        const pct = parseInt(d.cell.raw);
+        if(!isNaN(pct)) d.cell.styles.textColor = pct>=60 ? OK : ERR;
+      }
+    },
+  });
+
+  y = doc.lastAutoTable.finalY + 6;
+
+  // Observaciones
+  if(obs){
+    doc.setFillColor(235,237,240); doc.rect(M,y,PW-2*M,12,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+    doc.text('OBSERVACIONES',M+3,y+4.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,40,40);
+    const lines = doc.splitTextToSize(obs,PW-2*M-6);
+    doc.text(lines,M+3,y+9);
+    y += Math.max(12,lines.length*4+6)+4;
+  }
+
+  // FOTOS — una página por práctica
+  const conFoto = RF.practicas.filter(p=>p.fotoUrl);
+  for(const p of conFoto){
+    let imgData = null;
+    try {
+      imgData = await new Promise((resolve,reject)=>{
+        const img = new Image(); img.crossOrigin='anonymous';
+        img.onload=()=>{
+          const c = document.createElement('canvas');
+          c.width=img.naturalWidth; c.height=img.naturalHeight;
+          c.getContext('2d').drawImage(img,0,0);
+          resolve(c.toDataURL('image/jpeg',0.85));
+        };
+        img.onerror=()=>reject(new Error('img load failed'));
+        img.src = p._blobUrl||p.fotoUrl;
+      });
+    } catch(_){}
+    if(!imgData) continue;
+
+    doc.addPage();
+    doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
+    doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
+    doc.text(`${p.nombre.toUpperCase()} · ${RF.alumnoNombre.toUpperCase()}`,M,11.5);
+
+    const maxW=PW-2*M, maxH=297-13-6-8;
+    const tmp=new Image(); tmp.src=imgData;
+    const ratio=(tmp.naturalHeight/tmp.naturalWidth)||1;
+    let iW=maxW, iH=iW*ratio;
+    if(iH>maxH){ iH=maxH; iW=iH/ratio; }
+    const ix=M+(maxW-iW)/2;
+    doc.addImage(imgData,'JPEG',ix,16,iW,iH);
+  }
+
+  // Footer
+  const np=doc.internal.getNumberOfPages();
+  for(let i=1;i<=np;i++){
+    doc.setPage(i);
+    doc.setFillColor(...BLACK); doc.rect(0,290,PW,7,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+    doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,294);
+    doc.text(`${i}/${np}`,PW-M,294,{align:'right'});
+  }
+
+  // Nombre archivo
+  const partes = RF.alumnoNombre.toUpperCase().trim().split(/\s+/);
+  const ape=partes[0]||'ALUMNO', nom=partes[1]||'';
+  const dni=RF.alumnoDni||'00000000';
+  const fname=`${nom}_${ape}_${dni}_${fecha}.pdf`.replace(/[^A-Z0-9_\.]/gi,'_');
+  doc.save(fname);
+  rfMsg('PDF generado','ok');
+}
+
+function rfMsg(txt, tipo){
+  const el = document.getElementById('rf-msg');
+  if(!el) return;
+  el.textContent = txt;
+  el.style.color = tipo==='ok'?'var(--lime)':tipo==='err'?'var(--red)':'var(--muted)';
+}
+
+/* ── Init ── */
+initPage();
+</script>
+</body>
+</html>
