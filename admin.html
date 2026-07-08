@@ -9507,7 +9507,22 @@ async function wn_save() {
 <!-- ══════════════════════════════════════════════════════════════════
      PANEL: REPORTES CON FOTOS
 ══════════════════════════════════════════════════════════════════ -->
-<div class="panel" id="panel-reportes-fotos" style="padding:0">
+<style>
+  .rf-label{display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .rf-input{width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s;box-sizing:border-box}
+  .rf-input:focus{border-color:var(--gold)}
+  .rf-input::placeholder{color:var(--muted)}
+  .rf-grid{display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start}
+  .rf-col{display:flex;flex-direction:column;gap:16px}
+  .rf-field{display:flex;flex-direction:column}
+  .rf-practica-card{background:var(--navy2);border:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:12px}
+  .rf-foto-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .rf-thumb{height:52px;width:auto;max-width:90px;object-fit:cover;border:1px solid var(--border);cursor:pointer;border-radius:2px}
+  @media(max-width:860px){.rf-grid{grid-template-columns:1fr}}
+  @media(max-width:480px){.rf-input{font-size:14px;padding:11px 12px}}
+</style>
+
+<div class="panel" id="panel-reportes-fotos">
   <div class="ph">
     <div class="ph-left">
       <div class="eye">Evaluaciones académicas</div>
@@ -9518,60 +9533,65 @@ async function wn_save() {
     </button>
   </div>
 
-  <div style="max-width:640px;padding:0 20px 24px">
+  <!-- layout PC: 2 columnas / mobile: 1 columna -->
+  <div class="rf-grid">
 
-    <!-- Alumno -->
-    <div style="margin-bottom:16px">
-      <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Alumno</label>
-      <div style="position:relative">
-        <input id="rf-alumno-input" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" type="text" placeholder="Buscar por apellido o DNI..."
-               autocomplete="off" oninput="rfFiltrarAlumnos(this.value)" onfocus="rfFiltrarAlumnos(this.value)"
-               style="width:100%"/>
-        <div id="rf-alumno-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
-      </div>
-      <div id="rf-alumno-badge" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--lime)"></div>
-      <input type="hidden" id="rf-alumno-id"/>
-    </div>
+    <!-- COLUMNA IZQUIERDA: datos del reporte -->
+    <div class="rf-col">
 
-    <!-- Fecha y tipo -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div>
-        <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Fecha de evaluación</label>
-        <input type="date" id="rf-fecha" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" style="width:100%"/>
+      <div class="rf-field">
+        <label class="rf-label">Alumno</label>
+        <div style="position:relative">
+          <input id="rf-alumno-input" class="rf-input" type="text"
+                 placeholder="Buscar por apellido o DNI..."
+                 autocomplete="off"
+                 oninput="rfFiltrarAlumnos(this.value)"
+                 onfocus="rfFiltrarAlumnos(this.value)"/>
+          <div id="rf-alumno-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
+        </div>
+        <div id="rf-alumno-badge" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--lime)"></div>
+        <input type="hidden" id="rf-alumno-id"/>
       </div>
-      <div>
-        <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Tipo de evaluación</label>
-        <input type="text" id="rf-tipo" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" placeholder="Ej: Examen mensual" style="width:100%"/>
-      </div>
-    </div>
 
-    <!-- Prácticas -->
-    <div style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Prácticas</label>
-        <button class="btn btn-outline" style="font-size:11px;padding:4px 12px" onclick="rfAgregarPractica()">+ Agregar</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="rf-field">
+          <label class="rf-label">Fecha</label>
+          <input type="date" id="rf-fecha" class="rf-input" style="color-scheme:dark"/>
+        </div>
+        <div class="rf-field">
+          <label class="rf-label">Tipo</label>
+          <input type="text" id="rf-tipo" class="rf-input" placeholder="Ej: Examen mensual"/>
+        </div>
+      </div>
+
+      <div class="rf-field">
+        <label class="rf-label">Observaciones <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">(opcional)</span></label>
+        <textarea id="rf-obs" class="rf-input" rows="3" placeholder="Notas adicionales..." style="resize:vertical"></textarea>
+      </div>
+
+      <div id="rf-msg" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;min-height:16px"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-gold" style="flex:1;min-width:140px;font-size:13px;padding:12px" onclick="rfGenerarPDF()">
+          ↓ Generar PDF
+        </button>
+        <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="rfLimpiar()">
+          Limpiar
+        </button>
+      </div>
+
+    </div><!-- /col izquierda -->
+
+    <!-- COLUMNA DERECHA: prácticas -->
+    <div class="rf-col">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <label class="rf-label" style="margin-bottom:0">Prácticas</label>
+        <button class="btn btn-outline" style="font-size:11px;padding:5px 14px" onclick="rfAgregarPractica()">+ Agregar práctica</button>
       </div>
       <div id="rf-practicas-list" style="display:flex;flex-direction:column;gap:10px"></div>
-    </div>
+    </div><!-- /col derecha -->
 
-    <!-- Observaciones -->
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Observaciones <span style="font-weight:400;letter-spacing:0;text-transform:none">(opcional)</span></label>
-      <textarea id="rf-obs" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" rows="2" placeholder="Notas adicionales..." style="width:100%;resize:vertical"></textarea>
-    </div>
-
-    <!-- Acciones -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-gold" style="flex:1;min-width:160px;font-size:13px;padding:12px" onclick="rfGenerarPDF()">
-        ↓ Generar PDF
-      </button>
-      <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="rfLimpiar()">
-        Limpiar formulario
-      </button>
-    </div>
-
-    <div id="rf-msg" style="margin-top:10px;font-family:'Barlow Condensed',sans-serif;font-size:12px;min-height:18px"></div>
-  </div>
+  </div><!-- /rf-grid -->
 </div>
 
 <script>
