@@ -9524,7 +9524,7 @@ async function wn_save() {
     <div style="margin-bottom:16px">
       <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Alumno</label>
       <div style="position:relative">
-        <input id="rf-alumno-input" class="fg-input" type="text" placeholder="Buscar por apellido o DNI..."
+        <input id="rf-alumno-input" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" type="text" placeholder="Buscar por apellido o DNI..."
                autocomplete="off" oninput="rfFiltrarAlumnos(this.value)" onfocus="rfFiltrarAlumnos(this.value)"
                style="width:100%"/>
         <div id="rf-alumno-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
@@ -9537,11 +9537,11 @@ async function wn_save() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Fecha de evaluación</label>
-        <input type="date" id="rf-fecha" class="fg-input" style="width:100%"/>
+        <input type="date" id="rf-fecha" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" style="width:100%"/>
       </div>
       <div>
         <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Tipo de evaluación</label>
-        <input type="text" id="rf-tipo" class="fg-input" placeholder="Ej: Examen mensual" style="width:100%"/>
+        <input type="text" id="rf-tipo" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" placeholder="Ej: Examen mensual" style="width:100%"/>
       </div>
     </div>
 
@@ -9557,7 +9557,7 @@ async function wn_save() {
     <!-- Observaciones -->
     <div style="margin-bottom:20px">
       <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Observaciones <span style="font-weight:400;letter-spacing:0;text-transform:none">(opcional)</span></label>
-      <textarea id="rf-obs" class="fg-input" rows="2" placeholder="Notas adicionales..." style="width:100%;resize:vertical"></textarea>
+      <textarea id="rf-obs" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-family:'Barlow',sans-serif;font-size:13px;padding:9px 12px;outline:none" rows="2" placeholder="Notas adicionales..." style="width:100%;resize:vertical"></textarea>
     </div>
 
     <!-- Acciones -->
