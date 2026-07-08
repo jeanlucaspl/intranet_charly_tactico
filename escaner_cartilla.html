@@ -13,6 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -331,29 +332,61 @@
 
     /* ── SUMMARY SCREEN ── */
     .summary-list {
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 6px;
     }
     .summary-item {
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 10px;
       background: var(--navy3); border: 1px solid var(--border);
-      padding: 12px 14px;
+      padding: 10px 12px; cursor: pointer; transition: background .15s;
     }
+    .summary-item:hover { background: rgba(201,168,76,.07); }
     .si-rank {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px; color: var(--muted); min-width: 28px;
+      font-size: 18px; color: var(--muted); min-width: 24px;
     }
     .si-name {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 14px; font-weight: 700;
+      font-size: 13px; font-weight: 700;
       letter-spacing: .05em; color: var(--chalk);
-      flex: 1;
+      flex: 1; text-transform: uppercase;
     }
     .si-score {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 18px;
+      font-size: 16px;
     }
     .si-score.pass { color: var(--lime); }
     .si-score.fail { color: var(--red); }
+    .si-score.neutral { color: var(--muted); }
+    .si-pdf-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 4px 10px; cursor: pointer;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 2px;
+      transition: all .15s; flex-shrink: 0;
+    }
+    .si-pdf-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── DETAIL SCREEN ── */
+    .detail-section-box {
+      background: var(--navy3); border: 1px solid var(--border);
+      padding: 12px 14px;
+    }
+    .detail-section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .detail-section-score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; line-height: 1;
+    }
+    .detail-section-pct {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; color: var(--muted); margin-left: 6px;
+    }
 
     .stat-row {
       display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
@@ -852,16 +885,38 @@
       <div class="stat-box"><div class="stat-val" id="st-max">—</div><div class="stat-lbl">Mejor</div></div>
       <div class="stat-box"><div class="stat-val" id="st-min">—</div><div class="stat-lbl">Peor</div></div>
     </div>
+    <div id="summary-type-badge" style="display:none"></div>
     <div class="summary-list" id="summary-list"></div>
-    <button class="btn btn-gold" style="width:100%;font-size:14px;padding:14px" onclick="showScreen('screen-student')">
-      Continuar escaneando
-    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-gold" style="font-size:13px;padding:12px" onclick="showScreen('screen-student')">
+        + Siguiente alumno
+      </button>
+      <button class="btn btn-lime" style="font-size:13px;padding:12px" onclick="downloadZipTodos()">
+        ↓ ZIP todos
+      </button>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
-      <button class="btn btn-lime" style="font-size:12px;padding:10px" onclick="printSummary()">Imprimir lista</button>
+      <button class="btn btn-red" style="font-size:12px;padding:10px" onclick="clearSession()">Borrar sesión</button>
     </div>
-    <button class="btn btn-red" style="width:100%;font-size:12px;padding:10px" onclick="clearSession()">
-      BORRAR SESIÓN DE HOY
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 5: DETALLE ALUMNO
+══════════════════════════════════════════════════ -->
+<div class="screen" id="screen-detail">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye" id="detail-eye">Reporte individual</div>
+      <div class="sc-title" id="detail-title">—</div>
+    </div>
+    <div id="detail-content"></div>
+    <button class="btn btn-lime" style="width:100%;font-size:14px;padding:14px" onclick="downloadPdfDetail()">
+      ↓ Descargar PDF
+    </button>
+    <button class="btn btn-outline" style="width:100%;font-size:12px;padding:10px" onclick="showScreen('screen-summary')">
+      ← Volver al resumen
     </button>
   </div>
 </div>
@@ -893,6 +948,7 @@ const REG_MM = [
 let examKey     = null;   // array de chars ['A','B','C',...] o '-' para práctica
 let examN       = 0;      // preguntas activas (con alternativa)
 let examMode    = 'vocab'; // 'vocab' | 'practica'
+let examSections = null;  // null=sin segmentación | [{nombre, qIndices:[...]}]
 let serverIP    = '';     // ip:puerto del servidor OMR (vacío = mismo origen)
 let mediaStream = null;
 let qrLoopActive = false;
@@ -1015,7 +1071,8 @@ function goToQR() {
 function _showQRResume() {
   document.getElementById('qr-resume-banner').style.display = 'flex';
   document.getElementById('qr-scanner-wrap').style.display  = 'none';
-  document.getElementById('qr-resume-desc').textContent     = `${examN} preguntas — cargada anteriormente`;
+  const secLabel = examSections ? ` · ${examSections.length} áreas (${examSections.map(s=>s.nombre).join(', ')})` : '';
+  document.getElementById('qr-resume-desc').textContent = `${examN} preguntas${secLabel} — guardada anteriormente`;
   stopQRLoop();
 }
 
@@ -1127,13 +1184,15 @@ function qrLoop() {
 }
 
 function onQRDetected(data) {
-  // Práctica: CTP|100|[100-char key, '-' = sin alternativa]
+  // Práctica: CTP|100|key[|sectionMap|sectionNames]
   if (data.startsWith('CTP|')) {
     const parts = data.split('|');
     if (parts.length < 3) { showToast('QR de práctica inválido', false); qrLoopActive = true; qrLoop(); return; }
-    const key = parts[2].toUpperCase();
+    const key        = parts[2].toUpperCase();
+    const sectionMap = parts.length >= 4 ? parts[3] : null;
+    const secNames   = parts.length >= 5 ? parts[4] : null;
     if (key.length < 100) { showToast('QR de práctica con formato incorrecto', false); qrLoopActive = true; qrLoop(); return; }
-    loadKeyPractica(key);
+    loadKeyPractica(key, sectionMap, secNames);
     return;
   }
   // Vocabulario: CT|N|KEY
@@ -1153,17 +1212,35 @@ function onQRDetected(data) {
   loadKey(n, key);
 }
 
-function loadKeyPractica(key) {
+function loadKeyPractica(key, sectionMapStr, secNamesStr) {
   examMode = 'practica';
   examKey  = key.slice(0, 100).split('');
-  examN    = examKey.filter(c => c !== '-').length; // solo preguntas con alternativa
+  examN    = examKey.filter(c => c !== '-').length;
+
+  // Parsear secciones si vienen en el QR
+  if (sectionMapStr && secNamesStr && sectionMapStr.length >= 100) {
+    const names = secNamesStr.split('~').map(n => n.trim()).filter(Boolean);
+    const byIdx = {};
+    sectionMapStr.slice(0, 100).split('').forEach((ch, qi) => {
+      const si = parseInt(ch) || 0;
+      if (!byIdx[si]) byIdx[si] = { nombre: names[si] || `Área ${si + 1}`, qIndices: [] };
+      if (examKey[qi] !== '-') byIdx[si].qIndices.push(qi);
+    });
+    examSections = Object.values(byIdx).filter(s => s.qIndices.length > 0);
+  } else {
+    examSections = null;
+  }
+
   saveExamKey();
   updateBadge();
   const st = document.getElementById('qr-status');
   st.className = 'qr-status success';
-  st.textContent = `✓ Clave práctica — ${examN} preguntas con alternativa`;
-  const badgeHtml = `<div class="badge badge-lime">✓ Práctica: ${examN} pregs A–D / 100</div>`;
-  document.getElementById('scan-key-badge').innerHTML   = badgeHtml;
+  const secLabel = examSections ? ` · ${examSections.length} áreas` : '';
+  st.textContent = `✓ Clave práctica — ${examN} preguntas${secLabel}`;
+  const badgeHtml = examSections
+    ? `<div class="badge badge-lime">✓ Simulacro: ${examN} pregs · ${examSections.length} áreas</div>`
+    : `<div class="badge badge-lime">✓ Práctica: ${examN} pregs / 100</div>`;
+  document.getElementById('scan-key-badge').innerHTML    = badgeHtml;
   document.getElementById('student-key-badge').innerHTML = badgeHtml;
   setTimeout(() => { showScreen('screen-student'); }, 900);
 }
@@ -1621,43 +1698,43 @@ function reintentarEscaneo() {
 
 async function confirmarNota() {
   if (!selectedStudent) { showToast('Sin alumno seleccionado', false); return; }
-  if (!lastResults) { showToast('Sin resultados para guardar', false); return; }
-  if (!materiaVocabId) { showToast('Materia Vocabulario no encontrada', false); return; }
+  if (!lastResults)     { showToast('Sin resultados para guardar', false); return; }
 
   const scoreRaw = document.getElementById('score-text').textContent;
   const [c, t]   = scoreRaw.split('/').map(Number);
-  const nota     = Math.round(c / t * 20);
-  const periodo  = new Date().toISOString().slice(0, 10);  // YYYY-MM-DD
+  const nota     = examSections ? null : Math.round(c / t * 20);
+  const periodo  = new Date().toISOString().slice(0, 10);
 
-  showProc('Guardando nota...');
-  const { error } = await sb.from('notas').upsert(
-    {
-      alumno_id: selectedStudent.id,
-      materia_id: materiaVocabId,
-      periodo,
-      nota_1: nota,
-      nota_2: null,
-      nota_3: null,
-      promedio: nota
-    },
-    { onConflict: 'alumno_id,materia_id,periodo' }
-  );
-  hideProc();
+  // Guardar en Supabase solo si es prueba sin segmentación (tiene nota /20)
+  if (!examSections) {
+    if (!materiaVocabId) { showToast('Materia Vocabulario no encontrada', false); return; }
+    showProc('Guardando nota...');
+    const { error } = await sb.from('notas').upsert(
+      { alumno_id: selectedStudent.id, materia_id: materiaVocabId, periodo,
+        nota_1: nota, nota_2: null, nota_3: null, promedio: nota },
+      { onConflict: 'alumno_id,materia_id,periodo' }
+    );
+    hideProc();
+    if (error) { showToast('Error al guardar: ' + error.message, false); return; }
+  }
 
-  if (error) { showToast('Error al guardar: ' + error.message, false); return; }
-
-  // Guardar en sesión local
   const entry = {
-    nombre:  `${selectedStudent.apellido} ${selectedStudent.nombre}`,
-    dni:     selectedStudent.dni,
-    correct: c,
-    total:   t,
-    nota
+    nombre:   `${selectedStudent.apellido} ${selectedStudent.nombre}`,
+    dni:      selectedStudent.dni,
+    correct:  c,
+    total:    t,
+    nota,                                            // null si es simulacro
+    results:  lastResults ? [...lastResults] : [],   // detalle completo de respuestas
+    sections: examSections ? JSON.parse(JSON.stringify(examSections)) : null,
+    key:      examKey ? [...examKey] : [],
   };
   session.push(entry);
   saveSession();
 
-  showToast(`Nota ${nota}/20 guardada para ${entry.nombre}`, true);
+  const msg = nota !== null
+    ? `Nota ${nota}/20 guardada — ${entry.nombre}`
+    : `Resultados guardados — ${entry.nombre}`;
+  showToast(msg, true);
   clearStudent();
   showScreen('screen-student');
 }
@@ -1686,7 +1763,9 @@ function clearSession() {
 function saveExamKey() {
   try {
     if (examKey && examN) {
-      localStorage.setItem('omr_exam_key', JSON.stringify({ n: examN, key: examKey, mode: examMode }));
+      localStorage.setItem('omr_exam_key', JSON.stringify({
+        n: examN, key: examKey, mode: examMode, sections: examSections
+      }));
     }
   } catch(_) {}
 }
@@ -1695,20 +1774,22 @@ function loadExamKey() {
   try {
     const saved = localStorage.getItem('omr_exam_key');
     if (!saved) return false;
-    const { n, key, mode } = JSON.parse(saved);
+    const { n, key, mode, sections } = JSON.parse(saved);
     if (!n || !key || !key.length) return false;
-    examN    = n;
-    examKey  = key;
-    examMode = mode || 'vocab';
+    examN        = n;
+    examKey      = key;
+    examMode     = mode || 'vocab';
+    examSections = sections || null;
     return true;
   } catch(_) { return false; }
 }
 
 function clearExamKey() {
   try { localStorage.removeItem('omr_exam_key'); } catch(_) {}
-  examKey  = null;
-  examN    = 0;
-  examMode = 'vocab';
+  examKey      = null;
+  examN        = 0;
+  examMode     = 'vocab';
+  examSections = null;
 }
 
 async function loadMateria() {
@@ -1730,35 +1811,390 @@ async function loadMateria() {
    SUMMARY
 ═══════════════════════════════════════════════════════════════════ */
 function renderSummary() {
-  const list = document.getElementById('summary-list');
+  const list     = document.getElementById('summary-list');
+  const statRow  = document.getElementById('stat-row');
+  const typeBadge = document.getElementById('summary-type-badge');
   list.innerHTML = '';
+
   if (session.length === 0) {
     list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;text-align:center;padding:20px">Sin alumnos escaneados aún</div>';
-    document.getElementById('st-prom').textContent = '—';
-    document.getElementById('st-max').textContent  = '—';
-    document.getElementById('st-min').textContent  = '—';
+    ['st-prom','st-max','st-min'].forEach(id => document.getElementById(id).textContent = '—');
+    statRow.style.display  = 'grid';
+    typeBadge.style.display = 'none';
     return;
   }
-  const notas = session.map(s => s.nota);
-  const prom  = Math.round(notas.reduce((a,b) => a+b, 0) / notas.length);
-  const max   = Math.max(...notas);
-  const min   = Math.min(...notas);
-  document.getElementById('st-prom').textContent = prom + '/20';
-  document.getElementById('st-max').textContent  = max  + '/20';
-  document.getElementById('st-min').textContent  = min  + '/20';
 
-  const sorted = [...session].map((s,i)=>({...s,idx:i})).sort((a,b)=>b.nota-a.nota);
+  // ¿Tiene notas (sin segmentación)?
+  const hasNotas = session.some(s => s.nota !== null && s.nota !== undefined);
+  statRow.style.display   = hasNotas ? 'grid' : 'none';
+  typeBadge.style.display = '';
+
+  if (hasNotas) {
+    const notas = session.filter(s => s.nota != null).map(s => s.nota);
+    const prom  = Math.round(notas.reduce((a,b) => a+b, 0) / notas.length);
+    document.getElementById('st-prom').textContent = prom + '/20';
+    document.getElementById('st-max').textContent  = Math.max(...notas) + '/20';
+    document.getElementById('st-min').textContent  = Math.min(...notas) + '/20';
+    typeBadge.innerHTML = `<div class="badge badge-gold">Práctica · nota /20</div>`;
+  } else {
+    const sec0 = session.find(s => s.sections)?.sections;
+    const label = sec0 ? sec0.map(s => s.nombre).join(' · ') : 'Simulacro';
+    typeBadge.innerHTML = `<div class="badge badge-gold" style="flex-wrap:wrap;gap:4px">Simulacro · ${escHtml(label)}</div>`;
+  }
+
+  const sorted = [...session]
+    .map((s, i) => ({ ...s, idx: i }))
+    .sort((a, b) => {
+      if (a.nota != null && b.nota != null) return b.nota - a.nota;
+      return a.nombre.localeCompare(b.nombre, 'es');
+    });
+
   sorted.forEach((s, rank) => {
-    const pass = s.nota >= 12;
-    const div  = document.createElement('div');
+    const pass = s.nota != null ? s.nota >= 12 : null;
+    const scoreText = s.nota != null
+      ? `${s.nota}<span style="font-size:11px;font-family:'Barlow Condensed',sans-serif">/20</span>`
+      : `${s.correct}/${s.total}`;
+    const div = document.createElement('div');
     div.className = 'summary-item';
     div.innerHTML = `
       <div class="si-rank">${rank + 1}</div>
       <div class="si-name">${escHtml(s.nombre)}</div>
-      <div class="si-score ${pass?'pass':'fail'}">${s.nota}<span style="font-size:13px;font-family:'Barlow Condensed',sans-serif">/20</span></div>
+      <div class="si-score ${pass === true ? 'pass' : pass === false ? 'fail' : 'neutral'}">${scoreText}</div>
+      <button class="si-pdf-btn" onclick="event.stopPropagation();downloadPdfAlumno(${s.idx})">PDF</button>
     `;
+    div.addEventListener('click', () => showAlumnoDetail(s.idx));
     list.appendChild(div);
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DETALLE ALUMNO — pantalla individual
+═══════════════════════════════════════════════════════════════════ */
+let _detailIdx = -1;
+
+function showAlumnoDetail(idx) {
+  const e = session[idx];
+  if (!e) return;
+  _detailIdx = idx;
+  document.getElementById('detail-title').textContent = e.nombre;
+  document.getElementById('detail-eye').textContent   = e.sections ? 'Simulacro — aciertos por área' : 'Práctica — corrección';
+
+  const content = document.getElementById('detail-content');
+  const key = e.key || [];
+
+  if (!e.sections) {
+    // ── Sin segmentación: nota + tabla ──────────────────────────
+    const pass = e.nota >= 12;
+    const pct  = Math.round(e.correct / e.total * 100);
+    let html = `
+      <div class="score-block" style="margin-bottom:12px">
+        <div class="nota-wrap">
+          <div class="nota-num" style="color:${pass?'var(--lime)':'var(--red)'}">${e.nota}</div>
+          <span class="nota-denom">/20</span>
+        </div>
+        <div class="score-pct">${e.correct}/${e.total} correctas · ${pct}% — ${pass?'APROBADO':'DESAPROBADO'}</div>
+        <div class="score-bar-wrap" style="margin-top:8px">
+          <div class="score-bar ${pass?'pass':'fail'}" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="resp-table">
+          <thead><tr><th>#</th><th>Marcó</th><th>Correcta</th><th></th></tr></thead>
+          <tbody>`;
+    (e.results || []).forEach(r => {
+      const expec = key[r.q - 1] || '?';
+      if (expec === '-') return;
+      const ok = r.status === 'ok' && r.detected === expec;
+      let mark;
+      if      (r.status === 'blank')  mark = '<span class="mark-dud" title="En blanco">○</span>';
+      else if (r.status === 'double') mark = '<span class="mark-dud" title="Doble marca">2x</span>';
+      else mark = ok ? '<span class="mark-ok">✓</span>' : '<span class="mark-err">✗</span>';
+      html += `<tr><td>${r.q}</td><td>${r.detected||'—'}</td><td>${expec}</td><td>${mark}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    content.innerHTML = html;
+
+  } else {
+    // ── Con segmentación: resumen por área + tabla ──────────────
+    let html = '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
+    e.sections.forEach(sec => {
+      const qRes   = (e.results || []).filter(r => sec.qIndices.includes(r.q - 1));
+      const corr   = qRes.filter(r => r.status === 'ok' && r.detected === key[r.q - 1]).length;
+      const total  = sec.qIndices.length;
+      const pct    = total > 0 ? Math.round(corr / total * 100) : 0;
+      const color  = pct >= 60 ? 'var(--lime)' : 'var(--red)';
+      html += `
+        <div class="detail-section-box">
+          <div class="detail-section-title">${escHtml(sec.nombre)}</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span class="detail-section-score" style="color:${color}">${corr}/${total}</span>
+            <span class="detail-section-pct">${pct}%</span>
+          </div>
+          <div class="score-bar-wrap" style="margin-top:6px">
+            <div class="score-bar ${pct>=60?'pass':'fail'}" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+    html += `<div style="overflow-x:auto">
+      <table class="resp-table">
+        <thead><tr><th>#</th><th>Área</th><th>Marcó</th><th>Correcta</th><th></th></tr></thead>
+        <tbody>`;
+    (e.results || []).forEach(r => {
+      const expec = key[r.q - 1] || '?';
+      if (expec === '-') return;
+      const sec = e.sections.find(s => s.qIndices.includes(r.q - 1));
+      const ok  = r.status === 'ok' && r.detected === expec;
+      let mark;
+      if      (r.status === 'blank')  mark = '<span class="mark-dud">○</span>';
+      else if (r.status === 'double') mark = '<span class="mark-dud">2x</span>';
+      else mark = ok ? '<span class="mark-ok">✓</span>' : '<span class="mark-err">✗</span>';
+      html += `<tr><td>${r.q}</td><td style="font-size:11px">${escHtml(sec?.nombre||'—')}</td><td>${r.detected||'—'}</td><td>${expec}</td><td>${mark}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    content.innerHTML = html;
+  }
+
+  showScreen('screen-detail');
+}
+
+function downloadPdfDetail() {
+  if (_detailIdx >= 0 && session[_detailIdx]) downloadPdfAlumno(_detailIdx);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PDF POR ALUMNO — brand Charly Táctico
+═══════════════════════════════════════════════════════════════════ */
+// Colores oficiales del brandbook
+const _B = {
+  black: [8, 12, 16], gold: [201, 168, 76], lime: [157, 217, 0],
+  fern:  [26, 74, 22], chalk: [240, 244, 248], muted: [100, 110, 120],
+  dark2: [20, 28, 36], ok: [26, 122, 26], err: [192, 57, 43], dud: [160, 100, 0],
+};
+
+function _pdfHeader(doc, subtitulo) {
+  const PW = 210, M = 10;
+  doc.setFillColor(..._B.black);  doc.rect(0, 0, PW, 13, 'F');
+  doc.setDrawColor(..._B.gold);   doc.setLineWidth(0.4); doc.line(0, 13, PW, 13);
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(..._B.gold);
+  doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX', M, 7.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(..._B.chalk);
+  doc.text(subtitulo.toUpperCase(), M, 11.5);
+  return 13;
+}
+
+function _pdfMetaBar(doc, y, alumno, dni, fecha) {
+  const PW = 210, M = 10;
+  doc.setFillColor(..._B.dark2); doc.rect(0, y, PW, 10, 'F');
+  doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(..._B.muted);
+  doc.text('ALUMNO', M, y + 3.5);
+  doc.text('DNI',    100, y + 3.5);
+  doc.text('FECHA',  162, y + 3.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220, 224, 228);
+  doc.text(alumno.toUpperCase(), M, y + 8.5);
+  doc.text(dni || '—', 100, y + 8.5);
+  doc.text(fecha, 162, y + 8.5);
+  return y + 10;
+}
+
+function _pdfFooter(doc) {
+  const PW = 210, M = 10;
+  const n = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= n; i++) {
+    doc.setPage(i);
+    doc.setFillColor(..._B.black); doc.rect(0, 290, PW, 7, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(..._B.muted);
+    doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX', M, 294);
+    doc.text(`${i} / ${n}`, PW - M, 294, { align: 'right' });
+  }
+}
+
+const _tblStyles = {
+  styles:     { fontSize: 8, cellPadding: 2.2, textColor: [20, 20, 20] },
+  headStyles: { fillColor: _B.black, textColor: _B.gold, fontStyle: 'bold', fontSize: 7, lineWidth: 0 },
+  bodyStyles: { lineWidth: 0.1, lineColor: [210, 210, 210] },
+  alternateRowStyles: { fillColor: [248, 249, 250] },
+};
+
+function _pdfReporteAlumno(e) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const M = 10, PW = 210;
+  const key    = e.key || [];
+  const fecha  = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+  const esTipo = e.sections ? 'SIMULACRO — ACIERTOS POR ÁREA' : 'PRÁCTICA — CORRECCIÓN';
+
+  let y = _pdfHeader(doc, esTipo);
+  y = _pdfMetaBar(doc, y, e.nombre, e.dni, fecha);
+  y += 6;
+
+  if (!e.sections) {
+    // ── Prueba sin segmentación: nota destacada + tabla ──────────
+    const pass = e.nota >= 12;
+    const pct  = Math.round(e.correct / e.total * 100);
+    const c1   = pass ? _B.fern : [100, 20, 20];
+
+    doc.setFillColor(...c1); doc.rect(M, y, 50, 11, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(..._B.chalk);
+    doc.text(`${e.nota}`, M + 10, y + 8.5);
+    doc.setFontSize(9); doc.text('/20', M + 24, y + 8.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(..._B.muted);
+    doc.text(`${e.correct}/${e.total} correctas · ${pct}% · ${pass ? 'APROBADO' : 'DESAPROBADO'}`, M + 56, y + 7);
+    y += 16;
+
+    const rows = (e.results || []).map(r => {
+      const exp = key[r.q - 1] || '?';
+      if (exp === '-') return null;
+      let estado;
+      if      (r.status === 'blank')  estado = 'En blanco';
+      else if (r.status === 'double') estado = 'Doble marca';
+      else                            estado = r.detected === exp ? 'Correcto' : 'Incorrecto';
+      return [r.q, r.detected || '—', exp, estado];
+    }).filter(Boolean);
+
+    doc.autoTable({
+      startY: y, margin: { left: M, right: M },
+      head: [['#', 'MARCÓ', 'CORRECTA', 'ESTADO']],
+      body: rows, ..._tblStyles,
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 'auto' },
+      },
+      didParseCell: d => {
+        if (d.section === 'body' && d.column.index === 3) {
+          const v = d.cell.raw;
+          d.cell.styles.textColor = v === 'Correcto' ? _B.ok : v === 'Incorrecto' ? _B.err : _B.dud;
+          d.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+
+  } else {
+    // ── Simulacro pág 1: resumen por área ───────────────────────
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(..._B.gold);
+    doc.text('RESUMEN POR ÁREA', M, y); y += 4;
+
+    const secRows = e.sections.map(sec => {
+      const qRes  = (e.results || []).filter(r => sec.qIndices.includes(r.q - 1));
+      const corr  = qRes.filter(r => r.status === 'ok' && r.detected === key[r.q - 1]).length;
+      const tot   = sec.qIndices.length;
+      const pct   = tot > 0 ? Math.round(corr / tot * 100) : 0;
+      return [sec.nombre.toUpperCase(), corr, tot, `${pct}%`];
+    });
+    const totCorr = secRows.reduce((a, r) => a + r[1], 0);
+    const totTot  = secRows.reduce((a, r) => a + r[2], 0);
+    const totPct  = totTot > 0 ? Math.round(totCorr / totTot * 100) : 0;
+
+    doc.autoTable({
+      startY: y, margin: { left: M, right: M },
+      head: [['ÁREA / CURSO', 'CORRECTAS', 'TOTAL', '%']],
+      body: [...secRows, ['TOTAL GENERAL', totCorr, totTot, `${totPct}%`]],
+      ..._tblStyles,
+      styles: { ..._tblStyles.styles, fontSize: 9 },
+      columnStyles: {
+        1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: d => {
+        if (d.section === 'body') {
+          if (d.row.index === secRows.length) {
+            d.cell.styles.fontStyle = 'bold';
+            d.cell.styles.fillColor = [235, 237, 240];
+          }
+          if (d.column.index === 3 && d.row.index < secRows.length) {
+            const pct = parseInt(d.cell.raw);
+            d.cell.styles.textColor = pct >= 60 ? _B.ok : _B.err;
+          }
+        }
+      },
+    });
+
+    // ── Pág 2: detalle de respuestas ────────────────────────────
+    doc.addPage();
+    _pdfHeader(doc, `DETALLE DE RESPUESTAS — ${e.nombre}`);
+    let y2 = 16;
+
+    const detRows = (e.results || []).map(r => {
+      const exp = key[r.q - 1] || '?';
+      if (exp === '-') return null;
+      const sec   = e.sections.find(s => s.qIndices.includes(r.q - 1));
+      let estado;
+      if      (r.status === 'blank')  estado = 'En blanco';
+      else if (r.status === 'double') estado = 'Doble marca';
+      else                            estado = r.detected === exp ? 'Correcto' : 'Incorrecto';
+      return [r.q, sec?.nombre || '—', r.detected || '—', exp, estado];
+    }).filter(Boolean);
+
+    doc.autoTable({
+      startY: y2, margin: { left: M, right: M },
+      head: [['#', 'ÁREA', 'MARCÓ', 'CORRECTA', 'ESTADO']],
+      body: detRows, ..._tblStyles,
+      styles: { ..._tblStyles.styles, fontSize: 7.5 },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 52 },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 18, halign: 'center' },
+        4: { cellWidth: 'auto' },
+      },
+      didParseCell: d => {
+        if (d.section === 'body' && d.column.index === 4) {
+          const v = d.cell.raw;
+          d.cell.styles.textColor = v === 'Correcto' ? _B.ok : v === 'Incorrecto' ? _B.err : _B.dud;
+          d.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+  }
+
+  _pdfFooter(doc);
+  return doc;
+}
+
+function _pdfFilename(e) {
+  // formato: PrimerNombre_PrimerApellido_DNI.pdf
+  const partes   = e.nombre.toUpperCase().trim().split(/\s+/);
+  const apellido = partes[0] || 'ALUMNO';
+  const nombre   = partes[1] || '';
+  const dni      = e.dni || '00000000';
+  return `${nombre}_${apellido}_${dni}.pdf`.replace(/[^A-Z0-9_\.]/gi, '_');
+}
+
+function downloadPdfAlumno(idx) {
+  const e = session[idx];
+  if (!e) return;
+  const doc = _pdfReporteAlumno(e);
+  _pdfSave(doc, _pdfFilename(e));
+}
+
+async function downloadZipTodos() {
+  if (!session.length) { showToast('Sin alumnos en la sesión', false); return; }
+  showProc('Generando ZIP...');
+  try {
+    const zip  = new JSZip();
+    const seen = {};
+    for (const e of session) {
+      const doc  = _pdfReporteAlumno(e);
+      const blob = doc.output('blob');
+      let fname  = _pdfFilename(e);
+      if (seen[fname]) fname = fname.replace('.pdf', `_${Date.now()}.pdf`);
+      seen[fname] = true;
+      zip.file(fname, blob);
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a   = document.createElement('a');
+    a.href = url;
+    a.download = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    hideProc();
+    showToast('ZIP descargado', true);
+  } catch (err) {
+    hideProc();
+    showToast('Error al generar ZIP: ' + err.message, false);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

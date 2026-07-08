@@ -377,6 +377,7 @@
       <button class="sb-link" onclick="showPanel('banco',this)">Banco de Preguntas</button>
       <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
       <a id="sb-escaner-link" class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none;display:none">Escáner Cartilla</a>
+      <button id="sb-reportes-link" class="sb-link" onclick="showPanel('reportes-fotos',this)" style="display:none">Reportes con Fotos</button>
     </div>
   </div>
   <div class="sb-section sb-collapsible collapsed" id="sec-comunicacion">
@@ -1849,10 +1850,12 @@ async function init(){
   uid=_u.id;
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',uid).single();
   esDueno = (pf?.rol==='dueno');
-  // Escáner Cartilla solo para admin y dueno
+  // Escáner Cartilla y Reportes con Fotos solo para admin y dueno
   if(pf?.rol==='admin' || pf?.rol==='dueno'){
     const elEsc = document.getElementById('sb-escaner-link');
     if(elEsc) elEsc.style.display='';
+    const elRep = document.getElementById('sb-reportes-link');
+    if(elRep) elRep.style.display='';
   }
   // Show dueno-only sections
   if(esDueno){
@@ -6258,6 +6261,7 @@ function showPanel(id,btn){
   if(id==='profesores') loadProfesores();
   if(id==='ingresos')   loadIngresos();
   if(id==='armar-practica') gpIniciar();
+  if(id==='reportes-fotos') { rfIniciar(); window.dispatchEvent(new Event('rf:panelOpen')); }
   if(id==='banco') bpIniciar();
   if(id==='historico') histInitFechas();
   if(id==='web-noticias') wn_loadList();
@@ -7041,6 +7045,18 @@ function gpShuffleAlts(){
   }
 }
 
+function gpBinarize(canvas,thresh=210){
+  const ctx=canvas.getContext('2d');
+  const d=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const px=d.data;
+  for(let i=0;i<px.length;i+=4){
+    const g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+    const v=g<thresh?0:255;
+    px[i]=px[i+1]=px[i+2]=v;px[i+3]=255;
+  }
+  ctx.putImageData(d,0,0);
+}
+
 async function gpPrerenderAll(nc){
   await MathJax.startup.promise;
   const mmToPx=3.7795,colWpx=Math.round(gpTW(nc)*mmToPx),fsPt=gpFSn(nc);
@@ -7056,16 +7072,19 @@ async function gpPrerenderAll(nc){
         box.innerHTML=gpBuildEnunciadoHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
         const canvasE=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        gpBinarize(canvasE);
         const hE=canvasE.height/(mmToPx*2);
         box.innerHTML=gpBuildAltsHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
         const canvasA=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        gpBinarize(canvasA);
         const hA=canvasA.height/(mmToPx*2);
         imgs.push({urlE:canvasE.toDataURL('image/png'),hE,urlA:canvasA.toDataURL('image/png'),hA,wMm:gpTW(nc),split:true});
       } else {
         box.innerHTML=gpBuildQHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
         const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        gpBinarize(canvas);
         imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*2),split:false});
       }
     }
@@ -7509,6 +7528,22 @@ function gpBuildPlantillaKey(){
   return key.join('');
 }
 
+// Construye mapa de secciones para el QR extendido (100 chars, dígito = índice de sección)
+function gpBuildSectionMap(){
+  const map=[];
+  let qNum=0;
+  GP.secciones.forEach((sec,si)=>{
+    sec.items.forEach(item=>{
+      if(item.tipo==='texto')return;
+      if(qNum>=100)return;
+      map.push(Math.min(si,9).toString());
+      qNum++;
+    });
+  });
+  while(map.length<100)map.push('0');
+  return map.join('');
+}
+
 // Agrega páginas de cartilla + hoja docente al doc existente (no crea PDF separado)
 function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   // Recibe el doc existente y agrega páginas — no crea ni guarda PDF nuevo
@@ -7519,7 +7554,12 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   const CONT_W=GW-2*RM,GRP_W=(CONT_W-3*GAP)/4,CX0=GX+RM;
   const activeCount=key.split('').filter(c=>c!=='-').length;
   function _qrDU(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createDataURL(5,0);}
-  const qrDU=_qrDU(`CTP|100|${key}`);
+  // Si hay más de una sección, codificar mapa de áreas en el QR
+  const _hasSecs = GP.secciones.length > 1;
+  const _secMap  = _hasSecs ? gpBuildSectionMap() : null;
+  const _secNoms = _hasSecs ? GP.secciones.map(s=>(s.nombre||'Área').replace(/[|~]/g,' ')).join('~') : null;
+  const _qrText  = _hasSecs ? `CTP|100|${key}|${_secMap}|${_secNoms}` : `CTP|100|${key}`;
+  const qrDU=_qrDU(_qrText);
   // ── HOJA CARTILLA (fotocopiar y distribuir a alumnos) ──────────────────────
   doc.addPage();
   doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...BLK);
@@ -7570,7 +7610,10 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(40,40,40);
   doc.text('CONFIDENCIAL — NO DISTRIBUIR AL ALUMNO',PW/2,M+17,{align:'center'});
   doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GRY);
-  doc.text(`${activeCount} preguntas con alternativas (A–E)`,PW/2,M+22,{align:'center'});
+  const _modeLabel = _hasSecs
+    ? `${activeCount} preguntas · ${GP.secciones.length} áreas (${GP.secciones.map(s=>s.nombre||'Área').join(', ')})`
+    : `${activeCount} preguntas con alternativas (A–E)`;
+  doc.text(_modeLabel,PW/2,M+22,{align:'center'});
   const qrX=(PW-QR_SZ)/2,qrYY=M+26;
   doc.addImage(qrDU,'PNG',qrX,qrYY,QR_SZ,QR_SZ);
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRY);
@@ -9458,6 +9501,467 @@ async function wn_save() {
     vocUpdateBadge();
   });
 
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     PANEL: REPORTES CON FOTOS
+══════════════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-reportes-fotos" style="padding:0">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="eye">Evaluaciones académicas</div>
+      <div class="ttl">REPORTES CON FOTOS</div>
+    </div>
+    <button class="btn btn-outline" style="font-size:11px;padding:5px 14px;color:var(--red);border-color:rgba(224,85,85,.4)" onclick="rfPurgarFotos()">
+      Purgar fotos de Supabase
+    </button>
+  </div>
+
+  <div style="max-width:640px;padding:0 20px 24px">
+
+    <!-- Alumno -->
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Alumno</label>
+      <div style="position:relative">
+        <input id="rf-alumno-input" class="fg-input" type="text" placeholder="Buscar por apellido o DNI..."
+               autocomplete="off" oninput="rfFiltrarAlumnos(this.value)" onfocus="rfFiltrarAlumnos(this.value)"
+               style="width:100%"/>
+        <div id="rf-alumno-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--navy2);border:1px solid var(--gold);border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
+      </div>
+      <div id="rf-alumno-badge" style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--lime)"></div>
+      <input type="hidden" id="rf-alumno-id"/>
+    </div>
+
+    <!-- Fecha y tipo -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Fecha de evaluación</label>
+        <input type="date" id="rf-fecha" class="fg-input" style="width:100%"/>
+      </div>
+      <div>
+        <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Tipo de evaluación</label>
+        <input type="text" id="rf-tipo" class="fg-input" placeholder="Ej: Examen mensual" style="width:100%"/>
+      </div>
+    </div>
+
+    <!-- Prácticas -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)">Prácticas</label>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 12px" onclick="rfAgregarPractica()">+ Agregar</button>
+      </div>
+      <div id="rf-practicas-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <!-- Observaciones -->
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Observaciones <span style="font-weight:400;letter-spacing:0;text-transform:none">(opcional)</span></label>
+      <textarea id="rf-obs" class="fg-input" rows="2" placeholder="Notas adicionales..." style="width:100%;resize:vertical"></textarea>
+    </div>
+
+    <!-- Acciones -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-gold" style="flex:1;min-width:160px;font-size:13px;padding:12px" onclick="rfGenerarPDF()">
+        ↓ Generar PDF
+      </button>
+      <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="rfLimpiar()">
+        Limpiar formulario
+      </button>
+    </div>
+
+    <div id="rf-msg" style="margin-top:10px;font-family:'Barlow Condensed',sans-serif;font-size:12px;min-height:18px"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   PANEL REPORTES CON FOTOS — lógica
+══════════════════════════════════════════════════════════════════ */
+(function(){
+  // Estado del panel
+  const RF = {
+    alumnoId: null,
+    alumnoNombre: '',
+    alumnoDni: '',
+    practicas: [],   // [{nombre, nota, notaMax, fotoUrl, fotoPath, _blobUrl}]
+    _uploadedPaths: [],  // paths en Storage para poder purgar
+  };
+
+  // Cargar paths guardados en localStorage
+  function rfLoadPaths(){
+    try { RF._uploadedPaths = JSON.parse(localStorage.getItem('rf_uploaded_paths')||'[]'); } catch(_){}
+  }
+  function rfSavePaths(){
+    try { localStorage.setItem('rf_uploaded_paths', JSON.stringify(RF._uploadedPaths)); } catch(_){}
+  }
+  rfLoadPaths();
+
+  // ── Alumno autocomplete ──────────────────────────────────────
+  window.rfFiltrarAlumnos = async function(q){
+    const drop = document.getElementById('rf-alumno-drop');
+    if(!q || q.length < 2){ drop.style.display='none'; return; }
+    // Usar la lista global si está cargada
+    const lista = window.allAlumnos || [];
+    const ql = q.toLowerCase();
+    const matches = lista.filter(a =>
+      (a.perfiles?.apellido||'').toLowerCase().includes(ql)||
+      (a.perfiles?.nombre||'').toLowerCase().includes(ql)||
+      (a.perfiles?.dni||'').includes(q)
+    ).slice(0,8);
+    if(!matches.length){ drop.style.display='none'; return; }
+    drop.innerHTML = matches.map((a,i)=>`
+      <div class="dni-sug-item" onclick="rfSeleccionarAlumno(${i})">
+        <span style="font-weight:700;text-transform:uppercase">${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</span>
+        <span style="color:var(--muted);font-size:11px">${a.perfiles?.dni||''}</span>
+      </div>`).join('');
+    drop.dataset.matches = JSON.stringify(matches.map(a=>({id:a.id,nombre:`${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`,dni:a.perfiles?.dni||''})));
+    drop.style.display = 'block';
+  };
+
+  window.rfSeleccionarAlumno = function(idx){
+    const matches = JSON.parse(document.getElementById('rf-alumno-drop').dataset.matches||'[]');
+    const a = matches[idx]; if(!a) return;
+    RF.alumnoId      = a.id;
+    RF.alumnoNombre  = a.nombre;
+    RF.alumnoDni     = a.dni;
+    document.getElementById('rf-alumno-input').value  = `${a.nombre.toUpperCase()}`;
+    document.getElementById('rf-alumno-id').value     = a.id;
+    document.getElementById('rf-alumno-badge').textContent = `✓ ${a.nombre.toUpperCase()} · DNI ${a.dni}`;
+    document.getElementById('rf-alumno-badge').style.display = '';
+    document.getElementById('rf-alumno-drop').style.display  = 'none';
+  };
+
+  // Cerrar dropdown al clickar afuera
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('#rf-alumno-input')&&!e.target.closest('#rf-alumno-drop'))
+      document.getElementById('rf-alumno-drop').style.display='none';
+  });
+
+  // ── Prácticas dinámicas ──────────────────────────────────────
+  window.rfAgregarPractica = function(){
+    const idx = RF.practicas.length;
+    RF.practicas.push({ nombre:`Práctica ${idx+1}`, nota:'', notaMax:20, fotoUrl:null, fotoPath:null, _blobUrl:null });
+    rfRenderPracticas();
+  };
+
+  window.rfEliminarPractica = function(idx){
+    RF.practicas.splice(idx,1);
+    rfRenderPracticas();
+  };
+
+  window.rfUpdatePractica = function(idx, campo, valor){
+    if(RF.practicas[idx]) RF.practicas[idx][campo] = valor;
+  };
+
+  function rfRenderPracticas(){
+    const list = document.getElementById('rf-practicas-list');
+    if(!RF.practicas.length){
+      list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:12px;padding:8px 0">Sin prácticas. Haz clic en + Agregar.</div>';
+      return;
+    }
+    list.innerHTML = RF.practicas.map((p,i)=>`
+      <div style="background:var(--navy2);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" value="${p.nombre}" placeholder="Nombre"
+            onchange="rfUpdatePractica(${i},'nombre',this.value)"
+            style="flex:1;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:6px 10px;font-family:'Barlow Condensed',sans-serif;font-size:13px;outline:none"/>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;color:var(--red);border-color:rgba(224,85,85,.4)" onclick="rfEliminarPractica(${i})">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center">
+          <div>
+            <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Nota</label>
+            <input type="number" value="${p.nota}" min="0" max="${p.notaMax}" step="0.5" placeholder="—"
+              oninput="rfUpdatePractica(${i},'nota',this.value)"
+              style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:6px 10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;outline:none"/>
+          </div>
+          <div>
+            <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Puntaje máx.</label>
+            <input type="number" value="${p.notaMax}" min="1" step="1"
+              oninput="rfUpdatePractica(${i},'notaMax',this.value)"
+              style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);padding:6px 10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;outline:none"/>
+          </div>
+        </div>
+        <!-- Foto -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-outline" style="font-size:11px;padding:6px 14px" onclick="rfAbrirCamara(${i})">
+            📷 Tomar foto
+          </button>
+          <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;border:1px solid var(--border);padding:6px 14px;transition:all .2s"
+            onmouseenter="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+            onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+            Subir archivo
+            <input type="file" accept="image/*" style="display:none" onchange="rfSubirArchivoFoto(${i},this)"/>
+          </label>
+          ${p.fotoUrl ? `<img src="${p._blobUrl||p.fotoUrl}" style="height:48px;width:auto;border-radius:2px;border:1px solid var(--border)" onclick="rfVerFoto(${i})" title="Ver foto" class="cursor-pointer"/>` : '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:var(--muted)">Sin foto</span>'}
+          ${p.fotoUrl ? `<button class="btn btn-outline" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(224,85,85,.3)" onclick="rfQuitarFoto(${i})">Quitar</button>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // Init con 1 práctica
+  window.rfIniciar = function(){
+    if(!RF.practicas.length){ rfAgregarPractica(); }
+    document.getElementById('rf-fecha').value = new Date().toISOString().slice(0,10);
+    rfRenderPracticas();
+  };
+
+  // ── Cámara ───────────────────────────────────────────────────
+  let _rfCamaraStream = null;
+  let _rfCamaraIdx = -1;
+
+  window.rfAbrirCamara = function(idx){
+    _rfCamaraIdx = idx;
+    // Crear modal de cámara dinámicamente
+    let modal = document.getElementById('rf-cam-modal');
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'rf-cam-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+      modal.innerHTML = `
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">TOMAR FOTO — PRÁCTICA</div>
+        <video id="rf-cam-video" autoplay muted playsinline style="max-width:min(90vw,520px);max-height:60vh;object-fit:contain;border:1px solid var(--border)"></video>
+        <canvas id="rf-cam-canvas" style="display:none"></canvas>
+        <div style="display:flex;gap:12px">
+          <button class="btn btn-gold" style="font-size:14px;padding:12px 28px" onclick="rfCapturarFoto()">Capturar</button>
+          <button class="btn btn-outline" style="font-size:13px;padding:12px 20px" onclick="rfCerrarCamara()">Cancelar</button>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+    navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } })
+      .then(stream=>{
+        _rfCamaraStream = stream;
+        document.getElementById('rf-cam-video').srcObject = stream;
+      })
+      .catch(()=>{ modal.style.display='none'; rfMsg('No se pudo acceder a la cámara','err'); });
+  };
+
+  window.rfCerrarCamara = function(){
+    if(_rfCamaraStream){ _rfCamaraStream.getTracks().forEach(t=>t.stop()); _rfCamaraStream=null; }
+    const m = document.getElementById('rf-cam-modal'); if(m) m.style.display='none';
+  };
+
+  window.rfCapturarFoto = async function(){
+    const video  = document.getElementById('rf-cam-video');
+    const canvas = document.getElementById('rf-cam-canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    rfCerrarCamara();
+    canvas.toBlob(async blob => {
+      await rfAsignarFoto(_rfCamaraIdx, blob);
+    }, 'image/jpeg', 0.88);
+  };
+
+  window.rfSubirArchivoFoto = async function(idx, input){
+    const file = input.files[0]; if(!file) return;
+    await rfAsignarFoto(idx, file);
+    input.value = '';
+  };
+
+  async function rfAsignarFoto(idx, blob){
+    rfMsg('Subiendo foto...','');
+    const path = `reportes-temp/${Date.now()}_${idx}.jpg`;
+    const { data, error } = await sb.storage.from('banco-preguntas').upload(path, blob, { contentType:'image/jpeg', upsert:true });
+    if(error){ rfMsg('Error al subir foto: '+error.message,'err'); return; }
+    const { data: urlData } = sb.storage.from('banco-preguntas').getPublicUrl(path);
+    RF.practicas[idx].fotoUrl  = urlData.publicUrl;
+    RF.practicas[idx].fotoPath = path;
+    RF.practicas[idx]._blobUrl = URL.createObjectURL(blob);
+    RF._uploadedPaths.push(path);
+    rfSavePaths();
+    rfRenderPracticas();
+    rfMsg('Foto subida','ok');
+  }
+
+  window.rfQuitarFoto = function(idx){
+    if(RF.practicas[idx]._blobUrl) URL.revokeObjectURL(RF.practicas[idx]._blobUrl);
+    RF.practicas[idx].fotoUrl  = null;
+    RF.practicas[idx].fotoPath = null;
+    RF.practicas[idx]._blobUrl = null;
+    rfRenderPracticas();
+  };
+
+  window.rfVerFoto = function(idx){
+    const p = RF.practicas[idx]; if(!p?.fotoUrl) return;
+    window.open(p._blobUrl||p.fotoUrl, '_blank');
+  };
+
+  // ── Purgar fotos ─────────────────────────────────────────────
+  window.rfPurgarFotos = async function(){
+    if(!await myConfirm('¿Eliminar todas las fotos temporales subidas a Supabase? Esta acción no se puede deshacer.')) return;
+    const paths = [...RF._uploadedPaths];
+    if(!paths.length){ rfMsg('No hay fotos registradas para purgar',''); return; }
+    let ok=0, fail=0;
+    for(const p of paths){
+      const {error} = await sb.storage.from('banco-preguntas').remove([p]);
+      error ? fail++ : ok++;
+    }
+    RF._uploadedPaths = [];
+    rfSavePaths();
+    // Limpiar referencias en prácticas actuales
+    RF.practicas.forEach(p=>{p.fotoUrl=null;p.fotoPath=null;p._blobUrl=null;});
+    rfRenderPracticas();
+    rfMsg(`Purgado: ${ok} eliminadas${fail?', '+fail+' errores':''}`, fail?'err':'ok');
+  };
+
+  // ── Limpiar formulario ───────────────────────────────────────
+  window.rfLimpiar = function(){
+    RF.alumnoId=null; RF.alumnoNombre=''; RF.alumnoDni='';
+    RF.practicas=[{nombre:'Práctica 1',nota:'',notaMax:20,fotoUrl:null,fotoPath:null,_blobUrl:null}];
+    document.getElementById('rf-alumno-input').value='';
+    document.getElementById('rf-alumno-id').value='';
+    document.getElementById('rf-alumno-badge').style.display='none';
+    document.getElementById('rf-obs').value='';
+    document.getElementById('rf-tipo').value='';
+    rfRenderPracticas();
+    rfMsg('','');
+  };
+
+  // ── Generar PDF ──────────────────────────────────────────────
+  window.rfGenerarPDF = async function(){
+    if(!RF.alumnoId){ rfMsg('Selecciona un alumno','err'); return; }
+    if(!RF.practicas.length){ rfMsg('Agrega al menos una práctica','err'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const PW=210, M=10;
+    const BLACK=[8,12,16], GOLD=[201,168,76], CHALK=[240,244,248];
+    const MUTED=[100,110,120], DARK2=[20,28,36], OK=[26,122,26], ERR=[192,57,43];
+
+    const fecha     = document.getElementById('rf-fecha').value || new Date().toISOString().slice(0,10);
+    const tipo      = document.getElementById('rf-tipo').value.trim() || 'Evaluación académica';
+    const obs       = document.getElementById('rf-obs').value.trim();
+    const fechaFmt  = new Date(fecha+'T12:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+
+    // HEADER
+    doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
+    doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
+    doc.text(tipo.toUpperCase(),M,11.5);
+
+    // META
+    doc.setFillColor(...DARK2); doc.rect(0,13,PW,10,'F');
+    doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...MUTED);
+    doc.text('ALUMNO',M,16.5); doc.text('DNI',120,16.5); doc.text('FECHA',165,16.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220,224,228);
+    doc.text(RF.alumnoNombre.toUpperCase(),M,21.5);
+    doc.text(RF.alumnoDni||'—',120,21.5);
+    doc.text(fechaFmt,165,21.5);
+
+    let y = 27;
+
+    // TABLA DE NOTAS
+    const rows = RF.practicas.map(p=>{
+      const n = parseFloat(p.nota);
+      const m = parseFloat(p.notaMax)||20;
+      const ok = !isNaN(n);
+      return [p.nombre, ok?`${n}`:' — ', `${m}`, ok?`${Math.round(n/m*100)}%`:' — '];
+    });
+
+    doc.autoTable({
+      startY: y, margin:{left:M,right:M},
+      head:[['PRÁCTICA','NOTA','MÁXIMO','%']],
+      body: rows,
+      styles:{fontSize:8.5,cellPadding:2.5,textColor:[20,20,20]},
+      headStyles:{fillColor:BLACK,textColor:GOLD,fontStyle:'bold',fontSize:7.5,lineWidth:0},
+      bodyStyles:{lineWidth:0.1,lineColor:[210,210,210]},
+      alternateRowStyles:{fillColor:[248,249,250]},
+      columnStyles:{1:{halign:'center',fontStyle:'bold'},2:{halign:'center'},3:{halign:'center',fontStyle:'bold'}},
+      didParseCell: d=>{
+        if(d.section==='body'&&d.column.index===3){
+          const pct=parseInt(d.cell.raw);
+          if(!isNaN(pct)) d.cell.styles.textColor = pct>=60?OK:ERR;
+        }
+      },
+    });
+
+    y = doc.lastAutoTable.finalY + 6;
+
+    // Observaciones
+    if(obs){
+      doc.setFillColor(235,237,240); doc.rect(M,y,PW-2*M,12,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+      doc.text('OBSERVACIONES',M+3,y+4.5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,40,40);
+      const lines = doc.splitTextToSize(obs,PW-2*M-6);
+      doc.text(lines,M+3,y+9);
+      y += Math.max(12,lines.length*4+6)+4;
+    }
+
+    // FOTOS — una por práctica que tenga foto
+    const practicasConFoto = RF.practicas.filter(p=>p.fotoUrl);
+    if(practicasConFoto.length){
+      for(const p of practicasConFoto){
+        // Cargar imagen como dataURL desde blob o URL pública
+        let imgData = null;
+        try {
+          imgData = await new Promise((resolve,reject)=>{
+            const img = new Image(); img.crossOrigin='anonymous';
+            img.onload=()=>{
+              const c = document.createElement('canvas');
+              c.width=img.naturalWidth; c.height=img.naturalHeight;
+              c.getContext('2d').drawImage(img,0,0);
+              resolve(c.toDataURL('image/jpeg',0.85));
+            };
+            img.onerror=()=>reject(new Error('img load failed'));
+            img.src = p._blobUrl||p.fotoUrl;
+          });
+        } catch(_){ /* sin foto */ }
+
+        if(!imgData) continue;
+
+        // Nueva página por foto
+        doc.addPage();
+        doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
+        doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
+        doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
+        doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
+        doc.text(`${p.nombre.toUpperCase()} · ${RF.alumnoNombre.toUpperCase()}`,M,11.5);
+
+        // Imagen centrada, máximo usable A4 - márgenes
+        const maxW = PW - 2*M;
+        const maxH = 297 - 13 - 6 - 8;  // bajo header, sobre footer
+        const tmp = new Image(); tmp.src = imgData;
+        const ratio = tmp.naturalHeight/tmp.naturalWidth||1;
+        let iW = maxW, iH = iW*ratio;
+        if(iH > maxH){ iH=maxH; iW=iH/ratio; }
+        const ix = M + (maxW-iW)/2;
+        doc.addImage(imgData,'JPEG',ix,16,iW,iH);
+      }
+    }
+
+    // Footer todas las páginas
+    const np=doc.internal.getNumberOfPages();
+    for(let i=1;i<=np;i++){
+      doc.setPage(i);
+      doc.setFillColor(...BLACK); doc.rect(0,290,PW,7,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+      doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,294);
+      doc.text(`${i}/${np}`,PW-M,294,{align:'right'});
+    }
+
+    // Nombre archivo
+    const partes  = RF.alumnoNombre.toUpperCase().trim().split(/\s+/);
+    const ape = partes[0]||'ALUMNO', nom = partes[1]||'';
+    const dni = RF.alumnoDni||'00000000';
+    const fname = `${nom}_${ape}_${dni}_${fecha}.pdf`.replace(/[^A-Z0-9_\.]/gi,'_');
+    _pdfSave(doc, fname);
+    rfMsg('PDF generado','ok');
+  };
+
+  function rfMsg(txt, tipo){
+    const el = document.getElementById('rf-msg');
+    if(!el) return;
+    el.textContent = txt;
+    el.style.color = tipo==='ok'?'var(--lime)':tipo==='err'?'var(--red)':'var(--muted)';
+  }
+
+  // Inicializar cuando se abre el panel
+  window.addEventListener('rf:panelOpen', rfIniciar);
 })();
 </script>
 </body>

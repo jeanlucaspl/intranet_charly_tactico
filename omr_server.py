@@ -44,7 +44,7 @@ A4_H     = int(297 * MM_TO_PX)
 
 # Evaluación ArgMax: la burbuja con mayor densidad de píxeles oscuros gana.
 # Blanco si max < BLANK_THRESH; doble si 2do/1ro >= DOUBLE_RATIO.
-BLANK_PX      = 280    # máx burbuja debe superar esto para no ser blanco
+BLANK_PX      = 240    # máx burbuja debe superar esto para no ser blanco
 MIN_MARK_GAP  = 80     # el ganador debe superar al 2do por ≥80px → respuesta clara
 DOUBLE_MIN_PX = 350    # doble marca: el 2do también debe superar esto
 
