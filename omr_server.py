@@ -404,18 +404,30 @@ def _save_debug(warped_bin: np.ndarray, results: list, N: int):
 @app.route('/')
 @app.route('/escaner_cartilla.html')
 def scanner_page():
-    resp = send_from_directory(BASE_DIR, 'escaner_cartilla.html')
+    from flask import send_file as _sf
+    path = os.path.join(BASE_DIR, 'escaner_cartilla.html')
+    print(f"  [scanner_page] BASE_DIR={BASE_DIR}  exists={os.path.exists(path)}")
+    resp = _sf(path, mimetype='text/html')
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
     resp.headers['Pragma'] = 'no-cache'
     return resp
 
 @app.route('/favicon.ico')
 def favicon():
+    path = os.path.join(BASE_DIR, 'favicon.ico')
+    if not os.path.exists(path):
+        return '', 204
     return send_from_directory(BASE_DIR, 'favicon.ico')
 
 @app.route('/icons/<path:filename>')
 def icons(filename):
     return send_from_directory(os.path.join(BASE_DIR, 'icons'), filename)
+
+@app.route('/debug_dir')
+def debug_dir():
+    """Diagnóstico: muestra BASE_DIR y archivos disponibles."""
+    files = os.listdir(BASE_DIR) if os.path.isdir(BASE_DIR) else []
+    return jsonify({'base_dir': BASE_DIR, 'files': sorted(files)})
 
 @app.route('/health', methods=['GET'])
 def health():
