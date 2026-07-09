@@ -9,13 +9,19 @@ Uso:
 """
 
 import os
+import sys
 import socket
 import numpy as np
 import cv2
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Cuando se ejecuta como .exe empaquetado con PyInstaller, los archivos
+# estáticos están junto al ejecutable, no en un __file__ temporal.
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 CORS(app)

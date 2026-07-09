@@ -1,0 +1,48 @@
+name: Build LanzadorEscaner.exe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lanzador_escaner.py'
+      - 'omr_server.py'
+      - 'lanzador_escaner.spec'
+      - 'requirements.txt'
+      - 'escaner_cartilla.html'
+  workflow_dispatch:   # También se puede lanzar manualmente desde GitHub
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install qrcode pillow pyinstaller
+
+      - name: Compilar .exe con PyInstaller
+        run: pyinstaller lanzador_escaner.spec
+
+      # El .exe queda en dist\LanzadorEscaner\
+      # Empaquetamos como ZIP para distribuir
+      - name: Empaquetar en ZIP
+        run: |
+          Compress-Archive -Path dist\LanzadorEscaner\* -DestinationPath LanzadorEscaner-Windows.zip
+        shell: pwsh
+
+      - name: Subir ZIP como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanzadorEscaner-Windows
+          path: LanzadorEscaner-Windows.zip
+          retention-days: 30
