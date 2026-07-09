@@ -668,9 +668,8 @@
       <div class="sc-title">SERVIDOR OMR</div>
     </div>
     <div class="cfg-note">
-      En la PC del admin, ejecuta:<br>
-      <code>python omr_server.py</code><br><br>
-      La consola mostrará la IP local. Ingrésala aquí.<br>
+      En la PC del admin, abre <strong>LanzadorEscaner.exe</strong>.<br>
+      Aparecerá un QR — escanéalo con el botón de abajo.<br>
       El celular y la PC deben estar en la misma red WiFi.
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -682,6 +681,16 @@
           placeholder="192.168.X.X:5000"
           autocomplete="off" inputmode="url"/>
         <button class="btn btn-gold" onclick="connectServer()">Conectar</button>
+      </div>
+      <button class="btn btn-outline" style="width:100%;padding:11px;font-size:13px" onclick="toggleServerQRScan()">
+        📷 Escanear QR del servidor
+      </button>
+      <div id="cfg-qr-wrap" style="display:none;border-radius:10px;overflow:hidden;position:relative">
+        <video id="cfg-qr-video" autoplay muted playsinline style="width:100%;display:block;border-radius:10px"></video>
+        <canvas id="cfg-qr-canvas" style="display:none"></canvas>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:60%;aspect-ratio:1;border:2px solid var(--gold);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+        </div>
       </div>
       <div class="cfg-status" id="cfg-status"></div>
     </div>
@@ -1014,6 +1023,7 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
     serverIP = '';
     loadSession();
     loadMateria();
+    loadStudents(); // pre-cargar alumnos para que el match DNI sea inmediato
     const hasKey = loadExamKey();
     startCamera();
     showScreen('screen-qr');
@@ -1028,6 +1038,64 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
 /* ═══════════════════════════════════════════════════════════════════
    CONFIG SERVIDOR
 ═══════════════════════════════════════════════════════════════════ */
+/* ── QR scanner para leer la IP del servidor desde el launcher ── */
+let _cfgQRStream = null;
+let _cfgQRLoop  = null;
+
+function toggleServerQRScan() {
+  const wrap = document.getElementById('cfg-qr-wrap');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    _startServerQRScan();
+  } else {
+    wrap.style.display = 'none';
+    _stopServerQRScan();
+  }
+}
+
+async function _startServerQRScan() {
+  try {
+    _cfgQRStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    const video = document.getElementById('cfg-qr-video');
+    video.srcObject = _cfgQRStream;
+    await video.play();
+    _cfgQRLoop = requestAnimationFrame(_scanServerQRFrame);
+  } catch(e) {
+    setCfgStatus('No se pudo acceder a la cámara', 'err');
+    document.getElementById('cfg-qr-wrap').style.display = 'none';
+  }
+}
+
+function _stopServerQRScan() {
+  if (_cfgQRLoop) { cancelAnimationFrame(_cfgQRLoop); _cfgQRLoop = null; }
+  if (_cfgQRStream) { _cfgQRStream.getTracks().forEach(t => t.stop()); _cfgQRStream = null; }
+}
+
+function _scanServerQRFrame() {
+  const video  = document.getElementById('cfg-qr-video');
+  const canvas = document.getElementById('cfg-qr-canvas');
+  if (!video.videoWidth) { _cfgQRLoop = requestAnimationFrame(_scanServerQRFrame); return; }
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data) {
+    const match = code.data.match(/https?:\/\/([^/\s]+)/i);
+    if (match) {
+      document.getElementById('cfg-ip').value = match[1];
+      document.getElementById('cfg-qr-wrap').style.display = 'none';
+      _stopServerQRScan();
+      connectServer();
+      return;
+    }
+  }
+  _cfgQRLoop = requestAnimationFrame(_scanServerQRFrame);
+}
+
 async function connectServer() {
   const raw = document.getElementById('cfg-ip').value.trim()
     .replace(/^https?:\/\//i, '');
@@ -1382,16 +1450,21 @@ async function sendOMR() {
   fd.append('n', examMode === 'practica' ? 100 : examN);
   try {
     const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
-    const resp = await fetch(`${apiBase}/process`, {
-      method: 'POST',
-      body: fd,
-      signal: AbortSignal.timeout(15000),
-    });
+    // Ejecutar en paralelo: procesar imagen + asegurar alumnos cargados
+    const [resp] = await Promise.all([
+      fetch(`${apiBase}/process`, {
+        method: 'POST',
+        body: fd,
+        signal: AbortSignal.timeout(15000),
+      }),
+      loadStudents(),
+    ]);
     const data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.error || 'Error del servidor');
     lastResults = data.results;
-    // Auto-identificar alumno por DNI detectado
-    if (data.dni && !data.dni.includes('?') && studentsList.length > 0) {
+    lastDetectedDni = data.dni || '';
+    // Auto-identificar alumno por DNI detectado en la cartilla
+    if (data.dni && !data.dni.includes('?')) {
       const match = studentsList.find(s => s.dni === data.dni);
       if (match) {
         selectedStudent = match;
@@ -1400,9 +1473,7 @@ async function sendOMR() {
         document.getElementById('autocomplete-dropdown').style.display = 'none';
       }
     }
-    lastDetectedDni = data.dni || '';
     hideProc();
-    loadStudents(); // cargar lista de alumnos en background (no bloquea)
     // Volver a mostrar cámara para el próximo escaneo
     document.getElementById('omr-preview-view').style.display = 'none';
     document.getElementById('omr-camera-view').style.display = 'block';
