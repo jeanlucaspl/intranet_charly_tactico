@@ -1947,13 +1947,15 @@ async function processBatch() {
       }
 
       if (selectedStudent) {
-        // Calcular puntaje y guardar en sesión automáticamente
         renderResult(data.results);
         await _batchConfirmar(files[i].name);
         ok++;
       } else {
         fail++;
-        showToast(`Sin DNI en ${files[i].name} — omitida`, false);
+        const dniInfo = !data.dni || data.dni.includes('?')
+          ? `DNI no detectado (${data.dni || '?'})`
+          : `DNI ${data.dni} no encontrado en la base de datos`;
+        showToast(`${files[i].name}: ${dniInfo}`, false);
       }
     } catch(e) {
       fail++;
