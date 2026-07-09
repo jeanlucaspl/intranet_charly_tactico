@@ -233,6 +233,12 @@ def process_dni(warped_bin: np.ndarray) -> str:
     DNI_BR = CL['DNI_BR']
     b_rad_px = DNI_BR * MM_TO_PX * 1.1
 
+    # Las burbujas DNI son pequeñas (~9px radio, área ~254px máx).
+    # El umbral global BLANK_PX=240 exigiría 94% de relleno — imposible.
+    # Con 80px (~30% de área) es suficiente para detectar lápiz o lapicero.
+    DNI_BLANK_PX  = 80
+    DNI_MIN_GAP   = 40   # diferencia mínima entre el ganador y el 2do
+
     digits = []
     for d in range(8):
         cx_mm = DNI_X + DNI_LW + d * DNI_SH
@@ -241,8 +247,10 @@ def process_dni(warped_bin: np.ndarray) -> str:
             cy_mm = DNI_Y + v * DNI_SV
             px = count_filled_px(warped_bin, cx_mm * MM_TO_PX, cy_mm * MM_TO_PX, b_rad_px)
             counts.append(px)
-        max_px = max(counts)
-        if max_px < BLANK_PX:
+        max_px  = max(counts)
+        sorted_c = sorted(counts, reverse=True)
+        gap = sorted_c[0] - sorted_c[1]
+        if max_px < DNI_BLANK_PX or gap < DNI_MIN_GAP:
             digits.append('?')
         else:
             digits.append(str(counts.index(max_px)))
