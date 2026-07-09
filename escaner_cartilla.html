@@ -2291,16 +2291,14 @@ async function downloadZipTodos() {
       zip.file(fname, blob);
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const url  = URL.createObjectURL(zipBlob);
     const fname = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
-    if (/Android/i.test(navigator.userAgent)) {
-      window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 8000);
-    } else if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
-      const w = window.open(url, '_blank');
-      if (!w) window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 20000);
+    // Web Share API: abre menú nativo de Android/iOS para guardar o compartir
+    const zipFile = new File([zipBlob], fname, { type: 'application/zip' });
+    if (navigator.canShare && navigator.canShare({ files: [zipFile] })) {
+      await navigator.share({ files: [zipFile], title: fname });
     } else {
+      // Fallback desktop
+      const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url; a.download = fname;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
