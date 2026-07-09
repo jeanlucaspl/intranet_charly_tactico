@@ -161,14 +161,25 @@ class LanzadorApp:
         )
         self.txt.pack(fill=tk.BOTH, expand=True)
 
+        btn_frame = tk.Frame(r, bg=COLOR_BG)
+        btn_frame.pack(pady=14)
+
         self.btn_stop = tk.Button(
-            r, text="Detener servidor",
+            btn_frame, text="Detener servidor",
             bg=COLOR_RED, fg="white", activebackground="#b03030",
-            font=("Arial", 11, "bold"), padx=28, pady=8,
+            font=("Arial", 11, "bold"), padx=22, pady=8,
             relief=tk.FLAT, cursor="hand2",
             command=self.stop_server, state=tk.DISABLED,
         )
-        self.btn_stop.pack(pady=14)
+        self.btn_stop.pack(side=tk.LEFT, padx=(0, 8))
+
+        tk.Button(
+            btn_frame, text="Ver fotos del proceso",
+            bg=COLOR_DARK, fg=COLOR_GOLD, activebackground="#1e2830",
+            font=("Arial", 10), padx=14, pady=8,
+            relief=tk.FLAT, cursor="hand2",
+            command=self._abrir_carpeta_debug,
+        ).pack(side=tk.LEFT)
 
     # ── Helpers thread-safe ─────────────────────────────────────────
 
@@ -263,6 +274,19 @@ class LanzadorApp:
             self._log(f"(QR no disponible: {e})")
 
     # ── Control ─────────────────────────────────────────────────────
+
+    def _abrir_carpeta_debug(self):
+        import tempfile
+        carpeta = tempfile.gettempdir()
+        try:
+            if sys.platform == "win32":
+                os.startfile(carpeta)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", carpeta])
+            else:
+                subprocess.Popen(["xdg-open", carpeta])
+        except Exception as e:
+            self._log(f"No se pudo abrir la carpeta: {e}")
 
     def stop_server(self):
         self.running = False
