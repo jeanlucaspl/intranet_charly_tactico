@@ -2290,20 +2290,14 @@ async function downloadZipTodos() {
       seen[fname] = true;
       zip.file(fname, blob);
     }
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
     const fname = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
-    // Web Share API: abre menú nativo de Android/iOS para guardar o compartir
-    const zipFile = new File([zipBlob], fname, { type: 'application/zip' });
-    if (navigator.canShare && navigator.canShare({ files: [zipFile] })) {
-      await navigator.share({ files: [zipFile], title: fname });
-    } else {
-      // Fallback desktop
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fname;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    }
+    // Generar como base64: funciona en Android con HTTPS auto-firmado
+    // donde los blob URLs quedan bloqueados por políticas de descarga.
+    const b64 = await zip.generateAsync({ type: 'base64' });
+    const a = document.createElement('a');
+    a.href = 'data:application/octet-stream;base64,' + b64;
+    a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     hideProc();
     showToast('ZIP descargado', true);
   } catch (err) {
