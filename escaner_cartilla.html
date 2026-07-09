@@ -2291,13 +2291,30 @@ async function downloadZipTodos() {
       zip.file(fname, blob);
     }
     const fname = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
-    // Generar como base64: funciona en Android con HTTPS auto-firmado
-    // donde los blob URLs quedan bloqueados por políticas de descarga.
-    const b64 = await zip.generateAsync({ type: 'base64' });
-    const a = document.createElement('a');
-    a.href = 'data:application/octet-stream;base64,' + b64;
-    a.download = fname;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    // File System Access API: abre selector nativo de Android/Desktop
+    if ('showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fname,
+        types: [{ description: 'ZIP', accept: { 'application/zip': ['.zip'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(zipBlob);
+      await writable.close();
+    } else {
+      // Fallback: Web Share API
+      const file = new File([zipBlob], fname, { type: 'application/zip' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: fname });
+      } else {
+        // Último recurso: blob URL
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }
+    }
     hideProc();
     showToast('ZIP descargado', true);
   } catch (err) {
