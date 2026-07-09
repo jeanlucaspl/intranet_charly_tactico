@@ -671,10 +671,28 @@
       <div class="sc-eye">Configuración inicial</div>
       <div class="sc-title">SERVIDOR OMR</div>
     </div>
-    <div class="cfg-note">
+
+    <!-- Toggle Celular / PC -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+      <button id="mode-btn-cel" onclick="setInputMode('cel')"
+        style="padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;border:none;cursor:pointer;background:var(--gold);color:#080C10;touch-action:manipulation;user-select:none">
+        📱 CELULAR
+      </button>
+      <button id="mode-btn-pc" onclick="setInputMode('pc')"
+        style="padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;border:none;cursor:pointer;background:var(--navy3);color:var(--muted);touch-action:manipulation;user-select:none">
+        💻 PC
+      </button>
+    </div>
+
+    <div class="cfg-note" id="cfg-note-cel">
       En la PC del admin, abre <strong>LanzadorEscaner.exe</strong>.<br>
       Aparecerá un QR — escanéalo con el botón de abajo.<br>
       El celular y la PC deben estar en la misma red WiFi.
+    </div>
+    <div class="cfg-note" id="cfg-note-pc" style="display:none">
+      Abre <strong>LanzadorEscaner.exe</strong> en esta PC o en otra de la red.<br>
+      Conecta por IP o escanea el QR con la cámara de esta PC.<br>
+      Luego seleccionarás las fotos de las cartillas para procesarlas en lote.
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">
@@ -804,6 +822,24 @@
       </div>
       <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="captureOMR()">
         CAPTURAR
+      </button>
+      <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="goToQR()">
+        Cambiar prueba (nuevo QR)
+      </button>
+    </div>
+
+    <!-- Vista PC: selector de archivos múltiple -->
+    <div id="omr-pc-view" style="display:none;flex-direction:column;gap:12px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);text-align:center;line-height:1.6">
+        Selecciona todas las fotos de cartillas a procesar.<br>Se identificarán automáticamente por DNI.
+      </div>
+      <input type="file" id="pc-files-input" multiple accept="image/*" style="display:none" onchange="onPCFilesSelected(this.files)">
+      <button class="btn btn-outline" style="width:100%;font-size:14px;padding:14px" onclick="document.getElementById('pc-files-input').click()">
+        📁 Seleccionar fotos de cartillas
+      </button>
+      <div id="pc-files-info" style="display:none;background:var(--navy3);border:1px solid var(--border);border-radius:4px;padding:12px 14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--fg)"></div>
+      <button id="pc-process-btn" class="btn btn-gold" style="display:none;width:100%;font-size:16px;padding:16px" onclick="processBatch()">
+        PROCESAR →
       </button>
       <button class="btn btn-outline" style="width:100%;font-size:12px;padding:9px" onclick="goToQR()">
         Cambiar prueba (nuevo QR)
@@ -965,6 +1001,7 @@ let examN       = 0;      // preguntas activas (con alternativa)
 let examMode    = 'vocab'; // 'vocab' | 'practica'
 let examSections = null;  // null=sin segmentación | [{nombre, qIndices:[...]}]
 let serverIP    = '';     // ip:puerto del servidor OMR (vacío = mismo origen)
+let pcMode      = false;  // true = modo PC (selector de archivos en lugar de cámara)
 let mediaStream = null;
 let qrLoopActive = false;
 let qrAnimFrame  = null;
@@ -985,6 +1022,10 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
    INIT — auth check
 ═══════════════════════════════════════════════════════════════════ */
 (async function init() {
+  // Restaurar modo de entrada guardado
+  const savedMode = localStorage.getItem('omr_input_mode') || 'cel';
+  setInputMode(savedMode);
+
   if (!IS_LOCAL) {
     const { data: { session: s } } = await sb.auth.getSession();
     if (!s) {
@@ -997,7 +1038,6 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
     const savedIP = localStorage.getItem('omr_server_ip');
     if (savedIP) {
       document.getElementById('cfg-ip').value = savedIP;
-      // Intentar auto-conexión silenciosa
       setCfgStatus('Reconectando al servidor...', '');
       showScreen('screen-config');
       try {
@@ -1005,17 +1045,15 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error();
         serverIP = savedIP;
-        await startCamera();
-        // Conectado — ver si hay clave guardada
+        if (!pcMode) await startCamera();
         const hasKey = loadExamKey();
         showScreen('screen-qr');
         if (hasKey) {
-          _showQRResume();   // pregunta si continuar o escanear nuevo
+          _showQRResume();
         } else {
           _showQRScanner();
         }
       } catch(_) {
-        // Auto-conexión falló → mostrar config con mensaje
         setCfgStatus('No se pudo reconectar. Verifica la IP.', 'err');
         showScreen('screen-config');
       }
@@ -1023,13 +1061,12 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
       showScreen('screen-config');
     }
   } else {
-    // Acceso directo desde el servidor Flask — no necesita config
     serverIP = '';
     loadSession();
     loadMateria();
-    loadStudents(); // pre-cargar alumnos para que el match DNI sea inmediato
+    loadStudents();
     const hasKey = loadExamKey();
-    startCamera();
+    if (!pcMode) startCamera();
     showScreen('screen-qr');
     if (hasKey) {
       _showQRResume();
@@ -1115,7 +1152,7 @@ async function connectServer() {
     localStorage.setItem('omr_server_ip', ip);
     setCfgStatus('✓ Conectado — ' + (data.server || ip), 'ok');
     setTimeout(() => {
-      startCamera();
+      if (!pcMode) startCamera();
       showScreen('screen-qr');
     }, 700);
   } catch(e) {
@@ -1789,12 +1826,119 @@ function renderResult(results) {
   bar.className   = 'score-bar ' + (pass ? 'pass' : 'fail');
 }
 
+function setInputMode(mode) {
+  pcMode = mode === 'pc';
+  localStorage.setItem('omr_input_mode', mode);
+  document.getElementById('mode-btn-cel').style.background  = pcMode ? 'var(--navy3)' : 'var(--gold)';
+  document.getElementById('mode-btn-cel').style.color       = pcMode ? 'var(--muted)' : '#080C10';
+  document.getElementById('mode-btn-pc').style.background   = pcMode ? 'var(--gold)'  : 'var(--navy3)';
+  document.getElementById('mode-btn-pc').style.color        = pcMode ? '#080C10'      : 'var(--muted)';
+  document.getElementById('cfg-note-cel').style.display     = pcMode ? 'none' : '';
+  document.getElementById('cfg-note-pc').style.display      = pcMode ? ''     : 'none';
+}
+
 function goToScan() {
   stopQRLoop();
   document.getElementById('scan-student-badge').innerHTML = selectedStudent
     ? `<div class="badge badge-gold">👤 ${selectedStudent.apellido} ${selectedStudent.nombre}</div>`
     : `<div class="badge badge-gold" style="opacity:.5">👤 Se identificará por DNI de la cartilla</div>`;
+  // Mostrar vista según modo
+  document.getElementById('omr-camera-view').style.display = pcMode ? 'none' : 'block';
+  document.getElementById('omr-pc-view').style.display     = pcMode ? 'flex'  : 'none';
+  document.getElementById('omr-preview-view').style.display = 'none';
   showScreen('screen-scan');
+}
+
+function onPCFilesSelected(files) {
+  const n = files.length;
+  if (!n) return;
+  const info = document.getElementById('pc-files-info');
+  const btn  = document.getElementById('pc-process-btn');
+  info.style.display = '';
+  info.textContent   = `${n} imagen${n > 1 ? 'es' : ''} seleccionada${n > 1 ? 's' : ''}`;
+  btn.style.display  = '';
+  btn.textContent    = `PROCESAR ${n} IMAGEN${n > 1 ? 'ES' : ''} →`;
+}
+
+async function processBatch() {
+  const input = document.getElementById('pc-files-input');
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
+
+  await loadStudents();
+  let ok = 0, fail = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    showProc(`Procesando ${i + 1} / ${files.length}…`);
+    try {
+      const fd = new FormData();
+      fd.append('image', files[i], files[i].name);
+      fd.append('n', examMode === 'practica' ? 100 : examN);
+      const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
+      const resp = await fetch(`${apiBase}/process`, {
+        method: 'POST', body: fd, signal: AbortSignal.timeout(30000),
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || 'Error del servidor');
+
+      lastResults     = data.results;
+      lastDetectedDni = data.dni || '';
+
+      // Auto-identificar alumno por DNI
+      selectedStudent = null;
+      if (data.dni && !data.dni.includes('?')) {
+        selectedStudent = studentsList.find(s => s.dni === data.dni) || null;
+      }
+
+      if (selectedStudent) {
+        // Calcular puntaje y guardar en sesión automáticamente
+        renderResult(data.results);
+        await _batchConfirmar(files[i].name);
+        ok++;
+      } else {
+        fail++;
+        showToast(`Sin DNI en ${files[i].name} — omitida`, false);
+      }
+    } catch(e) {
+      fail++;
+      showToast(`Error en ${files[i].name}: ${e.message}`, false);
+    }
+  }
+
+  hideProc();
+  // Limpiar selector para siguiente uso
+  input.value = '';
+  document.getElementById('pc-files-info').style.display = 'none';
+  document.getElementById('pc-process-btn').style.display = 'none';
+
+  showToast(`Lote finalizado: ${ok} guardadas, ${fail} omitidas`, ok > 0);
+  showSummary();
+}
+
+async function _batchConfirmar(filename) {
+  if (!selectedStudent || !lastResults) return;
+  const scoreRaw = document.getElementById('score-text').textContent;
+  const [c, t]   = scoreRaw.split('/').map(Number);
+  const nota     = examSections ? null : Math.round(c / t * 20);
+  const periodo  = new Date().toISOString().slice(0, 10);
+
+  if (!examSections && materiaVocabId) {
+    await sb.from('notas').upsert(
+      { alumno_id: selectedStudent.id, materia_id: materiaVocabId, periodo,
+        nota_1: nota, nota_2: null, nota_3: null, promedio: nota },
+      { onConflict: 'alumno_id,materia_id,periodo' }
+    );
+  }
+  session.push({
+    nombre:   `${selectedStudent.apellido} ${selectedStudent.nombre}`,
+    dni:      selectedStudent.dni,
+    correct:  c, total: t, nota,
+    results:  lastResults ? [...lastResults] : [],
+    sections: examSections ? JSON.parse(JSON.stringify(examSections)) : null,
+    key:      examKey ? [...examKey] : [],
+  });
+  saveSession();
 }
 
 function reintentarEscaneo() {
