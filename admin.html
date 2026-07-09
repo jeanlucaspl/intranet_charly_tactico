@@ -2606,13 +2606,13 @@ async function _getLogoUrl(){
 
 // Constantes de estilo compartidas entre reportes
 const _PDF={
-  W:210,H:297,PL:14,PR:14,
+  W:210,H:297,PL:8,PR:8,
   GOLD:[201,168,76],DARK:[9,14,10],DARK2:[14,26,16],
   WHITE:[240,244,240],MUTED:[122,144,128],BLACK:[20,20,20],
-  tbl:{fontSize:8,cellPadding:2,textColor:[20,20,20],fillColor:[255,255,255],overflow:'ellipsize'},
+  tbl:{fontSize:8,cellPadding:1.5,textColor:[20,20,20],fillColor:[255,255,255],overflow:'ellipsize'},
   head:{fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]},
   body:{lineWidth:0.2,lineColor:[210,210,210]},
-  colE:{0:{cellWidth:7},1:{cellWidth:55},2:{cellWidth:52},3:{cellWidth:22},4:{cellWidth:14},5:{cellWidth:20},6:{cellWidth:12}}
+  colE:{0:{cellWidth:9},1:{cellWidth:60},2:{cellWidth:57},3:{cellWidth:24},4:{cellWidth:16},5:{cellWidth:16},6:{cellWidth:12}}
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
