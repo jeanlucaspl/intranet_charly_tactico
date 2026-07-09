@@ -14,6 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -751,6 +752,10 @@
       <div class="qr-status" id="qr-status">
         <span class="spinner"></span> Apunta al código QR de la Hoja Docente
       </div>
+      <input type="file" id="qr-pdf-input" accept="application/pdf,image/*" style="display:none" onchange="scanQRFromFile(this)">
+      <button class="btn btn-outline" style="width:100%" onclick="document.getElementById('qr-pdf-input').click()">
+        📄 Subir PDF o imagen con QR
+      </button>
       <button class="btn btn-outline" style="width:100%" onclick="toggleManual()">
         Ingresar código manualmente
       </button>
@@ -1295,6 +1300,56 @@ function qrLoop() {
     }
   }
   qrAnimFrame = requestAnimationFrame(qrLoop);
+}
+
+async function scanQRFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  showProc('Buscando QR…');
+
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+
+    if (file.type === 'application/pdf') {
+      // PDF.js: renderizar primera página
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const page = await pdf.getPage(1);
+      const vp   = page.getViewport({ scale: 2.0 });
+      canvas.width  = vp.width;
+      canvas.height = vp.height;
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    } else {
+      // Imagen directa
+      const img = await new Promise((res, rej) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = URL.createObjectURL(file);
+      });
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+    }
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code    = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+    hideProc();
+
+    if (code && (code.data.startsWith('CT|') || code.data.startsWith('CTP|'))) {
+      stopQRLoop();
+      onQRDetected(code.data);
+    } else {
+      showToast('No se encontró QR válido en el archivo', false);
+    }
+  } catch(e) {
+    hideProc();
+    showToast('Error al leer el archivo: ' + e.message, false);
+  }
 }
 
 function onQRDetected(data) {
