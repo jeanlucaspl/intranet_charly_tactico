@@ -28,9 +28,12 @@ CORS(app)
 
 # ── Constantes de layout (idénticas a CART_LAYOUT en admin.html) ──
 CL = {
-    'GX': 10, 'GY': 36, 'GW': 190, 'GH': 200,
+    'GX': 10, 'GY': 64, 'GW': 190, 'GH': 200,   # GY cambia de 36 a 64
     'RM': 5,  'HDR': 6,  'RH': 7,  'QW': 8,
     'BA': 11, 'BS': 6.5, 'BR': 2.5, 'GAP': 5,
+    # DNI section
+    'DNI_X': 10, 'DNI_Y': 20, 'DNI_LW': 7,
+    'DNI_SH': 5, 'DNI_SV': 4, 'DNI_BR': 1.4,
 }
 
 # Marcas de registro en esquinas del papel A4 (3mm del borde, 7×7mm)
@@ -211,6 +214,42 @@ def count_filled_px(warped_bin: np.ndarray, cx_px: float, cy_px: float, r_px: fl
     mask = np.zeros(warped_bin.shape, dtype=np.uint8)
     cv2.circle(mask, (int(round(cx_px)), int(round(cy_px))), int(round(r_px)), 255, -1)
     return cv2.countNonZero(cv2.bitwise_and(warped_bin, mask))
+
+
+# ══════════════════════════════════════════════════════════════════
+#  DNI
+# ══════════════════════════════════════════════════════════════════
+
+def process_dni(warped_bin: np.ndarray) -> str:
+    """
+    Detecta el DNI (8 dígitos 0-9) en la sección DNI de la cartilla.
+    Devuelve string de 8 caracteres ('?' si un dígito está en blanco).
+    """
+    DNI_X  = CL['DNI_X']
+    DNI_Y  = CL['DNI_Y']
+    DNI_LW = CL['DNI_LW']
+    DNI_SH = CL['DNI_SH']
+    DNI_SV = CL['DNI_SV']
+    DNI_BR = CL['DNI_BR']
+    b_rad_px = DNI_BR * MM_TO_PX * 1.1
+
+    digits = []
+    for d in range(8):
+        cx_mm = DNI_X + DNI_LW + d * DNI_SH
+        counts = []
+        for v in range(10):
+            cy_mm = DNI_Y + v * DNI_SV
+            px = count_filled_px(warped_bin, cx_mm * MM_TO_PX, cy_mm * MM_TO_PX, b_rad_px)
+            counts.append(px)
+        max_px = max(counts)
+        if max_px < BLANK_PX:
+            digits.append('?')
+        else:
+            digits.append(str(counts.index(max_px)))
+
+    dni = ''.join(digits)
+    print(f"  DNI detectado: {dni}")
+    return dni
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -403,6 +442,7 @@ def process():
     # Warp en gris → binarización adaptativa sobre papel plano (ver warp_perspective)
     warped_bin = warp_perspective(gray, marks)
     results    = process_omr(warped_bin, n)
+    dni        = process_dni(warped_bin)
     _save_debug(warped_bin, results, n)
 
     counts = {'ok': 0, 'blank': 0, 'double': 0}
@@ -412,7 +452,7 @@ def process():
     for r in results:
         print(f"  Q{r['q']:2d}: {r['status']:8s} {r['detected'] or '—'}  px={r['counts']}")
 
-    return jsonify({'results': results})
+    return jsonify({'results': results, 'dni': dni})
 
 
 # ══════════════════════════════════════════════════════════════════
