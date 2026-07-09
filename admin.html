@@ -1714,7 +1714,7 @@ async function checkAuth() {
   const { data: { user }, error } = await sb.auth.getUser();
   if (!user || error) { await sb.auth.signOut(); location.replace('login.html'); return false; }
   const { data: pf } = await sb.from('perfiles').select('rol').eq('id', user.id).single();
-  if (!['admin','profesor','dueno'].includes(pf?.rol)) {
+  if (!['admin','profesor','dueno','delegado'].includes(pf?.rol)) {
     await sb.auth.signOut();
     location.replace('login.html');
     return false;
@@ -1850,6 +1850,29 @@ async function init(){
   uid=_u.id;
   const {data:pf}=await sb.from('perfiles').select('rol').eq('id',uid).single();
   esDueno = (pf?.rol==='dueno');
+  const esDelegado = (pf?.rol==='delegado');
+
+  // Delegado: solo ve la sección Asistencia
+  if(esDelegado){
+    document.getElementById('sec-gestion').style.display='none';
+    document.getElementById('sec-academico').style.display='none';
+    document.getElementById('sec-comunicacion').style.display='none';
+    document.getElementById('sec-web').style.display='none';
+    // Ocultar General (Panel del Día y Reportes)
+    const secGeneral = document.querySelector('.sb-section');
+    if(secGeneral) secGeneral.style.display='none';
+    // Abrir sección asistencia automáticamente
+    const secAsist = document.getElementById('sec-asistencia');
+    if(secAsist) secAsist.classList.remove('collapsed');
+    // Navegar directo a Tomar Asistencia
+    showPanel('facial', document.querySelector('[onclick*="facial"]'));
+    document.getElementById('topFecha').textContent = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
+    await Promise.all([loadAlumnos(),loadMaterias(),loadAulas()]);
+    renderAulaTabs();
+    cargarModelosFacial();
+    return;
+  }
+
   // Escáner Cartilla y Reportes con Fotos solo para admin y dueno
   if(pf?.rol==='admin' || pf?.rol==='dueno'){
     const elEsc = document.getElementById('sb-escaner-link');

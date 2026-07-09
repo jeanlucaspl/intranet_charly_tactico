@@ -129,9 +129,10 @@ def find_registration_marks(gray: np.ndarray):
         best, best_score = None, 0
         top_cands = []
 
-        # Margen de borde: la marca real está a ~6% del borde; excluir objetos al 4%
-        edge_x = W * 0.04
-        edge_y = H * 0.04
+        # Margen de borde: en fotos de celular la marca está lejos del borde (hay fondo).
+        # En imágenes escaneadas la marca está a ~3% del borde — usar 1.5% para no excluirla.
+        edge_x = W * 0.015
+        edge_y = H * 0.015
 
         for cnt in contours:
             M = cv2.moments(cnt)
@@ -174,35 +175,46 @@ def find_registration_marks(gray: np.ndarray):
 #  CORRECCIÓN DE PERSPECTIVA
 # ══════════════════════════════════════════════════════════════════
 
-def warp_perspective(gray: np.ndarray, marks_px: list):
+def warp_perspective(gray: np.ndarray, marks_px: list, is_scan: bool = False):
     """
     Warpea la imagen EN GRIS (no binaria) usando las 4 marcas.
     Retorna (warped_bin, warped_raw):
-      - warped_bin: con MORPH_CLOSE 7×7 — para burbujas OMR grandes (r≈16px)
-      - warped_raw: solo adaptive threshold, sin cierre — para burbujas DNI pequeñas (r≈9px)
-    El cierre morfológico 7×7 rellena los círculos DNI impresos vacíos,
-    haciendo imposible distinguirlos de los marcados.
+      - warped_bin: binarizada para burbujas OMR grandes
+      - warped_raw: sin cierre morfológico, para burbujas DNI pequeñas
+
+    Modo escáner: iluminación uniforme → Otsu global + denoising.
+      El threshold adaptativo con blockSize=31 sobre scans captura grano del papel.
+    Modo celular: iluminación no uniforme → adaptive threshold + MORPH_CLOSE.
     """
     src = np.float32([list(m) for m in marks_px])
     dst = np.float32([
         [m[0] * MM_TO_PX, m[1] * MM_TO_PX] for m in REG_MM
     ])
-    H_mat      = cv2.getPerspectiveTransform(src, dst)
+    H_mat       = cv2.getPerspectiveTransform(src, dst)
     warped_gray = cv2.warpPerspective(gray, H_mat, (A4_W, A4_H),
                                       flags=cv2.INTER_LINEAR)
-    # Adaptive threshold sobre papel plano: detecta lápiz claro y tinta oscura
-    # por igual sin importar iluminación no uniforme de la foto.
-    warped_raw = cv2.adaptiveThreshold(
-        warped_gray, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        blockSize=31, C=6
-    )
-    # Cierre morfológico: fusiona trazos finos del lapicero en masa sólida.
-    # Kernel 7×7 elipse: cierra huecos sin fusionar burbujas adyacentes.
-    # NO usar para DNI (burbujas pequeñas): el cierre rellena los círculos vacíos.
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    warped_bin = cv2.morphologyEx(warped_raw, cv2.MORPH_CLOSE, kernel)
+    if is_scan:
+        # Escáner: iluminación uniforme → Otsu global funciona bien.
+        # Denoising previo elimina grano del papel que confunde el threshold.
+        denoised = cv2.fastNlMeansDenoising(warped_gray, h=10,
+                                            templateWindowSize=7,
+                                            searchWindowSize=21)
+        blurred = cv2.GaussianBlur(denoised, (5, 5), 0)
+        _, warped_raw = cv2.threshold(blurred, 0, 255,
+                                      cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        # Cierre pequeño: sella huecos en trazos de lápiz sin rellenar círculos vacíos
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        warped_bin = cv2.morphologyEx(warped_raw, cv2.MORPH_CLOSE, kernel)
+    else:
+        # Celular: adaptive threshold compensa iluminación no uniforme
+        warped_raw = cv2.adaptiveThreshold(
+            warped_gray, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            blockSize=31, C=6
+        )
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        warped_bin = cv2.morphologyEx(warped_raw, cv2.MORPH_CLOSE, kernel)
     return warped_bin, warped_raw
 
 
@@ -487,9 +499,22 @@ def process():
     if img is None:
         return jsonify({'error': 'No se pudo decodificar la imagen'}), 400
 
-    # Canal rojo (BGR índice 2): lapicero azul absorbe luz roja → aparece negro puro.
-    # Mucho mejor contraste que escala de grises para tinta azul.
-    gray  = img[:, :, 2]
+    # Detección automática: escáner vs foto de celular.
+    # Escáner (≥1400px ancho): usa escala de grises y normaliza a 150dpi
+    # para que los umbrales de detección sean consistentes con fotos de celular.
+    # Celular: lapicero azul absorbe luz roja → canal rojo da mejor contraste.
+    h_img, w_img = img.shape[:2]
+    is_scan = w_img >= 1400 and h_img >= 1900
+    if is_scan:
+        gray_full = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Normalizar a 150dpi (A4_W=1240px). Círculos vacíos leen ~200-280px como en celular.
+        scale = A4_W / w_img
+        new_h  = int(h_img * scale)
+        gray   = cv2.resize(gray_full, (A4_W, new_h), interpolation=cv2.INTER_AREA)
+        print(f"  [modo escáner] {w_img}x{h_img}px → {A4_W}x{new_h}px (150dpi equiv.)")
+    else:
+        gray = img[:, :, 2]
+        print(f"  [modo celular] {w_img}x{h_img}px → canal rojo")
 
     marks = find_registration_marks(gray)
     valid = [m for m in marks if m is not None]
@@ -499,6 +524,23 @@ def process():
     for i, m in enumerate(marks):
         print(f"  Marca {names[i]}: {f'({m[0]:.0f}, {m[1]:.0f})' if m else 'NO DETECTADA'}")
     _save_marks_debug(gray, marks)
+
+    # ── Extrapolación geométrica si falta exactamente 1 marca ────────
+    # Propiedad del paralelogramo: TL + BR = TR + BL
+    # Índices: 0=TL, 1=TR, 2=BL, 3=BR
+    if len(valid) == 3:
+        mi = next(i for i, m in enumerate(marks) if m is None)
+        tl, tr, bl, br = marks
+        if mi == 0:   # falta TL: TL = TR + BL - BR
+            marks[0] = (tr[0] + bl[0] - br[0], tr[1] + bl[1] - br[1])
+        elif mi == 1: # falta TR: TR = TL + BR - BL
+            marks[1] = (tl[0] + br[0] - bl[0], tl[1] + br[1] - bl[1])
+        elif mi == 2: # falta BL: BL = TL + BR - TR
+            marks[2] = (tl[0] + br[0] - tr[0], tl[1] + br[1] - tr[1])
+        else:         # falta BR: BR = TR + BL - TL
+            marks[3] = (tr[0] + bl[0] - tl[0], tr[1] + bl[1] - tl[1])
+        print(f"  [EXTRAPOLADO] {names[mi]}: ({marks[mi][0]:.0f}, {marks[mi][1]:.0f})")
+        valid = [m for m in marks if m is not None]
 
     if len(valid) < 4:
         missing = [names[i] for i, m in enumerate(marks) if m is None]
@@ -510,9 +552,8 @@ def process():
             )
         }), 422
 
-    # Warp en gris → binarización adaptativa sobre papel plano (ver warp_perspective)
-    # warped_bin: con MORPH_CLOSE para OMR; warped_raw: sin cierre para DNI
-    warped_bin, warped_raw = warp_perspective(gray, marks)
+    # Warp en gris → binarización (adaptive para celular, Otsu para escáner)
+    warped_bin, warped_raw = warp_perspective(gray, marks, is_scan=is_scan)
     results    = process_omr(warped_bin, n)
     dni        = process_dni(warped_raw)
     _save_debug(warped_bin, results, n)
