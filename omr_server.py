@@ -337,8 +337,10 @@ def _save_marks_debug(gray: np.ndarray, marks: list):
             cv2.circle(dbg, (int(m[0]), int(m[1])), 20, (0, 230, 0), 3)
             cv2.putText(dbg, names[i], (int(m[0])+22, int(m[1])+6),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 230, 0), 2)
-    cv2.imwrite('/tmp/omr_marks.jpg', dbg)
-    print("  Diagnóstico marcas → /tmp/omr_marks.jpg")
+    import tempfile, os as _os
+    _p = _os.path.join(tempfile.gettempdir(), 'omr_marks.jpg')
+    cv2.imwrite(_p, dbg)
+    print(f"  Diagnóstico marcas → {_p}")
 
 
 def _save_debug(warped_bin: np.ndarray, results: list, N: int):
@@ -370,8 +372,10 @@ def _save_debug(warped_bin: np.ndarray, results: list, N: int):
             if c == 0:
                 cv2.putText(dbg, str(r['q']), (px - b_rad_px - 18, py + 4),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.28, (120, 120, 120), 1)
-    cv2.imwrite('/tmp/omr_debug.jpg', dbg)
-    print("  Debug burbujas → /tmp/omr_debug.jpg")
+    import tempfile, os as _os
+    _p = _os.path.join(tempfile.gettempdir(), 'omr_debug.jpg')
+    cv2.imwrite(_p, dbg)
+    print(f"  Debug burbujas → {_p}")
 
 
 # ══════════════════════════════════════════════════════════════════
