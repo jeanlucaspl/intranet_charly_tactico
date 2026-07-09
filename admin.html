@@ -7568,39 +7568,22 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   doc.text('PLANTILLA DE RESPUESTAS — '+titulo.toUpperCase(),PW/2,M+9,{align:'center'});
   doc.setFontSize(7);doc.text(fecha,PW-M,M+4,{align:'right'});
   doc.setDrawColor(...LGT);doc.setLineWidth(0.2);doc.line(M,M+11,PW-M,M+11);
-  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(...GRY);
-  doc.text('Rellene el círculo de la alternativa elegida. Solo marque filas con fondo claro (tienen alternativa).',M,M+16.5);
   // Marcas de registro 7×7mm a 3mm del borde
   const MK=7,MP=3;
   doc.setFillColor(0,0,0);
   doc.rect(MP,MP,MK,MK,'F');doc.rect(210-MP-MK,MP,MK,MK,'F');
   doc.rect(MP,297-MP-MK,MK,MK,'F');doc.rect(210-MP-MK,297-MP-MK,MK,MK,'F');
   // ── Sección DNI ──────────────────────────────────────────────
-  // Marco del área DNI
   doc.setDrawColor(...LGT);doc.setLineWidth(0.2);
   doc.rect(DNI_X-1, DNI_Y-DNI_SV/2-5, DNI_LW+8*DNI_SH+2, 10*DNI_SV+7,'S');
-  // Título
   doc.setFont('helvetica','bold');doc.setFontSize(5.5);doc.setTextColor(...GRY);
   doc.text('DNI DEL ALUMNO',DNI_X,DNI_Y-DNI_SV/2-1.5);
-  // Encabezado columnas (posición 1-8)
   doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(160,160,160);
   for(let d=0;d<8;d++) doc.text(`${d+1}`,DNI_X+DNI_LW+d*DNI_SH,DNI_Y-DNI_SV/2+1.5,{align:'center'});
-  // Etiquetas filas (0-9)
   doc.setFont('helvetica','bold');doc.setFontSize(5.5);doc.setTextColor(...GRY);
   for(let v=0;v<10;v++) doc.text(`${v}`,DNI_X+DNI_LW-2,DNI_Y+v*DNI_SV+1.5,{align:'right'});
-  // Burbujas DNI
   doc.setDrawColor(60,60,60);doc.setLineWidth(0.35);
   for(let d=0;d<8;d++) for(let v=0;v<10;v++) doc.circle(DNI_X+DNI_LW+d*DNI_SH,DNI_Y+v*DNI_SV,DNI_BR,'S');
-  // Campos de texto a la derecha
-  const TX=62;
-  doc.setDrawColor(...LGT);doc.setLineWidth(0.3);
-  doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...GRY);
-  doc.text('Apellidos y Nombres:',TX,DNI_Y-1);
-  doc.line(TX,DNI_Y+4,200,DNI_Y+4);
-  doc.text('Materia / Sección:',TX,DNI_Y+10);
-  doc.line(TX,DNI_Y+15,140,DNI_Y+15);
-  doc.text('Fecha:',146,DNI_Y+10);
-  doc.line(146,DNI_Y+15,200,DNI_Y+15);
   doc.setDrawColor(...LGT);doc.setLineWidth(0.2);doc.rect(GX,GY,GW,200,'S');
   for(let g=0;g<4;g++){
     const gx=CX0+g*(GRP_W+GAP),q0=g*25;
@@ -9426,9 +9409,6 @@ async function wn_save() {
     const GRP_W  = (CONT_W-(N_GRP-1)*GAP)/N_GRP;
 
     hdr('Cartilla de Respuestas — '+titulo);
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRY);
-    doc.text('Rellene completamente el círculo de la alternativa elegida. Use lapicero negro o azul.', M, M+16.5);
-
     // Marcas de registro — esquinas del papel A4 (3mm del borde, 7x7mm)
     const MK=7, MP=3;
     doc.setFillColor(0,0,0);
@@ -9438,31 +9418,16 @@ async function wn_save() {
     doc.rect(210-MP-MK,  297-MP-MK,  MK, MK, 'F');  // BR
 
     // ── Sección DNI ──────────────────────────────────────────────
-    // Marco del área DNI
-    doc.setDrawColor(...LGT);doc.setLineWidth(0.2);
-    doc.rect(DNI_X-1, DNI_Y-DNI_SV/2-5, DNI_LW+8*DNI_SH+2, 10*DNI_SV+7,'S');
-    // Título
-    doc.setFont('helvetica','bold');doc.setFontSize(5.5);doc.setTextColor(...GRY);
-    doc.text('DNI DEL ALUMNO',DNI_X,DNI_Y-DNI_SV/2-1.5);
-    // Encabezado columnas (posición 1-8)
-    doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(160,160,160);
-    for(let d=0;d<8;d++) doc.text(`${d+1}`,DNI_X+DNI_LW+d*DNI_SH,DNI_Y-DNI_SV/2+1.5,{align:'center'});
-    // Etiquetas filas (0-9)
-    doc.setFont('helvetica','bold');doc.setFontSize(5.5);doc.setTextColor(...GRY);
-    for(let v=0;v<10;v++) doc.text(`${v}`,DNI_X+DNI_LW-2,DNI_Y+v*DNI_SV+1.5,{align:'right'});
-    // Burbujas DNI
-    doc.setDrawColor(60,60,60);doc.setLineWidth(0.35);
-    for(let d=0;d<8;d++) for(let v=0;v<10;v++) doc.circle(DNI_X+DNI_LW+d*DNI_SH,DNI_Y+v*DNI_SV,DNI_BR,'S');
-    // Campos de texto a la derecha
-    const TX=62;
-    doc.setDrawColor(...LGT);doc.setLineWidth(0.3);
-    doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...GRY);
-    doc.text('Apellidos y Nombres:',TX,DNI_Y-1);
-    doc.line(TX,DNI_Y+4,200,DNI_Y+4);
-    doc.text('Materia / Sección:',TX,DNI_Y+10);
-    doc.line(TX,DNI_Y+15,140,DNI_Y+15);
-    doc.text('Fecha:',146,DNI_Y+10);
-    doc.line(146,DNI_Y+15,200,DNI_Y+15);
+    doc.setDrawColor(...LGT); doc.setLineWidth(0.2);
+    doc.rect(DNI_X-1, DNI_Y-DNI_SV/2-5, DNI_LW+8*DNI_SH+2, 10*DNI_SV+7, 'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(...GRY);
+    doc.text('DNI DEL ALUMNO', DNI_X, DNI_Y-DNI_SV/2-1.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(5); doc.setTextColor(160,160,160);
+    for(let d=0;d<8;d++) doc.text(`${d+1}`,DNI_X+DNI_LW+d*DNI_SH, DNI_Y-DNI_SV/2+1.5, {align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(...GRY);
+    for(let v=0;v<10;v++) doc.text(`${v}`, DNI_X+DNI_LW-2, DNI_Y+v*DNI_SV+1.5, {align:'right'});
+    doc.setDrawColor(60,60,60); doc.setLineWidth(0.35);
+    for(let d=0;d<8;d++) for(let v=0;v<10;v++) doc.circle(DNI_X+DNI_LW+d*DNI_SH, DNI_Y+v*DNI_SV, DNI_BR, 'S');
 
     // Borde del área de la grilla
     doc.setDrawColor(...LGT); doc.setLineWidth(0.2); doc.rect(GX, GY, GW, GH, 'S');
