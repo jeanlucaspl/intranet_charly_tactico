@@ -1780,9 +1780,9 @@ function renderResult(results) {
 }
 
 function goToScan() {
-  if (!selectedStudent) { showToast('Selecciona un alumno primero', false); return; }
-  document.getElementById('scan-student-badge').innerHTML =
-    `<div class="badge badge-gold">👤 ${selectedStudent.apellido} ${selectedStudent.nombre}</div>`;
+  document.getElementById('scan-student-badge').innerHTML = selectedStudent
+    ? `<div class="badge badge-gold">👤 ${selectedStudent.apellido} ${selectedStudent.nombre}</div>`
+    : `<div class="badge badge-gold" style="opacity:.5">👤 Se identificará por DNI de la cartilla</div>`;
   showScreen('screen-scan');
 }
 
