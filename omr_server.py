@@ -422,6 +422,42 @@ def health():
     return jsonify({'ok': True, 'server': 'Charly Táctico OMR'})
 
 
+# ── Descarga de ZIP vía servidor (evita restricciones de blob URL en Android) ──
+
+import tempfile
+import io
+
+_zip_store = {}   # token → bytes (en memoria, vida corta)
+
+@app.route('/save_zip', methods=['POST'])
+def save_zip():
+    import uuid
+    data = request.get_data()
+    if not data:
+        return jsonify({'error': 'Sin datos'}), 400
+    token = uuid.uuid4().hex
+    filename = request.args.get('filename', 'reportes.zip')
+    _zip_store[token] = (filename, data)
+    # Limpiar tokens viejos (guardar solo los últimos 5)
+    if len(_zip_store) > 5:
+        oldest = next(iter(_zip_store))
+        del _zip_store[oldest]
+    return jsonify({'token': token})
+
+@app.route('/get_zip/<token>')
+def get_zip(token):
+    from flask import send_file
+    if token not in _zip_store:
+        return 'ZIP no encontrado o expirado', 404
+    filename, data = _zip_store.pop(token)
+    return send_file(
+        io.BytesIO(data),
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @app.route('/process', methods=['POST'])
 def process():
     if 'image' not in request.files:

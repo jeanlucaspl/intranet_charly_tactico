@@ -2292,29 +2292,16 @@ async function downloadZipTodos() {
     }
     const fname = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    // File System Access API: abre selector nativo de Android/Desktop
-    if ('showSaveFilePicker' in window) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: fname,
-        types: [{ description: 'ZIP', accept: { 'application/zip': ['.zip'] } }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(zipBlob);
-      await writable.close();
-    } else {
-      // Fallback: Web Share API
-      const file = new File([zipBlob], fname, { type: 'application/zip' });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: fname });
-      } else {
-        // Último recurso: blob URL
-        const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fname;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-      }
-    }
+    // Enviar ZIP al servidor local y navegar al GET — único método confiable
+    // en Android Chrome con HTTPS auto-firmado (blob URLs bloqueados).
+    const apiBase = IS_LOCAL ? '' : `https://${serverIP}`;
+    const saveResp = await fetch(
+      `${apiBase}/save_zip?filename=${encodeURIComponent(fname)}`,
+      { method: 'POST', body: zipBlob, headers: { 'Content-Type': 'application/zip' } }
+    );
+    if (!saveResp.ok) throw new Error('Error al guardar ZIP en servidor');
+    const { token } = await saveResp.json();
+    window.location.href = `${apiBase}/get_zip/${token}`;
     hideProc();
     showToast('ZIP descargado', true);
   } catch (err) {
