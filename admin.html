@@ -7549,8 +7549,8 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   const PW=210,M=8;
   const BLK=[0,0,0],GRY=[100,100,100],LGT=[180,180,180];
   // Layout IDÉNTICO al de omr_server.py (CL) y CART_LAYOUT de vocab — NO modificar sin actualizar ambos
-  const GX=10,GY=64,GW=190,RM=5,HDR=6,RH=7,QW=8,BA=11,BS=6.5,BR=2.5,GAP=5;
-  const DNI_X=10,DNI_Y=20,DNI_LW=7,DNI_SH=5,DNI_SV=4,DNI_BR=1.4;
+  const GX=10,GY=70,GW=190,RM=5,HDR=6,RH=7,QW=8,BA=11,BS=6.5,BR=2.5,GAP=5;
+  const DNI_X=10,DNI_Y=27,DNI_LW=7,DNI_SH=5,DNI_SV=4,DNI_BR=1.4;
   const CONT_W=GW-2*RM,GRP_W=(CONT_W-3*GAP)/4,CX0=GX+RM;
   const activeCount=key.split('').filter(c=>c!=='-').length;
   function _qrDU(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createDataURL(5,0);}
@@ -9343,7 +9343,7 @@ async function wn_save() {
   // escaner_cartilla.html (const CL = {...})
   // ═══════════════════════════════════════════════════════════════
   const CART_LAYOUT = {
-    GX:10, GY:64, GW:190, GH:200,  // grid origin y dimensiones (mm)
+    GX:10, GY:70, GW:190, GH:200,  // grid origin y dimensiones (mm)
     RM:5,                            // tamaño marca de registro (mm)
     HDR:6,                           // fila cabecera A/B/C/D (mm)
     RH:7,                            // altura por fila/pregunta (mm)
@@ -9352,7 +9352,7 @@ async function wn_save() {
     BS:6.5,                          // separación entre centros de burbujas (mm)
     BR:2.5,                          // radio de burbuja (mm)
     GAP:5,                           // espacio entre grupos de columnas (mm)
-    DNI_X:10, DNI_Y:20, DNI_LW:7, DNI_SH:5, DNI_SV:4, DNI_BR:1.4
+    DNI_X:10, DNI_Y:27, DNI_LW:7, DNI_SH:5, DNI_SV:4, DNI_BR:1.4
   };
 
   function makeQRDataURL(text) {

@@ -28,11 +28,11 @@ CORS(app)
 
 # ── Constantes de layout (idénticas a CART_LAYOUT en admin.html) ──
 CL = {
-    'GX': 10, 'GY': 64, 'GW': 190, 'GH': 200,   # GY cambia de 36 a 64
+    'GX': 10, 'GY': 70, 'GW': 190, 'GH': 200,
     'RM': 5,  'HDR': 6,  'RH': 7,  'QW': 8,
     'BA': 11, 'BS': 6.5, 'BR': 2.5, 'GAP': 5,
     # DNI section
-    'DNI_X': 10, 'DNI_Y': 20, 'DNI_LW': 7,
+    'DNI_X': 10, 'DNI_Y': 27, 'DNI_LW': 7,
     'DNI_SH': 5, 'DNI_SV': 4, 'DNI_BR': 1.4,
 }
 
