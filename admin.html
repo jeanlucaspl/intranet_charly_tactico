@@ -2612,7 +2612,7 @@ const _PDF={
   tbl:{fontSize:8,cellPadding:1.5,textColor:[20,20,20],fillColor:[255,255,255],overflow:'ellipsize'},
   head:{fillColor:[255,255,255],textColor:[20,20,20],fontStyle:'bold',lineWidth:0.3,lineColor:[180,180,180]},
   body:{lineWidth:0.2,lineColor:[210,210,210]},
-  colE:{0:{cellWidth:9},1:{cellWidth:60},2:{cellWidth:57},3:{cellWidth:24},4:{cellWidth:16},5:{cellWidth:16},6:{cellWidth:12}}
+  colE:{0:{cellWidth:9},1:{cellWidth:'wrap',minCellWidth:28},2:{cellWidth:'wrap',minCellWidth:22},3:{cellWidth:22},4:{cellWidth:13},5:{cellWidth:20},6:{cellWidth:14}}
 };
 
 // Dibuja el encabezado institucional en el doc. Retorna la y desde donde continuar.
@@ -2694,9 +2694,9 @@ function _pdfBloqueTablas(doc,y,asists,nombre){
   const {PL,PR,BLACK,tbl,head,body,colE}=_PDF;
   const ent=(asists||[]).filter(a=>a.tipo==='entrada');
   if(ent.length){
-    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:_PDF.W-_PDF.PL-_PDF.PR,
-      head:[['#','Apellido','Nombre','DNI','Hora','Estado','Método']],
-      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'Facial':'Manual'];}),
+    doc.autoTable({startY:y,margin:{left:PL,right:PR},tableWidth:'auto',
+      head:[['#','Apellido','Nombre','DNI','Hora','Estado','Mét.']],
+      body:ent.map((a,i)=>{const n=nombre(a.alumno_id);return[i+1,n.ap,n.nom,n.dni,(a.hora_ingreso||'').slice(0,5),(a.estado||'').toUpperCase(),a.verificado_facial?'F':'M'];}),
       styles:tbl,headStyles:head,bodyStyles:body,columnStyles:colE
     });
     y=doc.lastAutoTable.finalY+8;
