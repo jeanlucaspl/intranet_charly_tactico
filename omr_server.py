@@ -174,11 +174,14 @@ def find_registration_marks(gray: np.ndarray):
 #  CORRECCIÓN DE PERSPECTIVA
 # ══════════════════════════════════════════════════════════════════
 
-def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
+def warp_perspective(gray: np.ndarray, marks_px: list):
     """
     Warpea la imagen EN GRIS (no binaria) usando las 4 marcas.
-    Luego aplica adaptive threshold sobre el papel ya plano y limpio.
-    Así se evita que sombras/bordes contaminen la binarización.
+    Retorna (warped_bin, warped_raw):
+      - warped_bin: con MORPH_CLOSE 7×7 — para burbujas OMR grandes (r≈16px)
+      - warped_raw: solo adaptive threshold, sin cierre — para burbujas DNI pequeñas (r≈9px)
+    El cierre morfológico 7×7 rellena los círculos DNI impresos vacíos,
+    haciendo imposible distinguirlos de los marcados.
     """
     src = np.float32([list(m) for m in marks_px])
     dst = np.float32([
@@ -189,7 +192,7 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
                                       flags=cv2.INTER_LINEAR)
     # Adaptive threshold sobre papel plano: detecta lápiz claro y tinta oscura
     # por igual sin importar iluminación no uniforme de la foto.
-    warped_bin = cv2.adaptiveThreshold(
+    warped_raw = cv2.adaptiveThreshold(
         warped_gray, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
@@ -197,9 +200,10 @@ def warp_perspective(gray: np.ndarray, marks_px: list) -> np.ndarray:
     )
     # Cierre morfológico: fusiona trazos finos del lapicero en masa sólida.
     # Kernel 7×7 elipse: cierra huecos sin fusionar burbujas adyacentes.
+    # NO usar para DNI (burbujas pequeñas): el cierre rellena los círculos vacíos.
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    warped_bin = cv2.morphologyEx(warped_bin, cv2.MORPH_CLOSE, kernel)
-    return warped_bin
+    warped_bin = cv2.morphologyEx(warped_raw, cv2.MORPH_CLOSE, kernel)
+    return warped_bin, warped_raw
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -220,26 +224,30 @@ def count_filled_px(warped_bin: np.ndarray, cx_px: float, cy_px: float, r_px: fl
 #  DNI
 # ══════════════════════════════════════════════════════════════════
 
-def process_dni(warped_bin: np.ndarray) -> str:
+def process_dni(warped_raw: np.ndarray) -> str:
     """
     Detecta el DNI (8 dígitos 0-9) en la sección DNI de la cartilla.
     Devuelve string de 8 caracteres ('?' si un dígito está en blanco).
+    Usa warped_raw (sin MORPH_CLOSE) para evitar que el cierre 7×7
+    rellene los círculos vacíos pequeños y los confunda con marcados.
     """
+    warped_bin = warped_raw  # alias semántico
     DNI_X  = CL['DNI_X']
     DNI_Y  = CL['DNI_Y']
     DNI_LW = CL['DNI_LW']
     DNI_SH = CL['DNI_SH']
     DNI_SV = CL['DNI_SV']
     DNI_BR = CL['DNI_BR']
-    b_rad_px = DNI_BR * MM_TO_PX * 1.1
+    b_rad_px = DNI_BR * MM_TO_PX * 1.2  # radio 20% mayor para capturar trazos finos
 
-    # Las burbujas DNI son pequeñas (~9px radio, área ~254px máx).
-    # El umbral global BLANK_PX=240 exigiría 94% de relleno — imposible.
-    # Con 80px (~30% de área) es suficiente para detectar lápiz o lapicero.
-    DNI_BLANK_PX  = 80
-    DNI_MIN_GAP   = 40   # diferencia mínima entre el ganador y el 2do
+    # Sin MORPH_CLOSE: círculos vacíos leen ~10–60px (solo borde impreso).
+    # Marcados con lápiz/lapicero: ~90–200px. Umbral 55px distingue ambos.
+    # GAP mínimo 18px: gap=24 ya indica ganador claro (d6 en log anterior era 130 vs 106).
+    DNI_BLANK_PX  = 55
+    DNI_MIN_GAP   = 18
 
     digits = []
+    print(f"  DNI debug (DNI_X={DNI_X} DNI_Y={DNI_Y} LW={DNI_LW} SH={DNI_SH} SV={DNI_SV} BR={DNI_BR:.1f} r_px={b_rad_px:.1f}):")
     for d in range(8):
         cx_mm = DNI_X + DNI_LW + d * DNI_SH
         counts = []
@@ -250,10 +258,13 @@ def process_dni(warped_bin: np.ndarray) -> str:
         max_px  = max(counts)
         sorted_c = sorted(counts, reverse=True)
         gap = sorted_c[0] - sorted_c[1]
-        if max_px < DNI_BLANK_PX or gap < DNI_MIN_GAP:
-            digits.append('?')
+        winner = counts.index(max_px)
+        ok = max_px >= DNI_BLANK_PX and gap >= DNI_MIN_GAP
+        print(f"    d{d} x={cx_mm:.1f}mm  max={max_px}(v{winner}) gap={gap}  {'OK→'+str(winner) if ok else '?'}  px={counts}")
+        if ok:
+            digits.append(str(winner))
         else:
-            digits.append(str(counts.index(max_px)))
+            digits.append('?')
 
     dni = ''.join(digits)
     print(f"  DNI detectado: {dni}")
@@ -452,9 +463,10 @@ def process():
         }), 422
 
     # Warp en gris → binarización adaptativa sobre papel plano (ver warp_perspective)
-    warped_bin = warp_perspective(gray, marks)
+    # warped_bin: con MORPH_CLOSE para OMR; warped_raw: sin cierre para DNI
+    warped_bin, warped_raw = warp_perspective(gray, marks)
     results    = process_omr(warped_bin, n)
-    dni        = process_dni(warped_bin)
+    dni        = process_dni(warped_raw)
     _save_debug(warped_bin, results, n)
 
     counts = {'ok': 0, 'blank': 0, 'double': 0}

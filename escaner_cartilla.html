@@ -142,6 +142,10 @@
       transition: all .2s;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       border-radius: 2px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn-gold { background: var(--gold); color: #080C10; }
     .btn-gold:hover { background: var(--gold2); }
@@ -1179,13 +1183,15 @@ function showSummary() {
 ═══════════════════════════════════════════════════════════════════ */
 async function startCamera() {
   try {
+    // Detener el loop QR antes de reiniciar la cámara (evita loops duplicados)
+    stopQRLoop();
     // Si ya hay un stream activo, detenerlo primero
     if (mediaStream) {
       mediaStream.getTracks().forEach(t => t.stop());
       mediaStream = null;
     }
     mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+      video: { facingMode: 'environment' }
     });
     const qrV  = document.getElementById('qr-video');
     const omrV = document.getElementById('omr-video');
@@ -1418,14 +1424,18 @@ function captureOMR() {
   const vW = video.videoWidth, vH = video.videoHeight;
   if (!vW || !vH) { showToast('La cámara aún no está lista', false); return; }
 
-  // Recorte al marco guía
+  // Recorte al marco guía, escalado a máx 1024px ancho (evita JPEG lento en móviles)
   const crop = getGuideCropRect(video);
+  const MAX_W = 1024;
+  const scale = crop.w > MAX_W ? MAX_W / crop.w : 1;
+  const outW  = Math.round(crop.w * scale);
+  const outH  = Math.round(crop.h * scale);
   const canvas = document.getElementById('omr-canvas');
-  canvas.width = crop.w; canvas.height = crop.h;
+  canvas.width = outW; canvas.height = outH;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
   // Captura inmediata: 1 solo frame
-  ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+  ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, outW, outH);
   canvas.toBlob(blob => {
     capturedBlob = blob;
     // Mostrar preview para que el usuario decida si está nítida
@@ -1433,7 +1443,7 @@ function captureOMR() {
     document.getElementById('omr-preview-img').src = url;
     document.getElementById('omr-camera-view').style.display = 'none';
     document.getElementById('omr-preview-view').style.display = 'block';
-  }, 'image/jpeg', 0.92);
+  }, 'image/jpeg', 0.82);
 }
 
 function retryCapture() {
@@ -1780,6 +1790,7 @@ function renderResult(results) {
 }
 
 function goToScan() {
+  stopQRLoop();
   document.getElementById('scan-student-badge').innerHTML = selectedStudent
     ? `<div class="badge badge-gold">👤 ${selectedStudent.apellido} ${selectedStudent.nombre}</div>`
     : `<div class="badge badge-gold" style="opacity:.5">👤 Se identificará por DNI de la cartilla</div>`;
@@ -1787,6 +1798,7 @@ function goToScan() {
 }
 
 function reintentarEscaneo() {
+  stopQRLoop();
   document.getElementById('omr-preview-view').style.display = 'none';
   document.getElementById('omr-camera-view').style.display = 'block';
   showScreen('screen-scan');
@@ -2279,12 +2291,21 @@ async function downloadZipTodos() {
       zip.file(fname, blob);
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(zipBlob);
-    const a   = document.createElement('a');
-    a.href = url;
-    a.download = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    const url  = URL.createObjectURL(zipBlob);
+    const fname = `reportes_charly_${new Date().toISOString().slice(0, 10)}.zip`;
+    if (/Android/i.test(navigator.userAgent)) {
+      window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 8000);
+    } else if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
+      const w = window.open(url, '_blank');
+      if (!w) window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 20000);
+    } else {
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
     hideProc();
     showToast('ZIP descargado', true);
   } catch (err) {
