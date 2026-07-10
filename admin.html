@@ -3019,7 +3019,8 @@ function _renderFichaContent(){
 
 function _fichaSuggest(q){
   const box=document.getElementById('ficha-sug');
-  if(!box)return;
+  const inp=document.getElementById('ficha-inp');
+  if(!box||!inp)return;
   if(!q.trim()){box.style.display='none';return;}
   const s=q.toLowerCase();
   const matches=(window._repTodosAlumnos||[]).filter(a=>
@@ -3030,6 +3031,13 @@ function _fichaSuggest(q){
     <span class="dni-sug-dni">${a.perfiles?.dni||'--'}</span>
     <span class="dni-sug-nom">${a.perfiles?.apellido||''}, ${a.perfiles?.nombre||''}</span>
   </div>`).join('');
+  // position:fixed escapa del overflow:auto del contenedor .tw
+  const rect=inp.getBoundingClientRect();
+  box.style.position='fixed';
+  box.style.top=rect.bottom+'px';
+  box.style.left=rect.left+'px';
+  box.style.width=rect.width+'px';
+  box.style.zIndex='9999';
   box.style.display='block';
 }
 
@@ -3145,36 +3153,36 @@ async function _buildFichaDoc(al,links){
     doc.text(estadoTxt,PL,y);
   }
 
-  // ── PÁGINA 2: APODERADO ──
-  doc.addPage();
-  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(0,0,0);
-  doc.text('CHARLY TÁCTICO TEDAX',PL,12);
-  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(80,80,80);
-  doc.text('FICHA TÉCNICA — DATOS DEL APODERADO',PL,18);
-  doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(PL,21,W-PR,21);
+  // ── APODERADO (misma hoja) ──
+  y+=8;
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);
+  y+=6;
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(0,0,0);
+  doc.text('DATOS DEL APODERADO',PL,y);
+  y+=6;
 
-  let y2=28;
   if(!links||!links.length){
-    doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(140,140,140);
-    doc.text('Sin apoderado registrado en el sistema.',PL,y2);
+    doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(140,140,140);
+    doc.text('Sin apoderado registrado en el sistema.',PL,y);
   }else{
     links.forEach((lnk,idx)=>{
-      if(idx>0){y2+=4;doc.setDrawColor(210,210,210);doc.setLineWidth(0.2);doc.line(PL,y2,W-PR,y2);y2+=6;}
+      if(idx>0){y+=3;doc.setDrawColor(210,210,210);doc.setLineWidth(0.2);doc.line(PL,y,W-PR,y);y+=5;}
       const pd=lnk.padre||{};
-      function row2(lbl,val){
+      function rowAp(lbl,val){
+        const availW=W-VX-PR;
         doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(110,110,110);
-        doc.text(lbl,PL,y2);
+        doc.text(lbl,PL,y);
         doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(0,0,0);
-        const lines=doc.splitTextToSize(String(val||'—'),W-VX-PR);
-        doc.text(lines,VX,y2);
-        doc.setDrawColor(230,230,230);doc.setLineWidth(0.1);doc.line(PL,y2+2,W-PR,y2+2);
-        y2+=Math.max(lines.length*4.5,5.5);
+        const lines=doc.splitTextToSize(String(val||'—'),availW);
+        doc.text(lines,VX,y);
+        doc.setDrawColor(230,230,230);doc.setLineWidth(0.1);doc.line(PL,y+2,W-PR,y+2);
+        y+=Math.max(lines.length*4.5,5.5);
       }
-      row2('APELLIDOS Y NOMBRES',`${pd.apellido||''}${pd.nombre?', '+pd.nombre:''}`);
-      row2('DNI',pd.dni);
-      row2('PARENTESCO',(lnk.parentesco||'—').toUpperCase());
-      row2('TELÉFONO',pd.telefono);
-      row2('EMAIL',pd.email_ref);
+      rowAp('APELLIDOS Y NOMBRES',`${pd.apellido||''}${pd.nombre?', '+pd.nombre:''}`);
+      rowAp('DNI',pd.dni);
+      rowAp('PARENTESCO',(lnk.parentesco||'—').toUpperCase());
+      rowAp('TELÉFONO',pd.telefono);
+      rowAp('EMAIL',pd.email_ref);
     });
   }
 
@@ -3655,6 +3663,7 @@ async function loadReportes(){
     window._repTodosAlumnos=todosAls||[];
     window._repAlsMap={};
     (als||[]).forEach(a=>{window._repAlsMap[a.id]=a;});
+    if(repTabActual!=='cadetes')return;  // usuario cambió de pestaña mientras cargaba
 
     el.innerHTML=`
       <div class="aula-tabs" id="rep-cad-subtabs" style="border-bottom:1px solid var(--border)">
