@@ -647,7 +647,8 @@
   <!-- Tabs -->
   <div class="aula-tabs">
     <div class="aula-tab active" id="ftab-facial" onclick="showFacialTab('facial')"> Verificación Facial</div>
-    <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')"> Asistencia Manual</div>
+    <!-- DESHABILITADO: asistencia manual desactivada para evitar marcado sin presencia física -->
+    <!-- <div class="aula-tab" id="ftab-manual" onclick="showFacialTab('manual')"> Asistencia Manual</div> -->
     <div class="aula-tab" id="ftab-registros" onclick="showFacialTab('registros')"> Registros del Día</div>
   </div>
 
@@ -662,7 +663,8 @@
       <div class="cam-wrap"><video id="f-video" autoplay muted playsinline></video><canvas id="f-canvas"></canvas></div>
       <div class="cam-status cs-idle" id="f-camst">Cámara detenida</div>
       <div style="display:flex;gap:8px;width:100%;max-width:400px">
-        <button class="btn btn-outline" style="flex:1" onclick="showFacialTab('manual')"> Asistencia Manual</button>
+        <!-- DESHABILITADO: botón de acceso rápido a asistencia manual desactivado -->
+        <!-- <button class="btn btn-outline" style="flex:1" onclick="showFacialTab('manual')"> Asistencia Manual</button> -->
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:.08em;color:var(--muted);text-align:center">Reconocimiento automático en tiempo real — apunta la cámara al alumno</div>
       <div class="verify-card" id="verify-card">
@@ -677,8 +679,8 @@
     </div>
   </div>
 
-  <!-- TAB 2: Asistencia Manual -->
-  <div id="ftab-content-manual" style="display:none;padding-top:16px">
+  <!-- TAB 2: Asistencia Manual — DESHABILITADO (reactivar cuando encargados sean de mayor confianza) -->
+  <!-- <div id="ftab-content-manual" style="display:none;padding-top:16px">
     <input type="hidden" id="man-alumno"/>
     <div class="fg">
       <label>Buscar alumno por apellido o DNI</label>
@@ -696,7 +698,7 @@
       </select>
     </div>
     <button class="btn btn-gold" style="margin-top:8px" onclick="saveManual()" id="btn-save-manual">REGISTRAR ASISTENCIA</button>
-  </div>
+  </div> -->
 
   <!-- TAB 3: Registros del Día -->
   <div id="ftab-content-registros" style="display:none;padding-top:16px">
