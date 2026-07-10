@@ -744,6 +744,7 @@
     <div class="aula-tab active" onclick="showRepTab('cadetes')">Cadetes</div>
     <div class="aula-tab" onclick="showRepTab('profesores')">Profesores</div>
     <div class="aula-tab" onclick="showRepTab('padres')">Padres</div>
+    <div class="aula-tab" onclick="showRepTab('ficha')">Ficha Técnica</div>
   </div>
   <div class="tw">
     <div class="th"><span class="th-ttl" id="rep-titulo">Asistencia por Cadete</span></div>
@@ -2972,6 +2973,285 @@ async function histGenerarPDF(){
   finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
 }
 
+// ── FICHA TÉCNICA ──────────────────────────────────────────────
+// Tabla de referencia talla/peso PNP (ANEXO 02 Damas, ANEXO 03 Varones)
+const _TPR={
+  F:{'1.56':[45.0,60.7],'1.57':[45.6,61.5],'1.58':[46.1,62.3],'1.59':[46.7,63.1],'1.60':[47.3,63.9],'1.61':[47.9,64.7],'1.62':[48.5,65.5],'1.63':[49.1,66.3],'1.64':[49.7,67.1],'1.65':[50.3,67.9],'1.66':[50.9,68.7],'1.67':[51.5,69.6],'1.68':[52.2,70.4],'1.69':[52.8,71.3],'1.70':[53.4,72.1],'1.71':[54.0,73.0],'1.72':[54.7,73.8],'1.73':[55.3,74.7],'1.74':[56.0,75.5],'1.75':[56.6,76.4],'1.76':[57.3,77.3],'1.77':[57.9,78.2],'1.78':[58.6,79.1],'1.79':[59.2,80.0],'1.80':[59.9,80.9],'1.81':[60.6,81.8],'1.82':[61.2,82.7],'1.83':[61.9,83.6],'1.84':[62.6,84.5],'1.85':[63.3,85.4],'1.86':[64.0,86.3],'1.87':[64.6,87.3],'1.88':[65.3,88.2],'1.89':[66.0,89.2],'1.90':[66.7,90.1]},
+  M:{'1.62':[48.5,65.5],'1.63':[49.1,66.3],'1.64':[49.7,67.1],'1.65':[50.3,67.9],'1.66':[50.9,68.7],'1.67':[51.5,69.6],'1.68':[52.2,70.4],'1.69':[52.8,71.3],'1.70':[53.4,72.1],'1.71':[54.0,73.0],'1.72':[54.7,73.8],'1.73':[55.3,74.7],'1.74':[56.0,75.5],'1.75':[56.6,76.4],'1.76':[57.3,77.3],'1.77':[57.9,78.2],'1.78':[58.6,79.1],'1.79':[59.2,80.0],'1.80':[59.9,80.9],'1.81':[60.6,81.8],'1.82':[61.2,82.7],'1.83':[61.9,83.6],'1.84':[62.6,84.5],'1.85':[63.3,85.4],'1.86':[64.0,86.3],'1.87':[64.6,87.3],'1.88':[65.3,88.2],'1.89':[66.0,89.2],'1.90':[66.7,90.1],'1.91':[67.4,91.1],'1.92':[68.1,92.0],'1.93':[68.9,93.0],'1.94':[69.6,93.9],'1.95':[70.3,94.9],'1.96':[71.0,95.9],'1.97':[71.7,97.5],'1.98':[72.5,97.9]}
+};
+
+function _evalTP(sexo,talla,peso){
+  if(!sexo||talla==null||peso==null)return{estado:'SIN DATOS'};
+  const g=sexo==='M'?'M':'F';
+  const tk=(+talla).toFixed(2);
+  const ref=_TPR[g]?.[tk];
+  if(!ref){
+    const mn=g==='M'?1.62:1.56;
+    return +talla<mn
+      ?{estado:'TALLA INSUFICIENTE',nota:`Talla mínima PNP: ${mn}m`}
+      :{estado:'SIN REFERENCIA PNP'};
+  }
+  const [mn,mx]=ref;
+  if(+peso>mx)return{estado:'SOBREPESO',min:mn,max:mx,diff:(+peso-mx).toFixed(1)};
+  if(+peso<mn)return{estado:'BAJO PESO',min:mn,max:mx,diff:(mn-+peso).toFixed(1)};
+  return{estado:'OK',min:mn,max:mx};
+}
+
+let _fichaAlumnoId=null;
+
+function _renderFichaContent(){
+  const el=document.getElementById('d-reporte');
+  el.innerHTML=`
+    <div style="padding:12px 14px 4px">
+      <div class="dni-wrap">
+        <input id="ficha-inp" type="text" placeholder="Buscar cadete por apellido o DNI..." autocomplete="off"
+          style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;outline:none"
+          oninput="_fichaSuggest(this.value)"
+          onblur="setTimeout(()=>{const s=document.getElementById('ficha-sug');if(s)s.style.display='none'},200)"/>
+        <div id="ficha-sug" class="dni-sug"></div>
+      </div>
+    </div>
+    <div style="padding:4px 14px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="btn-ficha-uno" class="btn btn-gold" style="font-size:11px;padding:8px 16px;display:none" onclick="generarFichaPDF(_fichaAlumnoId)">⬇ Generar Ficha</button>
+      <button class="btn btn-outline" style="font-size:11px;padding:8px 16px" onclick="generarFichasTodosZip()">⬇ Fichas de todos los activos (ZIP)</button>
+    </div>`;
+}
+
+function _fichaSuggest(q){
+  const box=document.getElementById('ficha-sug');
+  if(!box)return;
+  if(!q.trim()){box.style.display='none';return;}
+  const s=q.toLowerCase();
+  const matches=(window._repTodosAlumnos||[]).filter(a=>
+    `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`.toLowerCase().includes(s)||(a.perfiles?.dni||'').includes(s)
+  ).slice(0,8);
+  if(!matches.length){box.style.display='none';return;}
+  box.innerHTML=matches.map(a=>`<div class="dni-sug-item" onmousedown="_selectFichaAlumno('${a.id}','${(a.perfiles?.apellido||'')+' '+(a.perfiles?.nombre||'')}','${a.perfiles?.dni||''}')">
+    <span class="dni-sug-dni">${a.perfiles?.dni||'--'}</span>
+    <span class="dni-sug-nom">${a.perfiles?.apellido||''}, ${a.perfiles?.nombre||''}</span>
+  </div>`).join('');
+  box.style.display='block';
+}
+
+function _selectFichaAlumno(id,nombre,dni){
+  _fichaAlumnoId=id;
+  const inp=document.getElementById('ficha-inp');
+  if(inp)inp.value=`${nombre} — ${dni}`;
+  const sug=document.getElementById('ficha-sug');
+  if(sug)sug.style.display='none';
+  const btn=document.getElementById('btn-ficha-uno');
+  if(btn)btn.style.display='';
+}
+
+async function _loadImgDataUrl(url){
+  try{
+    const resp=await fetch(url,{mode:'cors'});
+    const blob=await resp.blob();
+    return await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(blob);});
+  }catch(e){return null;}
+}
+
+async function _buildFichaDoc(al,links){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PL=_PDF.PL, PR=_PDF.PR, W=_PDF.W;
+  const p=al.perfiles||{};
+  const LW=44; // label column width
+  const VX=PL+LW;
+  const photoW=30, photoH=38;
+  const photoX=W-PR-photoW;
+  const photoY=24;
+
+  // ── PÁGINA 1: DATOS DEL CADETE ──
+  // Header minimalista — sin fondos oscuros
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(0,0,0);
+  doc.text('CHARLY TÁCTICO TEDAX',PL,12);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(80,80,80);
+  doc.text('FICHA TÉCNICA DEL CADETE',PL,18);
+  doc.setTextColor(150,150,150);doc.setFontSize(7);
+  doc.text(new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'}),W-PR,12,{align:'right'});
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(PL,21,W-PR,21);
+
+  // Foto
+  let imgData=null;
+  if(al.foto_url)imgData=await _loadImgDataUrl(al.foto_url);
+  if(imgData){
+    doc.addImage(imgData,'JPEG',photoX,photoY,photoW,photoH,undefined,'FAST');
+    doc.setDrawColor(200,200,200);doc.setLineWidth(0.2);doc.rect(photoX,photoY,photoW,photoH);
+  }else{
+    doc.setDrawColor(200,200,200);doc.setLineWidth(0.2);doc.rect(photoX,photoY,photoW,photoH);
+    doc.setTextColor(200,200,200);doc.setFontSize(6.5);
+    doc.text('SIN FOTO',photoX+photoW/2,photoY+photoH/2,{align:'center'});
+  }
+
+  // Filas de datos
+  let y=photoY;
+  function row(lbl,val){
+    const inPhotoZone=y<photoY+photoH+4;
+    const availW=inPhotoZone?photoX-VX-3:W-VX-PR;
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(110,110,110);
+    doc.text(lbl,PL,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(0,0,0);
+    const v=String(val||'—');
+    const lines=doc.splitTextToSize(v,availW);
+    doc.text(lines,VX,y);
+    doc.setDrawColor(230,230,230);doc.setLineWidth(0.1);doc.line(PL,y+2,inPhotoZone?photoX-2:W-PR,y+2);
+    y+=Math.max(lines.length*4.5,5.5);
+  }
+
+  const fnac=al.fecha_nacimiento
+    ?new Date(al.fecha_nacimiento+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'})
+    :'—';
+  const tels=[p.telefono,p.telefono2].filter(Boolean).join(' / ')||'—';
+  const sexoStr=al.sexo==='M'?'Masculino':al.sexo==='F'?'Femenino':'—';
+
+  row('APELLIDOS Y NOMBRES',`${p.apellido||''}${p.nombre?', '+p.nombre:''}`);
+  row('DNI',p.dni);
+  row('FECHA DE NACIMIENTO',fnac);
+  row('SEXO',sexoStr);
+  row('TELÉFONO / CELULAR',tels);
+  row('EMAIL',p.email_ref);
+  row('DIRECCIÓN',al.direccion);
+  row('ESCUELA / INSTITUCIÓN',al.escuela);
+  row('TALLA UNIFORME',al.talla_uniforme);
+
+  // Evaluación física
+  y=Math.max(y,photoY+photoH+6);
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);
+  y+=6;
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(0,0,0);
+  doc.text('EVALUACIÓN FÍSICA — REFERENCIA PNP',PL,y);
+  y+=6;
+
+  if(al.talla==null||al.peso==null){
+    doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(140,140,140);
+    doc.text('Sin datos de talla o peso registrados.',PL,y);
+  }else{
+    const tp=_evalTP(al.sexo,al.talla,al.peso);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(0,0,0);
+    doc.text(`Talla: ${al.talla}m   ·   Peso: ${al.peso}kg   ·   Sexo: ${sexoStr}`,PL,y);
+    y+=5.5;
+    if(tp.min!=null){
+      doc.text(`Rango PNP permitido para ${al.talla}m: ${tp.min} – ${tp.max} kg`,PL,y);
+      y+=5.5;
+    }
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);
+    let estadoTxt='';
+    if(tp.estado==='OK')estadoTxt='DENTRO DEL RANGO PERMITIDO';
+    else if(tp.estado==='SOBREPESO')estadoTxt=`SOBREPESO — ${tp.diff} kg sobre el máximo (${tp.max} kg)`;
+    else if(tp.estado==='BAJO PESO')estadoTxt=`BAJO PESO — ${tp.diff} kg bajo el mínimo (${tp.min} kg)`;
+    else if(tp.estado==='TALLA INSUFICIENTE')estadoTxt=`TALLA INSUFICIENTE — ${tp.nota||''}`;
+    else estadoTxt='TALLA SIN REFERENCIA EN TABLA PNP';
+    doc.text(estadoTxt,PL,y);
+  }
+
+  // ── PÁGINA 2: APODERADO ──
+  doc.addPage();
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(0,0,0);
+  doc.text('CHARLY TÁCTICO TEDAX',PL,12);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(80,80,80);
+  doc.text('FICHA TÉCNICA — DATOS DEL APODERADO',PL,18);
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(PL,21,W-PR,21);
+
+  let y2=28;
+  if(!links||!links.length){
+    doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(140,140,140);
+    doc.text('Sin apoderado registrado en el sistema.',PL,y2);
+  }else{
+    links.forEach((lnk,idx)=>{
+      if(idx>0){y2+=4;doc.setDrawColor(210,210,210);doc.setLineWidth(0.2);doc.line(PL,y2,W-PR,y2);y2+=6;}
+      const pd=lnk.padre||{};
+      function row2(lbl,val){
+        doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(110,110,110);
+        doc.text(lbl,PL,y2);
+        doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(0,0,0);
+        const lines=doc.splitTextToSize(String(val||'—'),W-VX-PR);
+        doc.text(lines,VX,y2);
+        doc.setDrawColor(230,230,230);doc.setLineWidth(0.1);doc.line(PL,y2+2,W-PR,y2+2);
+        y2+=Math.max(lines.length*4.5,5.5);
+      }
+      row2('APELLIDOS Y NOMBRES',`${pd.apellido||''}${pd.nombre?', '+pd.nombre:''}`);
+      row2('DNI',pd.dni);
+      row2('PARENTESCO',(lnk.parentesco||'—').toUpperCase());
+      row2('TELÉFONO',pd.telefono);
+      row2('EMAIL',pd.email_ref);
+    });
+  }
+
+  return doc;
+}
+
+async function generarFichaPDF(alumnoId){
+  if(!alumnoId)return;
+  const btn=document.getElementById('btn-ficha-uno');
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='Generando...';btn.disabled=true;}
+  try{
+    const {data:al}=await sb.from('alumnos')
+      .select('*,perfiles(nombre,apellido,dni,telefono,telefono2,email_ref)')
+      .eq('id',alumnoId).single();
+    if(!al){await myAlert('No se encontró el cadete.');return;}
+    const {data:rawLinks}=await sb.from('padres_alumnos')
+      .select('parentesco,padre_id').eq('alumno_id',alumnoId);
+    let links=[];
+    if(rawLinks?.length){
+      const padreIds=rawLinks.map(l=>l.padre_id);
+      const {data:padresPerf}=await sb.from('perfiles')
+        .select('id,nombre,apellido,dni,telefono,email_ref').in('id',padreIds);
+      const pm={};(padresPerf||[]).forEach(p=>{pm[p.id]=p;});
+      links=rawLinks.map(l=>({...l,padre:pm[l.padre_id]}));
+    }
+    const doc=await _buildFichaDoc(al,links);
+    const n=(al.perfiles?.nombre||'').replace(/\s+/g,'_');
+    const a=(al.perfiles?.apellido||'').replace(/\s+/g,'_');
+    const d=al.perfiles?.dni||'';
+    _pdfSave(doc,`ficha_${n}_${a}_${d}.pdf`);
+  }catch(e){await myAlert('Error al generar ficha: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
+}
+
+async function generarFichasTodosZip(){
+  const btn=event?.currentTarget||event?.target;
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='Generando ZIP...';btn.disabled=true;}
+  try{
+    const {data:alumnos}=await sb.from('alumnos')
+      .select('*,perfiles(nombre,apellido,dni,telefono,telefono2,email_ref)')
+      .eq('activo',true).order('perfiles(apellido)');
+    if(!alumnos?.length){await myAlert('No hay alumnos activos.');return;}
+    const alumnoIds=alumnos.map(a=>a.id);
+    const {data:allLinks}=await sb.from('padres_alumnos')
+      .select('alumno_id,parentesco,padre_id').in('alumno_id',alumnoIds);
+    const padreIds=[...new Set((allLinks||[]).map(l=>l.padre_id))];
+    const {data:padresPerf}=padreIds.length
+      ?await sb.from('perfiles').select('id,nombre,apellido,dni,telefono,email_ref').in('id',padreIds)
+      :{data:[]};
+    const padreMap={};(padresPerf||[]).forEach(p=>{padreMap[p.id]=p;});
+    const linksByAl={};
+    (allLinks||[]).forEach(l=>{
+      if(!linksByAl[l.alumno_id])linksByAl[l.alumno_id]=[];
+      linksByAl[l.alumno_id].push({...l,padre:padreMap[l.padre_id]});
+    });
+    const zip=new JSZip();
+    for(const al of alumnos){
+      const links=linksByAl[al.id]||[];
+      const doc=await _buildFichaDoc(al,links);
+      const nombre=(al.perfiles?.nombre||'').replace(/\s+/g,'_');
+      const apellido=(al.perfiles?.apellido||'').replace(/\s+/g,'_');
+      const dni=al.perfiles?.dni||'';
+      zip.file(`ficha_${nombre}_${apellido}_${dni}.pdf`,doc.output('blob'));
+    }
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    const url=URL.createObjectURL(zipBlob);
+    const a=document.createElement('a');a.href=url;
+    a.download=`fichas_tecnicas_${todayISO()}.zip`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+    _toast(`${alumnos.length} fichas generadas y descargadas.`);
+  }catch(e){await myAlert('Error al generar ZIP: '+e.message);}
+  finally{if(btn){btn.textContent=orig;btn.disabled=false;}}
+}
+
 function _fmtMes(m){const[y,mo]=m.split('-');return new Date(+y,+mo-1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'});}
 function _renderGenStat(){
   const el=document.getElementById('rep-gen-stat');
@@ -3245,7 +3525,7 @@ function showRepTab(tab){
   repCadetesSubTab='general';
   _repAlumnoId=null;
   document.querySelectorAll('#rep-tabs .aula-tab').forEach((t,i)=>{
-    t.classList.toggle('active',['cadetes','profesores','padres'][i]===tab);
+    t.classList.toggle('active',['cadetes','profesores','padres','ficha'][i]===tab);
   });
   loadReportes();
 }
@@ -3437,6 +3717,15 @@ async function loadReportes(){
         <div style="font-size:10px;color:var(--muted);margin-top:5px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em">${fecha} · <span style="color:${clr};text-transform:uppercase">${n.tipo}</span>${n.leida?' · <span style="color:var(--green)">Leída</span>':''}</div>
       </div>`;
     }).join('')}</div>`;
+  }
+  if(repTabActual==='ficha'){
+    tit.textContent='Ficha Técnica';
+    if(!window._repTodosAlumnos?.length){
+      const {data:todosAls}=await sb.from('alumnos').select('id,perfiles(nombre,apellido,dni)').eq('activo',true).order('perfiles(apellido)');
+      window._repTodosAlumnos=todosAls||[];
+    }
+    _renderFichaContent();
+    return;
   }
 }
 async function loadNotifHist(){
