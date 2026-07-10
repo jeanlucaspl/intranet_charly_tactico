@@ -3575,7 +3575,7 @@ async function loadRepAlTab(){
     el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>Fecha</th><th>Materia</th><th>Hora</th><th>Estado</th><th>Método</th></tr></thead><tbody>${
       data.map(a=>{
         const bc=a.estado==='presente'?'bg':a.estado==='tardanza'?'by':'br';
-        const fecha=new Date(a.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+        const fecha=new Date(a.fecha+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
         return`<tr><td>${fecha}</td><td>${a.materias?.nombre||'--'}</td><td>${a.hora_ingreso?.slice(0,5)||'--'}</td><td><span class="badge ${bc}">${a.estado}</span></td><td>${a.verificado_facial?'<span class="badge bb">Facial</span>':'<span class="badge">Manual</span>'}</td></tr>`;
       }).join('')
     }</tbody></table></div>`;
