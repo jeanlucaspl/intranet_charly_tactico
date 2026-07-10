@@ -7375,6 +7375,18 @@ function gpShuffleAlts(){
   }
 }
 
+// Detecta si un ítem requiere LaTeX (MathJax) o puede renderizarse como texto nativo
+function gpHasLatex(item){
+  if((item.e||'').includes('$'))return true;
+  if((item.ePost||'').includes('$'))return true;
+  if((item.si||[]).some(s=>(s||'').includes('$')))return true;
+  if((item.alts||[]).some(a=>(a||'').includes('$')))return true;
+  return false;
+}
+function gpCanNative(item){
+  return !gpHasLatex(item)&&!item.imgData&&!item.bpImgUrl;
+}
+
 function gpBinarize(canvas,thresh=210){
   const ctx=canvas.getContext('2d');
   const d=ctx.getImageData(0,0,canvas.width,canvas.height);
@@ -7397,6 +7409,8 @@ async function gpPrerenderAll(nc){
   for(const sec of GP.secciones){
     for(const item of sec.items){
       if(item.tipo==='texto') continue; // texto se dibuja directamente en PDF
+      // Sin LaTeX ni imagen adjunta → marcar para renderizado nativo (texto vectorial)
+      if(gpCanNative(item)){imgs.push({native:true});continue;}
       if(item.tipo==='alternativas'){
         // Render enunciado y alternativas por separado para el algoritmo de corte de columna
         box.innerHTML=gpBuildEnunciadoHTML(item,fsPt);
@@ -7665,6 +7679,52 @@ async function generarPracticaPDF(){
       }
     };
 
+    // Renderizado nativo (sin html2canvas) para preguntas sin LaTeX ni imágenes
+    // Produce texto vectorial: imprime continuo en laser, igual que el texto de lectura
+    const drawQNative=(item,num)=>{
+      const ind=gpIND[nc],fs=gpFSn(nc),lh=gpLHn(nc),tw=cw-ind-1;
+      doc.setFont('helvetica','normal');doc.setFontSize(fs);
+      const eLines=doc.splitTextToSize((item.e||'').trim(),tw);
+      let altFlat=[];
+      if(item.tipo==='alternativas'){
+        const n=item.numAlts||5;
+        ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
+          const txt=(item.alts||[])[i]||'';
+          doc.splitTextToSize(L+') '+txt,tw).forEach(l=>altFlat.push(l));
+        });
+      } else {
+        (item.si||[]).forEach((si,i)=>{
+          doc.splitTextToSize(String.fromCharCode(97+i)+') '+(si||''),tw).forEach(l=>altFlat.push(l));
+        });
+      }
+      const totalH=1+eLines.length*lh+(altFlat.length?lh*0.5+altFlat.length*lh:0)+1;
+      if(curY+totalH>gpFOOT)moveNext();
+      const cx=colXs[curCol];
+      // Número de pregunta y puntaje
+      doc.setFont('helvetica','bold');doc.setFontSize(nc===1?10:9);doc.setTextColor(0,0,0);
+      doc.text(String(num)+'.',cx+1,curY+fs*0.35+1);
+      if(GP.cfg.mostrarPts&&item.p){
+        doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(80,80,80);
+        doc.text('('+item.p+'pt'+(item.p>1?'s':'')+')',cx+cw,curY+fs*0.35+1,{align:'right'});
+      }
+      curY+=1;
+      // Enunciado
+      doc.setFont('helvetica','normal');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+      eLines.forEach((line,i)=>doc.text(line,cx+ind,curY+(i+0.85)*lh));
+      curY+=eLines.length*lh;
+      // Alternativas / sub-ítems
+      if(altFlat.length){
+        curY+=lh*0.4;
+        altFlat.forEach(line=>{
+          if(curY+lh>gpFOOT)moveNext();
+          doc.setFont('helvetica','normal');doc.setFontSize(fs);doc.setTextColor(20,20,20);
+          doc.text(line,colXs[curCol]+ind,curY+lh*0.85);
+          curY+=lh;
+        });
+      }
+      curY+=1;
+    };
+
     const drawSubtema=(nombre)=>{
       const dh=5;
       if(curY+dh>gpFOOT)moveNext();
@@ -7684,6 +7744,7 @@ async function generarPracticaPDF(){
 
     const drawQ=(item,num)=>{
       const img=imgs[imgIdx++];
+      if(img.native){drawQNative(item,num);return;}
       const ind=gpIND[nc];
       const _drawNum=(cx)=>{
         doc.setFont('helvetica','bold');doc.setFontSize(nc===1?10:9);doc.setTextColor(0,0,0);
