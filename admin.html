@@ -5846,7 +5846,7 @@ async function saveAllAtt(){
 
 // ── FACIAL TABS ──
 function showFacialTab(tab){
-  ['facial','manual','registros'].forEach(t=>{
+  ['facial','registros'].forEach(t=>{
     document.getElementById('ftab-content-'+t).style.display=t===tab?'block':'none';
     document.getElementById('ftab-'+t).classList.toggle('active',t===tab);
   });
