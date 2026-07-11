@@ -7666,7 +7666,9 @@ async function generarPracticaPDF(){
     const drawQNative=(item,num)=>{
       const ind=gpIND[nc],fs=gpFSn(nc),lh=gpLHn(nc),tw=cw-ind-1;
       doc.setFont('helvetica','normal');doc.setFontSize(fs);
-      const eLines=doc.splitTextToSize((item.e||'').trim(),tw);
+      const _rawE=(item.e||'').trim();
+      const _eText=_rawE.replace(/^seleccione\s+el\s+(sin[oó]nimo|ant[oó]nimo)\s+de\s+la\s+palabra\s*:\s*/i,'');
+      const eLines=doc.splitTextToSize(_eText,tw);
       let altFlat=[];
       if(item.tipo==='alternativas'){
         const n=item.numAlts||5;
