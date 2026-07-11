@@ -6820,7 +6820,7 @@ init();
 
 // ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
 const GP={
-  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:55},
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:70},
   targetPages:1,
   secciones:[],
   layout:{cols:1,pages:1},
@@ -6843,7 +6843,7 @@ function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:G
 function gpClearDraft(){localStorage.removeItem('gp_draft');}
 async function gpNuevo(){
   if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
-  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:55});
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:70});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
     items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
@@ -7162,10 +7162,10 @@ function gpRenderUI(){
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase">Tamaño</span>
-            <input type="range" min="30" max="120" step="5" value="${GP.cfg.wmSize||55}"
-              oninput="GP.cfg.wmSize=+this.value;document.getElementById('gp-wm-size-val').textContent=this.value+'pt'"
+            <input type="range" min="40" max="100" step="5" value="${GP.cfg.wmSize||70}"
+              oninput="GP.cfg.wmSize=+this.value;document.getElementById('gp-wm-size-val').textContent=this.value+'%'"
               style="width:80px;accent-color:var(--gold)">
-            <span id="gp-wm-size-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:36px">${GP.cfg.wmSize||55}pt</span>
+            <span id="gp-wm-size-val" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;color:var(--white);min-width:36px">${GP.cfg.wmSize||70}%</span>
           </div>
         </div>
       </div>
@@ -7815,7 +7815,18 @@ async function generarPracticaPDF(){
     for(let i=1;i<=practicaPages;i++){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
-      if(GP.cfg.watermark){try{doc.setGState(new doc.GState({opacity:GP.cfg.wmOpacity||0.08}));doc.setFont('helvetica','bold');doc.setFontSize(GP.cfg.wmSize||55);doc.setTextColor(0,0,0);doc.text('CHARLY TÁCTICO',gpPW/2,297/2,{align:'center',angle:45});doc.setGState(new doc.GState({opacity:1}));}catch(e){}}
+      if(GP.cfg.watermark){try{
+        const _wmTxt='CHARLY TACTICO TEDAX';
+        const _diag=Math.sqrt(gpPW*gpPW+297*297);
+        const _ang=Math.atan2(297,gpPW)*(180/Math.PI);
+        doc.setFont('helvetica','bold');doc.setFontSize(50);
+        const _refW=doc.getTextWidth(_wmTxt);
+        const _wmFs=(50*(_diag/_refW))*((GP.cfg.wmSize||70)/100);
+        doc.setGState(new doc.GState({opacity:GP.cfg.wmOpacity||0.08}));
+        doc.setFontSize(_wmFs);doc.setTextColor(0,0,0);
+        doc.text(_wmTxt,gpPW/2,297/2,{align:'center',angle:_ang});
+        doc.setGState(new doc.GState({opacity:1}));
+      }catch(e){}}
       doc.setDrawColor(0,0,0);doc.setLineWidth(0.2);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(60,60,60);
