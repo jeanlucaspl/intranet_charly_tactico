@@ -7818,13 +7818,19 @@ async function generarPracticaPDF(){
       if(GP.cfg.watermark){try{
         const _wmTxt='CHARLY TACTICO TEDAX';
         const _diag=Math.sqrt(gpPW*gpPW+297*297);
-        const _ang=Math.atan2(297,gpPW)*(180/Math.PI);
+        const _angRad=Math.atan2(297,gpPW);
+        const _angDeg=_angRad*(180/Math.PI);
         doc.setFont('helvetica','bold');doc.setFontSize(50);
         const _refW=doc.getTextWidth(_wmTxt);
         const _wmFs=(50*(_diag/_refW))*((GP.cfg.wmSize||70)/100);
+        doc.setFontSize(_wmFs);
+        const _tw=doc.getTextWidth(_wmTxt);
+        // Punto de inicio para que el centro del texto quede en el centro de la hoja
+        const _sx=gpPW/2-(_tw/2)*Math.cos(_angRad);
+        const _sy=297/2+(_tw/2)*Math.sin(_angRad);
         doc.setGState(new doc.GState({opacity:GP.cfg.wmOpacity||0.08}));
-        doc.setFontSize(_wmFs);doc.setTextColor(0,0,0);
-        doc.text(_wmTxt,gpPW/2,297/2,{align:'center',angle:_ang});
+        doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
+        doc.text(_wmTxt,_sx,_sy,{angle:_angDeg});
         doc.setGState(new doc.GState({opacity:1}));
       }catch(e){}}
       doc.setDrawColor(0,0,0);doc.setLineWidth(0.2);
