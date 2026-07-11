@@ -7415,21 +7415,21 @@ async function gpPrerenderAll(nc){
         // Render enunciado y alternativas por separado para el algoritmo de corte de columna
         box.innerHTML=gpBuildEnunciadoHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
-        const canvasE=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        const canvasE=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvasE);
-        const hE=canvasE.height/(mmToPx*2);
+        const hE=canvasE.height/(mmToPx*4);
         box.innerHTML=gpBuildAltsHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
-        const canvasA=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        const canvasA=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvasA);
-        const hA=canvasA.height/(mmToPx*2);
+        const hA=canvasA.height/(mmToPx*4);
         imgs.push({urlE:canvasE.toDataURL('image/png'),hE,urlA:canvasA.toDataURL('image/png'),hA,wMm:gpTW(nc),split:true});
       } else {
         box.innerHTML=gpBuildQHTML(item,fsPt);
         await MathJax.typesetPromise([box]);
-        const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+        const canvas=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvas);
-        imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*2),split:false});
+        imgs.push({url:canvas.toDataURL('image/png'),wMm:gpTW(nc),hMm:canvas.height/(mmToPx*4),split:false});
       }
     }
   }
