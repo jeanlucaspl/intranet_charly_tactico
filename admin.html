@@ -7563,10 +7563,10 @@ async function generarPracticaPDF(){
     doc.text('ACADEMIA CHARLY TÁCTICO TEDAX',gpPW/2,7,{align:'center'});
     doc.setFont('helvetica','normal');doc.setFontSize(8);
     doc.text((titulo+matLabel).toUpperCase(),gpPW/2,12,{align:'center',maxWidth:gpPW-gpML-gpMR-40});
-    doc.setFontSize(7);doc.setTextColor(60,60,60);
+    doc.setFontSize(7);doc.setTextColor(0,0,0);
     doc.text(fechaPrac,gpPW-gpMR,7,{align:'right'});
     if(GP.cfg.tiempo)doc.text(GP.cfg.tiempo+' min',gpPW-gpMR,12,{align:'right'});
-    if(GP.cfg.mostrarPts&&totalPts){doc.setFontSize(7);doc.setTextColor(60,60,60);doc.text('Total: '+totalPts+' pts',gpML,12);}
+    if(GP.cfg.mostrarPts&&totalPts){doc.setFontSize(7);doc.setTextColor(0,0,0);doc.text('Total: '+totalPts+' pts',gpML,12);}
     doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
     doc.line(gpML,HDR,gpPW-gpMR,HDR);
 
@@ -7596,7 +7596,7 @@ async function generarPracticaPDF(){
       const MH=8;
       doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(0,0,0);
       doc.text('CHARLY TACTICO TEDAX',gpML,5.5);
-      doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);
+      doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
       doc.text(titulo,gpPW/2,5.5,{align:'center'});
       doc.text(fechaHoy,gpPW-gpMR,5.5,{align:'right'});
       doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);
@@ -7717,7 +7717,7 @@ async function generarPracticaPDF(){
       const tw=doc.getTextWidth(lbl)+4;
       const lx=cx+(cw-tw)/2;
       const rx=lx+tw;
-      doc.setDrawColor(80,80,80);doc.setLineWidth(.25);
+      doc.setDrawColor(0,0,0);doc.setLineWidth(.25);
       doc.line(cx,mid,lx-1,mid);
       doc.line(rx+1,mid,cx+cw,mid);
       doc.text(lbl,cx+cw/2,mid+0.5,{align:'center'});
@@ -7775,8 +7775,7 @@ async function generarPracticaPDF(){
       const dh=8;
       if(curY+dh>gpFOOT)moveNext();
       const cx=colXs[curCol];
-      doc.setFillColor(235,235,235);doc.rect(cx,curY,cw,dh,'F');
-      doc.setDrawColor(80,80,80);doc.setLineWidth(.3);
+      doc.setDrawColor(0,0,0);doc.setLineWidth(.3);
       doc.line(cx,curY,cx+cw,curY);doc.line(cx,curY+dh,cx+cw,curY+dh);
       doc.setFont('helvetica','bold');doc.setFontSize(nc===1?8:7);doc.setTextColor(20,20,20);
       doc.text(nombre.toUpperCase(),cx+cw/2,curY+5.2,{align:'center'});
@@ -7816,7 +7815,7 @@ async function generarPracticaPDF(){
       doc.setPage(i);
       if(i===1&&GP.cfg.caratula) continue;
       if(GP.cfg.watermark){try{
-        const _wmTxt='CHARLY TACTICO TEDAX';
+        const _wmTxt='CHARLY TÁCTICO TEDAX';
         const _diag=Math.sqrt(gpPW*gpPW+297*297);
         const _angRad=Math.atan2(297,gpPW);
         const _angDeg=_angRad*(180/Math.PI);
@@ -7835,11 +7834,9 @@ async function generarPracticaPDF(){
       }catch(e){}}
       doc.setDrawColor(0,0,0);doc.setLineWidth(0.2);
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
-      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(60,60,60);
-      doc.text('Charly Tactico TEDAX — Academia Pre-Cadetes',gpML,gpFOOT+7);
-      const cp=i-(GP.cfg.caratula?1:0),tp=practicaPages-(GP.cfg.caratula?1:0);
-      doc.text(`${cp} / ${tp}`,gpPW/2,gpFOOT+7,{align:'center'});
-      doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0,0,0);
+      doc.text('Charly Táctico TEDAX — Academia Pre-Cadetes',gpML,gpFOOT+7);
+      doc.text('El primer error es el último',gpPW/2,gpFOOT+7,{align:'center'});
     }
 
     // ── 3. Plantilla (cartilla de burbujas + hoja docente con QR) ────────────
@@ -7883,11 +7880,10 @@ async function generarPracticaPDF(){
       const solTotal=pcTotal-plantillaEndPage;
       for(let i=plantillaEndPage+1;i<=pcTotal;i++){
         doc.setPage(i);
-        doc.setDrawColor(160,160,160);doc.setLineWidth(.3);doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
-        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(130,130,130);
+        doc.setDrawColor(0,0,0);doc.setLineWidth(.3);doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
+        doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0,0,0);
         doc.text('SOLUCIONARIO — Uso Interno',gpML,gpFOOT+7);
         doc.text(`S${i-plantillaEndPage}/${solTotal}`,gpPW/2,gpFOOT+7,{align:'center'});
-        doc.text(fechaHoy,gpPW-gpMR,gpFOOT+7,{align:'right'});
       }
     }
 
