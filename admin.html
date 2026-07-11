@@ -7637,10 +7637,14 @@ async function generarPracticaPDF(){
       }
       // Texto de la lectura
       if(item.texto?.trim()){
-        // Normalizar: \n simple → espacio, \n\n → párrafo real
+        // Normalizar: colapsar saltos PDF, párrafos reales, limpiar líneas vacías
         const textoNorm=item.texto.trim()
           .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
-          .replace(/\n{2,}/g,'\x00').replace(/\n/g,' ').replace(/\x00/g,'\n');
+          .replace(/\n[ \t]*\n/g,'\x00')   // línea vacía (con o sin espacios) → marca de párrafo
+          .replace(/\n/g,' ')               // salto simple (ajuste de línea PDF) → espacio
+          .replace(/\x00+/g,'\n')           // colapsar párrafos múltiples → uno
+          .split('\n').map(p=>p.trim()).filter(p=>p).join('\n')  // eliminar párrafos vacíos
+          .replace(/ {2,}/g,' ');
         // Setear font ANTES de splitTextToSize (usa métricas del font activo)
         doc.setFont('helvetica','italic');doc.setFontSize(fs);doc.setTextColor(20,20,20);
         const alh=fs*1.15*(25.4/72);
@@ -7666,7 +7670,9 @@ async function generarPracticaPDF(){
     const drawQNative=(item,num)=>{
       const ind=gpIND[nc],fs=gpFSn(nc),lh=gpLHn(nc),tw=cw-ind-1;
       doc.setFont('helvetica','normal');doc.setFontSize(fs);
-      const _rawE=(item.e||'').trim();
+      const _rawE=(item.e||'').trim()
+        .replace(/\r\n/g,'\n').replace(/[ \t]+/g,' ')
+        .replace(/\n[ \t]*\n/g,' ').replace(/\n/g,' ').replace(/ {2,}/g,' ');
       const _eText=_rawE.replace(/^seleccione\s+el\s+(sin[oó]nimo|ant[oó]nimo)\s+de\s+la\s+palabra\s*:\s*/i,'');
       const eLines=doc.splitTextToSize(_eText,tw);
       let altFlat=[];
