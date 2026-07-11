@@ -6820,7 +6820,7 @@ init();
 
 // ── ARMAR PRÁCTICA ────────────────────────────────────────────────────────────
 const GP={
-  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:70},
+  cfg:{titulo:'',fecha:'',tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.13,wmSize:70},
   targetPages:1,
   secciones:[],
   layout:{cols:1,pages:1},
@@ -6843,7 +6843,7 @@ function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:G
 function gpClearDraft(){localStorage.removeItem('gp_draft');}
 async function gpNuevo(){
   if(!await myConfirm('¿Comenzar práctica nueva? Se borrará el borrador actual.'))return;
-  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.08,wmSize:70});
+  Object.assign(GP.cfg,{titulo:'',fecha:new Date().toISOString().slice(0,10),tiempo:'',instrucciones:'',mostrarPts:false,caratula:false,colsForzar:0,escalaFuente:1.2,separadorCols:true,watermark:true,wmOpacity:0.13,wmSize:70});
   GP.targetPages=1;
   GP.secciones=[{nombre:allMaterias[0]?.nombre||'Sección',materia_id:allMaterias[0]?.id||null,
     items:[{tipo:'pregunta',e:'',ePost:'',imgData:null,imgW:0,imgH:0,p:1,si:[],alts:['','','','',''],altCorrecta:-1,numAlts:5,align:'left'}]}];
@@ -7790,21 +7790,24 @@ async function generarPracticaPDF(){
     GP.secciones.forEach(sec=>{
       if(multi)drawDiv(sec.nombre);
       const isRV=/verbal|razonamiento/i.test(sec.nombre);
-      let prevSubtema=null;
+      let prevSubtema=null,prevWasQ=false;
       sec.items.forEach(item=>{
         if(item.tipo==='texto'){
+          if(prevWasQ)curY+=6;
           const _sub=item.bpSubtema||item.etiqueta||'';
           if(_sub&&_sub!=='Lectura'&&_sub!=='Texto'&&_sub!==prevSubtema){
             drawSubtema(_sub);
             prevSubtema=_sub;
           }
           drawTexto(item);
+          prevWasQ=false;
         }else{
           if(isRV&&!item.bpEsSubitem&&item.bpSubtema&&item.bpSubtema!==prevSubtema){
             drawSubtema(item.bpSubtema);
             prevSubtema=item.bpSubtema;
           }
           drawQ(item,gnum++);
+          prevWasQ=true;
         }
       });
     });
@@ -7838,7 +7841,9 @@ async function generarPracticaPDF(){
       doc.line(gpML,gpFOOT+2,gpPW-gpMR,gpFOOT+2);
       doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(0,0,0);
       doc.text('Charly Táctico TEDAX — Academia Pre-Cadetes',gpML,gpFOOT+7);
-      doc.text('El primer error es el último',gpPW/2,gpFOOT+7,{align:'center'});
+      const cp=i-(GP.cfg.caratula?1:0),tp=practicaPages-(GP.cfg.caratula?1:0);
+      doc.text(`${cp} / ${tp}`,gpPW/2,gpFOOT+7,{align:'center'});
+      doc.text('El primer error es el último',gpPW-gpMR,gpFOOT+7,{align:'right'});
     }
 
     // ── 3. Plantilla (cartilla de burbujas + hoja docente con QR) ────────────
