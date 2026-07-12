@@ -783,6 +783,11 @@
       <input type="date" id="nf-hasta" title="Hasta">
       <button class="btn btn-gold" onclick="applyNotasFiltro()" style="font-size:11px;padding:5px 14px">Consultar</button>
       <button class="btn btn-outline" onclick="limpiarNotasFiltros()" style="font-size:11px;padding:5px 12px">&#10005; Limpiar</button>
+      <select id="nf-orden" onchange="renderNotas()" style="background:var(--navy);border:1px solid var(--border);color:var(--white);padding:5px 10px;font-family:'Barlow',sans-serif;font-size:11px;outline:none;border-radius:6px" title="Ordenar por">
+        <option value="apellido">Ordenar: Apellido ↑</option>
+        <option value="nota_desc">Ordenar: Nota ↓</option>
+        <option value="nota_asc">Ordenar: Nota ↑</option>
+      </select>
       <button class="btn btn-gold" id="btn-notas-pdf" onclick="generarNotasFiltradosPDF()" style="font-size:11px;padding:5px 12px;display:none">&#8595; Exportar PDF</button>
     </div>
     <div id="d-notas"><div class="empty"><div class="ei"></div><div class="et">Cargando...</div></div></div>
@@ -2015,8 +2020,18 @@ async function loadAulas(){
   renderAulas();
 }
 let notasSectorTab='aptitud_fisica';
-let _nfTexto='',_nfDesde='',_nfHasta='';
+let _nfTexto='',_nfDesde='',_nfHasta='',_nfOrden='apellido';
 let _notasConsultaActiva=false;
+function _getNfOrden(){return document.getElementById('nf-orden')?.value||'apellido';}
+function _sortAluEntries(entries){
+  const ord=_getNfOrden();
+  return [...entries].sort(([,a],[,b])=>{
+    if(ord==='apellido') return a.nombre.localeCompare(b.nombre,'es');
+    const pa=a.notas?.[0]?.promedio??a.resultados?.[0]?.nota??-1;
+    const pb=b.notas?.[0]?.promedio??b.resultados?.[0]?.nota??-1;
+    return ord==='nota_desc'?pb-pa:pa-pb;
+  });
+}
 
 function applyNotasFiltro(){
   _nfTexto=document.getElementById('nf-texto').value.trim().toLowerCase();
@@ -2191,22 +2206,32 @@ async function generarNotasFiltradosPDF(){
   };
 
   let hayDatos=false;
+  let _pdfPrimerCurso=true;
+  const _pdfNuevaHoja=(secLabel)=>{if(!_pdfPrimerCurso){doc.addPage();curY=14;}else{_pdfPrimerCurso=false;}drawSecTitle(secLabel);};
+  const _pdfSortRows=(rows,getNombre,getNota)=>{
+    const ord=_getNfOrden();
+    return [...rows].sort((a,b)=>{
+      if(ord==='apellido')return getNombre(a).localeCompare(getNombre(b),'es');
+      const pa=getNota(a)??-1,pb=getNota(b)??-1;
+      return ord==='nota_desc'?pb-pa:pa-pb;
+    });
+  };
 
   // Aptitud Física
   const rfFilt=allResultadosFisicos.filter(r=>_aluMatchFiltro(`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`,r.alumnos?.perfiles?.dni)&&_notaMatchFiltro(r.fecha||r.creado_en));
   if(rfFilt.length){
     hayDatos=true;
-    drawSecTitle('Aptitud Física');
     const byP={};
     rfFilt.forEach(r=>{const pid=r.prueba_id;if(!byP[pid])byP[pid]={nombre:r.pruebas_fisicas?.nombre||'--',tipo:r.pruebas_fisicas?.tipo,rows:[]};byP[pid].rows.push(r);});
     Object.values(byP).forEach(pd=>{
+      _pdfNuevaHoja('Aptitud Física');
       drawSubTitle(pd.nombre);
-      const body=pd.rows.map(r=>{
+      const sorted=_pdfSortRows(pd.rows,r=>`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`.trim(),r=>r.nota);
+      const body=sorted.map(r=>{
         const marca=r.valor!=null?(pd.tipo==='tiempo'?formatTiempo(r.valor):String(r.valor)):'--';
         const nombre=`${r.alumnos?.perfiles?.apellido||''} ${r.alumnos?.perfiles?.nombre||''}`.trim();
         const fecha=r.fecha||new Date(r.creado_en).toLocaleDateString('es-PE');
-        const nota=r.nota??'--';
-        return[nombre,r.alumnos?.perfiles?.dni||'--',fecha,marca,nota];
+        return[nombre,r.alumnos?.perfiles?.dni||'--',fecha,marca,r.nota??'--'];
       });
       doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Marca','Nota']],body,
         didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
@@ -2222,14 +2247,15 @@ async function generarNotasFiltradosPDF(){
     const nFilt=allNotas.filter(n=>sMatIds.has(n.materia_id)&&_aluMatchFiltro(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&_notaMatchFiltro(n.creado_en));
     if(!nFilt.length)continue;
     hayDatos=true;
-    drawSecTitle(label);
     const byMat={};
     nFilt.forEach(n=>{const k=n.materia_id;if(!byMat[k])byMat[k]={nombre:n.materias?.nombre||'--',rows:[]};byMat[k].rows.push(n);});
     Object.values(byMat).forEach(md=>{
+      _pdfNuevaHoja(label);
       drawSubTitle(md.nombre);
       const tieneMultiples=md.rows.some(n=>n.nota_2!=null||n.nota_3!=null);
+      const sorted=_pdfSortRows(md.rows,n=>`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim(),n=>n.promedio??n.nota_1);
       if(tieneMultiples){
-        const body=md.rows.map(n=>{
+        const body=sorted.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
           const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
@@ -2238,7 +2264,7 @@ async function generarNotasFiltradosPDF(){
           didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
         });
       }else{
-        const body=md.rows.map(n=>{
+        const body=sorted.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
           const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
@@ -4467,7 +4493,7 @@ function renderNotas(){
       byPrueba[pid].alumnos[aid].resultados.push(r);
     });
     el.innerHTML=`<div class="nota-sector-wrap">${Object.entries(byPrueba).map(([pid,pd])=>{
-      const aluEntries=Object.entries(pd.alumnos);
+      const aluEntries=_sortAluEntries(Object.entries(pd.alumnos));
       const aluHTML=aluEntries.map(([aid,ad])=>{
         const sorted=[...ad.resultados].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
         const rows=sorted.map(r=>{
@@ -4512,7 +4538,7 @@ function renderNotas(){
     byMat[k].alumnos[aid].notas.push(n);
   });
   el.innerHTML=`<div class="nota-sector-wrap">${Object.entries(byMat).map(([mid,md])=>{
-    const aluEntries=Object.entries(md.alumnos);
+    const aluEntries=_sortAluEntries(Object.entries(md.alumnos));
     const aluHTML=aluEntries.map(([aid,ad])=>{
       const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
       const rows=sorted.map(n=>{
