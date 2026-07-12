@@ -1319,7 +1319,7 @@ async function scanQRFromFile(input) {
       const buf = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       const page = await pdf.getPage(1);
-      const vp   = page.getViewport({ scale: 2.0 });
+      const vp   = page.getViewport({ scale: 4.0 });
       canvas.width  = vp.width;
       canvas.height = vp.height;
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
@@ -1337,7 +1337,7 @@ async function scanQRFromFile(input) {
     }
 
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code    = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+    const code    = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
     hideProc();
 
     if (code && (code.data.startsWith('CT|') || code.data.startsWith('CTP|'))) {
@@ -1981,11 +1981,12 @@ async function _batchConfirmar(filename) {
   const periodo  = new Date().toISOString().slice(0, 10);
 
   if (!examSections && materiaVocabId) {
-    await sb.from('notas').upsert(
+    const { error } = await sb.from('notas').upsert(
       { alumno_id: selectedStudent.id, materia_id: materiaVocabId, periodo,
         nota_1: nota, nota_2: null, nota_3: null, promedio: nota },
       { onConflict: 'alumno_id,materia_id,periodo' }
     );
+    if (error) throw new Error(error.message);
   }
   session.push({
     nombre:   `${selectedStudent.apellido} ${selectedStudent.nombre}`,
