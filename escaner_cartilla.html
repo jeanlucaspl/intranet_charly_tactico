@@ -1359,9 +1359,19 @@ async function scanQRFromFile(input) {
     }
     hideProc();
 
-    if (code && (code.data.startsWith('CT|') || code.data.startsWith('CTP|'))) {
-      stopQRLoop();
-      onQRDetected(code.data);
+    if (code) {
+      // qrcode-generator puede anteponer bytes ECI; extraer desde el marcador real
+      let raw = code.data;
+      const idxCTP = raw.indexOf('CTP|');
+      const idxCT  = raw.indexOf('CT|');
+      if      (idxCTP >= 0) raw = raw.slice(idxCTP);
+      else if (idxCT  >= 0) raw = raw.slice(idxCT);
+      if (raw.startsWith('CT|') || raw.startsWith('CTP|')) {
+        stopQRLoop();
+        onQRDetected(raw);
+      } else {
+        showToast('No se encontró QR válido en el archivo', false);
+      }
     } else {
       showToast('No se encontró QR válido en el archivo', false);
     }
