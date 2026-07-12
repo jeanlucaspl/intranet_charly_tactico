@@ -7953,7 +7953,7 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
   const DNI_X=10,DNI_Y=27,DNI_LW=7,DNI_SH=5,DNI_SV=4,DNI_BR=1.4;
   const CONT_W=GW-2*RM,GRP_W=(CONT_W-3*GAP)/4,CX0=GX+RM;
   const activeCount=key.split('').filter(c=>c!=='-').length;
-  function _qrDU(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createDataURL(5,0);}
+  function _qrDU(text){const q=qrcode(0,'M');q.addData(text);q.make();return q.createDataURL(12,0);}
   // Si hay más de una sección, codificar mapa de áreas en el QR
   const _hasSecs = GP.secciones.length > 1;
   const _secMap  = _hasSecs ? gpBuildSectionMap() : null;
@@ -8008,7 +8008,7 @@ function gpAgregarPaginasPlantilla(doc,titulo,fecha,key){
     }
   }
   // ── HOJA DOCENTE (solo para el evaluador — contiene QR con clave) ──────────
-  const QR_SZ=60;
+  const QR_SZ=70;
   doc.addPage();
   doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...BLK);
   doc.text('ACADEMIA CHARLY TÁCTICO TEDAX',PW/2,M+4,{align:'center'});
@@ -9758,7 +9758,7 @@ async function wn_save() {
   function makeQRDataURL(text) {
     const qr = qrcode(0, 'M');
     qr.addData(text); qr.make();
-    return qr.createDataURL(5, 0);
+    return qr.createDataURL(12, 0);
   }
 
   window.vocGenerarCompleto = async function() {
@@ -9893,7 +9893,7 @@ async function wn_save() {
     doc.addPage(); hdr('Hoja Docente — '+titulo);
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(40,40,40);
     doc.text('CONFIDENCIAL — NO DISTRIBUIR AL ALUMNO', PW/2, M+17, {align:'center'});
-    const QR_SZ=60, qrX=(PW-QR_SZ)/2, qrYY=M+22;
+    const QR_SZ=70, qrX=(PW-QR_SZ)/2, qrYY=M+22;
     doc.addImage(qrDU,'PNG',qrX,qrYY,QR_SZ,QR_SZ);
     doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRY);
     doc.text('Escanear con app Charly Táctico → Escáner Cartilla', PW/2, qrYY+QR_SZ+5, {align:'center'});
