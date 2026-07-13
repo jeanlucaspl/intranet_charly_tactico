@@ -232,68 +232,48 @@
 
   <div class="rf-grid">
 
-    <!-- ── COLUMNA IZQUIERDA: datos del reporte ── -->
+    <!-- ── COLUMNA IZQUIERDA: configuración ── -->
     <div class="rf-col">
       <div class="rf-card">
 
         <div class="rf-field">
-          <label class="rf-label">Alumno</label>
-          <div style="position:relative">
-            <input id="rf-alumno-input" class="rf-input" type="text"
-                   placeholder="Buscar por apellido o DNI..."
-                   autocomplete="off"
-                   oninput="rfFiltrarAlumnos(this.value)"
-                   onfocus="rfFiltrarAlumnos(this.value)"/>
-            <div id="rf-alumno-drop"
-                 style="display:none;position:absolute;top:100%;left:0;right:0;
-                        background:var(--navy2);border:1px solid var(--gold);
-                        border-top:none;z-index:50;max-height:220px;overflow-y:auto"></div>
-          </div>
-          <div id="rf-alumno-badge"
-               style="display:none;margin-top:6px;font-family:'Barlow Condensed',sans-serif;
-                      font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--lime)"></div>
-          <input type="hidden" id="rf-alumno-id"/>
+          <label class="rf-label">Fecha del examen</label>
+          <input type="date" id="rf-fecha" class="rf-input" style="color-scheme:dark"/>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="rf-field">
-            <label class="rf-label">Fecha</label>
-            <input type="date" id="rf-fecha" class="rf-input" style="color-scheme:dark"/>
-          </div>
-          <div class="rf-field">
-            <label class="rf-label">Tipo</label>
-            <input type="text" id="rf-tipo" class="rf-input" placeholder="Ej: Examen mensual"/>
+        <div class="rf-field">
+          <label class="rf-label">Cursos / Materias</label>
+          <div id="rf-materias-checks" style="display:flex;flex-direction:column;gap:7px;max-height:200px;overflow-y:auto;padding:2px 0">
+            <span style="color:var(--muted);font-size:12px;font-family:'Barlow Condensed',sans-serif">Cargando materias...</span>
           </div>
         </div>
 
         <div class="rf-field">
-          <label class="rf-label">Observaciones
-            <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">(opcional)</span>
+          <label class="rf-label">Observación general
+            <span style="font-weight:400;letter-spacing:0;text-transform:none;font-size:11px">(aparece en todos los reportes)</span>
           </label>
-          <textarea id="rf-obs" class="rf-input" rows="3" placeholder="Notas adicionales..." style="resize:vertical"></textarea>
+          <textarea id="rf-obs-general" class="rf-input" rows="3" placeholder="Ej: Evaluación mensual — Semana 3..." style="resize:vertical"></textarea>
         </div>
 
         <div id="rf-msg" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;min-height:16px"></div>
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-gold" style="flex:1;min-width:140px;font-size:13px;padding:12px" onclick="rfGenerarPDF()">
-            ↓ Generar PDF
-          </button>
-          <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="rfLimpiar()">
-            Limpiar
-          </button>
-        </div>
+        <button class="btn btn-gold" style="width:100%;font-size:13px;padding:12px" onclick="rfCargarAlumnos()">
+          Cargar alumnos →
+        </button>
+        <button class="btn btn-outline" style="width:100%;font-size:11px;padding:8px" onclick="rfLimpiar()">
+          Limpiar
+        </button>
 
       </div>
     </div><!-- /col izquierda -->
 
-    <!-- ── COLUMNA DERECHA: prácticas ── -->
+    <!-- ── COLUMNA DERECHA: alumnos ── -->
     <div class="rf-col">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <label class="rf-label" style="margin-bottom:0">Prácticas</label>
-        <button class="btn btn-outline" style="font-size:11px;padding:5px 14px" onclick="rfAgregarPractica()">+ Agregar práctica</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <label class="rf-label" id="rf-alumnos-header" style="margin-bottom:0">Alumnos</label>
+        <button class="btn btn-gold" id="rf-btn-todos" style="font-size:11px;padding:5px 14px;display:none" onclick="rfGenerarTodos()">↓ Generar todos los PDFs</button>
       </div>
-      <div id="rf-practicas-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div id="rf-alumnos-list" style="display:flex;flex-direction:column;gap:10px"></div>
     </div><!-- /col derecha -->
 
   </div><!-- /rf-grid -->
@@ -305,158 +285,184 @@ const SB_URL = 'https://jfczouzgikqxcnotukag.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmY3pvdXpnaWtxeGNub3R1a2FnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODU1NjgsImV4cCI6MjA4ODg2MTU2OH0.Q8MRAj-AFPm8fsJsg52hxDSMdjf9YJRuGbhs4WrOEcA';
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
-let allAlumnos = [];
+/* ── Estado ── */
+let allMaterias  = [];     // [{ id, nombre }]
+let rfAlumnos    = [];     // [{ alumno_id, nombre, dni, notas:[{materia_id,nombre,nota}], fotoUrl, fotoPath, _blobUrl, obs }]
+let _uploadedPaths = [];
 
-async function initPage(){
+function rfLoadPaths(){ try { _uploadedPaths = JSON.parse(localStorage.getItem('rf_uploaded_paths')||'[]'); } catch(_){} }
+function rfSavePaths(){ try { localStorage.setItem('rf_uploaded_paths', JSON.stringify(_uploadedPaths)); } catch(_){} }
+rfLoadPaths();
+
+async function initPage() {
   const badge = document.getElementById('tb-status');
   document.getElementById('rf-fecha').value = new Date().toISOString().slice(0,10);
 
-  const { data, error } = await sb.from('alumnos')
-    .select('*,perfiles(nombre,apellido,dni,telefono)')
-    .order('creado_en');
+  const { data, error } = await sb.from('materias').select('id, nombre').order('nombre');
+  if (error) { badge.textContent = 'Error al cargar'; return; }
+  allMaterias = data || [];
 
-  if(error){
-    badge.textContent = 'Error al cargar';
-    badge.style.color = 'var(--red)';
-    return;
+  const checks = document.getElementById('rf-materias-checks');
+  if (!allMaterias.length) {
+    checks.innerHTML = '<span style="color:var(--muted);font-size:12px;font-family:\'Barlow Condensed\',sans-serif">Sin materias registradas</span>';
+  } else {
+    checks.innerHTML = allMaterias.map(m => `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                    font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--chalk)">
+        <input type="checkbox" value="${m.id}" data-nombre="${m.nombre.replace(/"/g,'&quot;')}"
+               style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
+        ${m.nombre}
+      </label>`).join('');
   }
-  allAlumnos = (data||[]).filter(a => a.activo !== false);
-  badge.textContent = `${allAlumnos.length} alumnos`;
+  badge.textContent = `${allMaterias.length} materias`;
   badge.classList.add('loaded');
-
-  rfAgregarPractica();
-  rfRenderPracticas();
 }
 
-/* ── Estado ── */
-const RF = {
-  alumnoId: null,
-  alumnoNombre: '',
-  alumnoDni: '',
-  practicas: [],
-  _uploadedPaths: [],
-};
+/* ── Cargar alumnos desde asistencia + notas ── */
+async function rfCargarAlumnos() {
+  const fecha = document.getElementById('rf-fecha').value;
+  if (!fecha) { rfMsg('Selecciona una fecha', 'err'); return; }
 
-function rfLoadPaths(){
-  try { RF._uploadedPaths = JSON.parse(localStorage.getItem('rf_uploaded_paths')||'[]'); } catch(_){}
-}
-function rfSavePaths(){
-  try { localStorage.setItem('rf_uploaded_paths', JSON.stringify(RF._uploadedPaths)); } catch(_){}
-}
-rfLoadPaths();
+  const checks = document.querySelectorAll('#rf-materias-checks input[type=checkbox]:checked');
+  if (!checks.length) { rfMsg('Selecciona al menos una materia', 'err'); return; }
 
-/* ── Alumno autocomplete ── */
-function rfFiltrarAlumnos(q){
-  const drop = document.getElementById('rf-alumno-drop');
-  if(!q || q.length < 2){ drop.style.display='none'; return; }
-  const ql = q.toLowerCase();
-  const matches = allAlumnos.filter(a =>
-    (a.perfiles?.apellido||'').toLowerCase().includes(ql)||
-    (a.perfiles?.nombre||'').toLowerCase().includes(ql)||
-    (a.perfiles?.dni||'').includes(q)
-  ).slice(0,8);
-  if(!matches.length){ drop.style.display='none'; return; }
-  drop.innerHTML = matches.map((a,i) => `
-    <div class="rf-drop-item" onclick="rfSeleccionarAlumno(${i})">
-      <span style="font-weight:700;text-transform:uppercase">${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}</span>
-      <span style="color:var(--muted);font-size:11px">${a.perfiles?.dni||''}</span>
-    </div>`).join('');
-  drop.dataset.matches = JSON.stringify(matches.map(a=>({
-    id: a.id,
-    nombre: `${a.perfiles?.apellido||''} ${a.perfiles?.nombre||''}`,
-    dni: a.perfiles?.dni||''
-  })));
-  drop.style.display = 'block';
-}
+  const selMaterias = Array.from(checks).map(c => ({ id: c.value, nombre: c.dataset.nombre }));
+  rfMsg('Cargando alumnos...', '');
 
-function rfSeleccionarAlumno(idx){
-  const matches = JSON.parse(document.getElementById('rf-alumno-drop').dataset.matches||'[]');
-  const a = matches[idx]; if(!a) return;
-  RF.alumnoId     = a.id;
-  RF.alumnoNombre = a.nombre;
-  RF.alumnoDni    = a.dni;
-  document.getElementById('rf-alumno-input').value  = a.nombre.toUpperCase();
-  document.getElementById('rf-alumno-id').value     = a.id;
-  document.getElementById('rf-alumno-badge').textContent = `✓ ${a.nombre.toUpperCase()} · DNI ${a.dni}`;
-  document.getElementById('rf-alumno-badge').style.display = '';
-  document.getElementById('rf-alumno-drop').style.display  = 'none';
-}
+  // Obtener bloques para las materias seleccionadas en esa fecha
+  const matIds = selMaterias.map(m => m.id);
+  const { data: bloques } = await sb.from('bloques_asistencia')
+    .select('id, materia_id')
+    .in('materia_id', matIds)
+    .eq('fecha', fecha);
 
-document.addEventListener('click', e => {
-  if(!e.target.closest('#rf-alumno-input') && !e.target.closest('#rf-alumno-drop'))
-    document.getElementById('rf-alumno-drop').style.display = 'none';
-});
-
-/* ── Prácticas ── */
-function rfAgregarPractica(){
-  const idx = RF.practicas.length;
-  RF.practicas.push({ nombre:`Práctica ${idx+1}`, nota:'', notaMax:20, fotoUrl:null, fotoPath:null, _blobUrl:null });
-  rfRenderPracticas();
-}
-
-function rfEliminarPractica(idx){
-  RF.practicas.splice(idx, 1);
-  rfRenderPracticas();
-}
-
-function rfUpdatePractica(idx, campo, valor){
-  if(RF.practicas[idx]) RF.practicas[idx][campo] = valor;
-}
-
-function rfRenderPracticas(){
-  const list = document.getElementById('rf-practicas-list');
-  if(!RF.practicas.length){
-    list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:12px;padding:8px 0">Sin prácticas. Haz clic en + Agregar.</div>';
+  if (!bloques || !bloques.length) {
+    rfMsg('No hay asistencia registrada para esa fecha y materias seleccionadas', 'err');
     return;
   }
-  list.innerHTML = RF.practicas.map((p,i) => `
+
+  const bloqueIds = bloques.map(b => b.id);
+
+  // Asistencias → alumnos únicos
+  const { data: asistencias } = await sb.from('asistencias')
+    .select('alumno_id, bloque_id, alumnos(perfiles(nombre, apellido, dni))')
+    .in('bloque_id', bloqueIds);
+
+  if (!asistencias || !asistencias.length) {
+    rfMsg('Sin asistencias registradas para ese bloque', 'err');
+    return;
+  }
+
+  // Deduplicar alumnos
+  const alumnosMap = {};
+  for (const a of asistencias) {
+    if (!a.alumnos?.perfiles) continue;
+    if (!alumnosMap[a.alumno_id]) {
+      alumnosMap[a.alumno_id] = {
+        alumno_id: a.alumno_id,
+        nombre: `${a.alumnos.perfiles.apellido||''} ${a.alumnos.perfiles.nombre||''}`.trim(),
+        dni: a.alumnos.perfiles.dni || '',
+        notas: [],
+        fotoUrl: null, fotoPath: null, _blobUrl: null,
+        obs: ''
+      };
+    }
+  }
+
+  // Notas para esos alumnos + materias + fecha
+  const alumnoIds = Object.keys(alumnosMap);
+  const { data: notasData } = await sb.from('notas')
+    .select('alumno_id, materia_id, promedio')
+    .in('alumno_id', alumnoIds)
+    .in('materia_id', matIds)
+    .eq('periodo', fecha);
+
+  // Asignar notas a cada alumno por materia
+  for (const n of (notasData || [])) {
+    const al = alumnosMap[n.alumno_id];
+    if (!al) continue;
+    const mat = selMaterias.find(m => m.id === n.materia_id);
+    if (!mat) continue;
+    al.notas.push({ materia_id: n.materia_id, nombre: mat.nombre, nota: n.promedio });
+  }
+
+  // Para materias sin nota registrada, agregar con nota null
+  for (const al of Object.values(alumnosMap)) {
+    for (const m of selMaterias) {
+      if (!al.notas.find(n => n.materia_id === m.id)) {
+        al.notas.push({ materia_id: m.id, nombre: m.nombre, nota: null });
+      }
+    }
+  }
+
+  rfAlumnos = Object.values(alumnosMap).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  rfMsg('', '');
+  rfRenderAlumnos();
+}
+
+/* ── Render lista de alumnos ── */
+function rfRenderAlumnos() {
+  const list = document.getElementById('rf-alumnos-list');
+  const header = document.getElementById('rf-alumnos-header');
+  const btnTodos = document.getElementById('rf-btn-todos');
+
+  if (!rfAlumnos.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:12px;padding:8px 0">Sin alumnos. Carga la lista primero.</div>';
+    if (btnTodos) btnTodos.style.display = 'none';
+    return;
+  }
+
+  if (header) header.textContent = `${rfAlumnos.length} alumnos`;
+  if (btnTodos) btnTodos.style.display = '';
+
+  list.innerHTML = rfAlumnos.map((a, i) => {
+    const notasHtml = a.notas.map(n => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;
+                  border-bottom:1px solid rgba(201,168,76,.08)">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted)">${n.nombre}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+                     color:${n.nota != null ? (n.nota >= 12 ? 'var(--lime)' : 'var(--red)') : 'var(--muted)'}">${n.nota != null ? n.nota + '/20' : '—'}</span>
+      </div>`).join('');
+
+    return `
     <div class="rf-practica-card">
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="text" value="${p.nombre}" placeholder="Nombre"
-          onchange="rfUpdatePractica(${i},'nombre',this.value)"
-          style="flex:1;background:var(--navy);border:1px solid var(--border);color:var(--white);
-                 padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;outline:none"/>
-        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;color:var(--red);border-color:rgba(224,85,85,.4)"
-                onclick="rfEliminarPractica(${i})">✕</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
-                        letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Nota</label>
-          <input type="number" value="${p.nota}" min="0" max="${p.notaMax}" step="0.5" placeholder="—"
-            oninput="rfUpdatePractica(${i},'nota',this.value)"
-            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);
-                   padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;outline:none"/>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase">${a.nombre}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">DNI ${a.dni}</div>
         </div>
-        <div>
-          <label style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
-                        letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Puntaje máx.</label>
-          <input type="number" value="${p.notaMax}" min="1" step="1"
-            oninput="rfUpdatePractica(${i},'notaMax',this.value)"
-            style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);
-                   padding:7px 10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;outline:none"/>
-        </div>
+        <button class="btn btn-gold" style="font-size:11px;padding:6px 14px" onclick="rfGenerarPDF(${i})">↓ PDF</button>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-outline" style="font-size:11px;padding:6px 14px" onclick="rfAbrirCamara(${i})">
-          📷 Tomar foto
+
+      <div style="margin-top:4px">${notasHtml}</div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-outline" style="font-size:11px;padding:5px 12px" onclick="rfAbrirCamara(${i})">
+          📷 Foto
         </button>
         <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;
                       letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;
-                      border:1px solid var(--border);padding:6px 14px;transition:all .2s"
+                      border:1px solid var(--border);padding:5px 12px;transition:all .2s"
                onmouseenter="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
                onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
-          Subir archivo
+          Subir
           <input type="file" accept="image/*" style="display:none" onchange="rfSubirArchivoFoto(${i},this)"/>
         </label>
-        ${p.fotoUrl
-          ? `<img src="${p._blobUrl||p.fotoUrl}" class="rf-thumb" onclick="rfVerFoto(${i})" title="Ver foto"/>
+        ${a.fotoUrl
+          ? `<img src="${a._blobUrl||a.fotoUrl}" class="rf-thumb" onclick="rfVerFoto(${i})" title="Ver foto"/>
              <button class="btn btn-outline" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(224,85,85,.3)"
                      onclick="rfQuitarFoto(${i})">Quitar</button>`
           : '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:var(--muted)">Sin foto</span>'
         }
       </div>
-    </div>`).join('');
+
+      <textarea placeholder="Observación particular (opcional)..."
+        oninput="rfAlumnos[${i}].obs=this.value"
+        style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--white);
+               padding:7px 10px;font-family:'Barlow',sans-serif;font-size:12px;outline:none;
+               resize:vertical;min-height:48px">${a.obs}</textarea>
+    </div>`;
+  }).join('');
 }
 
 /* ── Cámara ── */
@@ -514,65 +520,61 @@ async function rfSubirArchivoFoto(idx, input){
 async function rfAsignarFoto(idx, blob){
   rfMsg('Subiendo foto...','');
   const path = `reportes-temp/${Date.now()}_${idx}.jpg`;
-  const { data, error } = await sb.storage.from('banco-preguntas').upload(path, blob, { contentType:'image/jpeg', upsert:true });
+  const { error } = await sb.storage.from('banco-preguntas').upload(path, blob, { contentType:'image/jpeg', upsert:true });
   if(error){ rfMsg('Error al subir foto: '+error.message,'err'); return; }
   const { data: urlData } = sb.storage.from('banco-preguntas').getPublicUrl(path);
-  RF.practicas[idx].fotoUrl  = urlData.publicUrl;
-  RF.practicas[idx].fotoPath = path;
-  RF.practicas[idx]._blobUrl = URL.createObjectURL(blob);
-  RF._uploadedPaths.push(path);
+  rfAlumnos[idx].fotoUrl  = urlData.publicUrl;
+  rfAlumnos[idx].fotoPath = path;
+  rfAlumnos[idx]._blobUrl = URL.createObjectURL(blob);
+  _uploadedPaths.push(path);
   rfSavePaths();
-  rfRenderPracticas();
+  rfRenderAlumnos();
   rfMsg('Foto subida','ok');
 }
 
 function rfQuitarFoto(idx){
-  if(RF.practicas[idx]._blobUrl) URL.revokeObjectURL(RF.practicas[idx]._blobUrl);
-  RF.practicas[idx].fotoUrl  = null;
-  RF.practicas[idx].fotoPath = null;
-  RF.practicas[idx]._blobUrl = null;
-  rfRenderPracticas();
+  if(rfAlumnos[idx]?._blobUrl) URL.revokeObjectURL(rfAlumnos[idx]._blobUrl);
+  rfAlumnos[idx].fotoUrl  = null;
+  rfAlumnos[idx].fotoPath = null;
+  rfAlumnos[idx]._blobUrl = null;
+  rfRenderAlumnos();
 }
 
 function rfVerFoto(idx){
-  const p = RF.practicas[idx]; if(!p?.fotoUrl) return;
-  window.open(p._blobUrl||p.fotoUrl, '_blank');
+  const a = rfAlumnos[idx]; if(!a?.fotoUrl) return;
+  window.open(a._blobUrl||a.fotoUrl, '_blank');
 }
 
 /* ── Purgar fotos ── */
 async function rfPurgarFotos(){
   if(!confirm('¿Eliminar todas las fotos temporales subidas a Supabase? Esta acción no se puede deshacer.')) return;
-  const paths = [...RF._uploadedPaths];
+  const paths = [..._uploadedPaths];
   if(!paths.length){ rfMsg('No hay fotos registradas para purgar',''); return; }
   let ok=0, fail=0;
   for(const p of paths){
     const {error} = await sb.storage.from('banco-preguntas').remove([p]);
     error ? fail++ : ok++;
   }
-  RF._uploadedPaths = [];
+  _uploadedPaths = [];
   rfSavePaths();
-  RF.practicas.forEach(p=>{ p.fotoUrl=null; p.fotoPath=null; p._blobUrl=null; });
-  rfRenderPracticas();
+  rfAlumnos.forEach(a=>{ a.fotoUrl=null; a.fotoPath=null; a._blobUrl=null; });
+  rfRenderAlumnos();
   rfMsg(`Purgado: ${ok} eliminadas${fail?', '+fail+' errores':''}`, fail?'err':'ok');
 }
 
 /* ── Limpiar ── */
 function rfLimpiar(){
-  RF.alumnoId=null; RF.alumnoNombre=''; RF.alumnoDni='';
-  RF.practicas=[{ nombre:'Práctica 1', nota:'', notaMax:20, fotoUrl:null, fotoPath:null, _blobUrl:null }];
-  document.getElementById('rf-alumno-input').value='';
-  document.getElementById('rf-alumno-id').value='';
-  document.getElementById('rf-alumno-badge').style.display='none';
-  document.getElementById('rf-obs').value='';
-  document.getElementById('rf-tipo').value='';
-  rfRenderPracticas();
+  rfAlumnos = [];
+  document.getElementById('rf-obs-general').value = '';
+  document.querySelectorAll('#rf-materias-checks input[type=checkbox]').forEach(c => c.checked = false);
+  rfRenderAlumnos();
   rfMsg('','');
 }
 
-/* ── Generar PDF ── */
-async function rfGenerarPDF(){
-  if(!RF.alumnoId){ rfMsg('Selecciona un alumno','err'); return; }
-  if(!RF.practicas.length){ rfMsg('Agrega al menos una práctica','err'); return; }
+/* ── Generar PDF por alumno ── */
+async function rfGenerarPDF(idx){
+  const a = rfAlumnos[idx];
+  if(!a){ rfMsg('Alumno no encontrado','err'); return; }
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -581,8 +583,9 @@ async function rfGenerarPDF(){
   const MUTED=[100,110,120], DARK2=[20,28,36], OK=[26,122,26], ERR=[192,57,43];
 
   const fecha    = document.getElementById('rf-fecha').value || new Date().toISOString().slice(0,10);
-  const tipo     = document.getElementById('rf-tipo').value.trim() || 'Evaluación académica';
-  const obs      = document.getElementById('rf-obs').value.trim();
+  const obsGen   = (document.getElementById('rf-obs-general').value||'').trim();
+  const obsParticular = (a.obs||'').trim();
+  const obsTotal = [obsGen, obsParticular].filter(Boolean).join('\n');
   const fechaFmt = new Date(fecha+'T12:00').toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
 
   // HEADER
@@ -591,30 +594,30 @@ async function rfGenerarPDF(){
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
   doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
   doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
-  doc.text(tipo.toUpperCase(),M,11.5);
+  doc.text('REPORTE DE EVALUACIÓN',M,11.5);
 
   // META
   doc.setFillColor(...DARK2); doc.rect(0,13,PW,10,'F');
   doc.setFontSize(6); doc.setFont('helvetica','bold'); doc.setTextColor(...MUTED);
   doc.text('ALUMNO',M,16.5); doc.text('DNI',120,16.5); doc.text('FECHA',165,16.5);
   doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(220,224,228);
-  doc.text(RF.alumnoNombre.toUpperCase(),M,21.5);
-  doc.text(RF.alumnoDni||'—',120,21.5);
+  doc.text(a.nombre.toUpperCase(),M,21.5);
+  doc.text(a.dni||'—',120,21.5);
   doc.text(fechaFmt,165,21.5);
 
   let y = 27;
 
-  // TABLA NOTAS
-  const rows = RF.practicas.map(p=>{
-    const n = parseFloat(p.nota);
-    const m = parseFloat(p.notaMax)||20;
-    const ok = !isNaN(n);
-    return [p.nombre, ok?`${n}`:' — ', `${m}`, ok?`${Math.round(n/m*100)}%`:' — '];
-  });
+  // TABLA NOTAS por materia
+  const rows = a.notas.map(n => [
+    n.nombre,
+    n.nota != null ? `${n.nota}` : '—',
+    '20',
+    n.nota != null ? `${Math.round(n.nota / 20 * 100)}%` : '—'
+  ]);
 
   doc.autoTable({
     startY: y, margin:{left:M,right:M},
-    head:[['PRÁCTICA','NOTA','MÁXIMO','%']],
+    head:[['MATERIA','NOTA','/20','%']],
     body: rows,
     styles:{fontSize:8.5,cellPadding:2.5,textColor:[20,20,20]},
     headStyles:{fillColor:BLACK,textColor:GOLD,fontStyle:'bold',fontSize:7.5,lineWidth:0},
@@ -631,20 +634,19 @@ async function rfGenerarPDF(){
 
   y = doc.lastAutoTable.finalY + 6;
 
-  // Observaciones
-  if(obs){
+  // Observaciones (general + particular)
+  if(obsTotal){
     doc.setFillColor(235,237,240); doc.rect(M,y,PW-2*M,12,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
     doc.text('OBSERVACIONES',M+3,y+4.5);
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,40,40);
-    const lines = doc.splitTextToSize(obs,PW-2*M-6);
+    const lines = doc.splitTextToSize(obsTotal,PW-2*M-6);
     doc.text(lines,M+3,y+9);
     y += Math.max(12,lines.length*4+6)+4;
   }
 
-  // FOTOS — una página por práctica
-  const conFoto = RF.practicas.filter(p=>p.fotoUrl);
-  for(const p of conFoto){
+  // FOTO — página adicional si tiene
+  if(a.fotoUrl){
     let imgData = null;
     try {
       imgData = await new Promise((resolve,reject)=>{
@@ -656,29 +658,27 @@ async function rfGenerarPDF(){
           resolve(c.toDataURL('image/jpeg',0.85));
         };
         img.onerror=()=>reject(new Error('img load failed'));
-        img.src = p._blobUrl||p.fotoUrl;
+        img.src = a._blobUrl||a.fotoUrl;
       });
     } catch(_){}
-    if(!imgData) continue;
-
-    doc.addPage();
-    doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
-    doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
-    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
-    doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
-    doc.text(`${p.nombre.toUpperCase()} · ${RF.alumnoNombre.toUpperCase()}`,M,11.5);
-
-    const maxW=PW-2*M, maxH=297-13-6-8;
-    const tmp=new Image(); tmp.src=imgData;
-    const ratio=(tmp.naturalHeight/tmp.naturalWidth)||1;
-    let iW=maxW, iH=iW*ratio;
-    if(iH>maxH){ iH=maxH; iW=iH/ratio; }
-    const ix=M+(maxW-iW)/2;
-    doc.addImage(imgData,'JPEG',ix,16,iW,iH);
+    if(imgData){
+      doc.addPage();
+      doc.setFillColor(...BLACK); doc.rect(0,0,PW,13,'F');
+      doc.setDrawColor(...GOLD); doc.setLineWidth(0.4); doc.line(0,13,PW,13);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...GOLD);
+      doc.text('ACADEMIA PRE-CADETES CHARLY TÁCTICO TEDAX',M,7.5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...CHALK);
+      doc.text(a.nombre.toUpperCase(),M,11.5);
+      const maxW=PW-2*M, maxH=297-13-6-8;
+      const tmp=new Image(); tmp.src=imgData;
+      const ratio=(tmp.naturalHeight/tmp.naturalWidth)||1;
+      let iW=maxW, iH=iW*ratio;
+      if(iH>maxH){ iH=maxH; iW=iH/ratio; }
+      doc.addImage(imgData,'JPEG',M+(maxW-iW)/2,16,iW,iH);
+    }
   }
 
-  // Footer
+  // Footer en todas las páginas
   const np=doc.internal.getNumberOfPages();
   for(let i=1;i<=np;i++){
     doc.setPage(i);
@@ -688,13 +688,22 @@ async function rfGenerarPDF(){
     doc.text(`${i}/${np}`,PW-M,294,{align:'right'});
   }
 
-  // Nombre archivo
-  const partes = RF.alumnoNombre.toUpperCase().trim().split(/\s+/);
+  const partes = a.nombre.toUpperCase().trim().split(/\s+/);
   const ape=partes[0]||'ALUMNO', nom=partes[1]||'';
-  const dni=RF.alumnoDni||'00000000';
-  const fname=`${nom}_${ape}_${dni}_${fecha}.pdf`.replace(/[^A-Z0-9_\.]/gi,'_');
+  const fname=`${nom}_${ape}_${a.dni||'00000000'}_${fecha}.pdf`.replace(/[^A-Z0-9_\.]/gi,'_');
   doc.save(fname);
   rfMsg('PDF generado','ok');
+}
+
+/* ── Generar todos los PDFs ── */
+async function rfGenerarTodos(){
+  if(!rfAlumnos.length){ rfMsg('Sin alumnos cargados','err'); return; }
+  rfMsg(`Generando ${rfAlumnos.length} PDFs...`,'');
+  for(let i=0; i<rfAlumnos.length; i++){
+    rfMsg(`Generando ${i+1}/${rfAlumnos.length}...`,'');
+    await rfGenerarPDF(i);
+  }
+  rfMsg(`${rfAlumnos.length} PDFs generados`,'ok');
 }
 
 function rfMsg(txt, tipo){

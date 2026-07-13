@@ -664,9 +664,41 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     SCREEN SETUP: MATERIA + FECHA
+══════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-setup">
+  <div class="sc-inner">
+    <div>
+      <div class="sc-eye">Inicio de sesión</div>
+      <div class="sc-title">¿QUÉ VAS A CALIFICAR?</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Materia / Curso</label>
+      <select id="setup-materia-select"
+        style="background:var(--navy2);border:1px solid var(--border);color:var(--chalk);padding:11px 12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;outline:none;width:100%;cursor:pointer">
+        <option value="">Cargando materias...</option>
+      </select>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Fecha del examen</label>
+      <input type="date" id="setup-fecha-input"
+        style="background:var(--navy2);border:1px solid var(--border);color:var(--chalk);padding:11px 12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;outline:none;width:100%;color-scheme:dark"/>
+    </div>
+
+    <div id="setup-status" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);min-height:16px"></div>
+
+    <button class="btn btn-gold" style="width:100%;font-size:16px;padding:16px" onclick="confirmarSetup()">
+      CONTINUAR →
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      SCREEN 0: CONFIG SERVIDOR
 ══════════════════════════════════════════════════ -->
-<div class="screen active" id="screen-config">
+<div class="screen" id="screen-config">
   <div class="sc-inner">
     <div>
       <div class="sc-eye">Configuración inicial</div>
@@ -912,7 +944,7 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-lime" style="width:100%;font-size:15px;padding:15px" onclick="confirmarNota()">
-        CONFIRMAR Y GUARDAR NOTA
+        ✓ AGREGAR AL LOTE
       </button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="reintentarEscaneo()">Reintentar escaneo</button>
@@ -935,6 +967,7 @@
       <div class="sc-eye">Sesión actual</div>
       <div class="sc-title">RESUMEN</div>
     </div>
+    <div id="summary-materia-badge"></div>
     <div class="stat-row" id="stat-row">
       <div class="stat-box"><div class="stat-val" id="st-prom">—</div><div class="stat-lbl">Promedio</div></div>
       <div class="stat-box"><div class="stat-val" id="st-max">—</div><div class="stat-lbl">Mejor</div></div>
@@ -942,17 +975,21 @@
     </div>
     <div id="summary-type-badge" style="display:none"></div>
     <div class="summary-list" id="summary-list"></div>
+    <div id="summary-pending"></div>
+    <button id="btn-confirmar-lote" class="btn btn-lime" style="width:100%;font-size:16px;padding:16px;display:none" onclick="confirmarLote()">
+      ✓ CONFIRMAR Y PASAR A NOTAS
+    </button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="btn btn-gold" style="font-size:13px;padding:12px" onclick="showScreen('screen-student')">
         + Siguiente alumno
       </button>
-      <button class="btn btn-lime" style="font-size:13px;padding:12px" onclick="downloadZipTodos()">
+      <button class="btn btn-outline" style="font-size:13px;padding:12px" onclick="downloadZipTodos()">
         ↓ ZIP todos
       </button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button class="btn btn-outline" style="font-size:12px;padding:10px" onclick="goToQR()">Nueva prueba</button>
-      <button class="btn btn-red" style="font-size:12px;padding:10px" onclick="clearSession()">Borrar sesión</button>
+      <button class="btn btn-red" style="font-size:12px;padding:10px" onclick="limpiarLote()">Limpiar y reintentar</button>
     </div>
   </div>
 </div>
@@ -1018,6 +1055,10 @@ let selectedStudent = null;
 let lastDetectedDni = '';
 let _autocompleteMatches = [];
 let materiaVocabId = null;  // ID de la materia "vocabulario"
+let selectedMateria  = null;  // { id, nombre, is_simulacro }
+let selectedFecha    = '';    // ISO date YYYY-MM-DD
+let attendanceList   = [];    // [{ alumno_id, nombre, dni }] — asistentes del bloque
+let allMaterias      = [];    // lista completa de materias
 
 // Si el celular abrió directamente el Flask (192.168.x.x / 10.x.x.x)
 // usamos URLs relativas y saltamos config + auth.
@@ -1027,7 +1068,6 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
    INIT — auth check
 ═══════════════════════════════════════════════════════════════════ */
 (async function init() {
-  // Restaurar modo de entrada guardado
   const savedMode = localStorage.getItem('omr_input_mode') || 'cel';
   setInputMode(savedMode);
 
@@ -1037,48 +1077,15 @@ const IS_LOCAL = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|localhost)/.tes
       window.location.href = './login.html?next=escaner_cartilla.html';
       return;
     }
-    loadSession();
-    loadMateria();
-
-    const savedIP = localStorage.getItem('omr_server_ip');
-    if (savedIP) {
-      document.getElementById('cfg-ip').value = savedIP;
-      setCfgStatus('Reconectando al servidor...', '');
-      showScreen('screen-config');
-      try {
-        const resp = await fetch(`https://${savedIP}/health`, { signal: AbortSignal.timeout(5000) });
-        const data = await resp.json();
-        if (!resp.ok || !data.ok) throw new Error();
-        serverIP = savedIP;
-        if (!pcMode) await startCamera();
-        const hasKey = loadExamKey();
-        showScreen('screen-qr');
-        if (hasKey) {
-          _showQRResume();
-        } else {
-          _showQRScanner();
-        }
-      } catch(_) {
-        setCfgStatus('No se pudo reconectar. Verifica la IP.', 'err');
-        showScreen('screen-config');
-      }
-    } else {
-      showScreen('screen-config');
-    }
-  } else {
-    serverIP = '';
-    loadSession();
-    loadMateria();
-    loadStudents();
-    const hasKey = loadExamKey();
-    if (!pcMode) startCamera();
-    showScreen('screen-qr');
-    if (hasKey) {
-      _showQRResume();
-    } else {
-      _showQRScanner();
-    }
   }
+
+  // Fecha por defecto: hoy
+  document.getElementById('setup-fecha-input').value = new Date().toISOString().slice(0, 10);
+
+  // Cargar materias para el dropdown de setup
+  await loadMaterias();
+
+  showScreen('screen-setup');
 })();
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1930,6 +1937,7 @@ async function processBatch() {
   const files = Array.from(input.files);
   if (!files.length) return;
   if (!examKey) { showToast('Carga la clave primero (escanea QR)', false); return; }
+  if (!selectedMateria?.id) { showToast('Selecciona la materia primero', false); showScreen('screen-setup'); return; }
 
   await loadStudents();
   let ok = 0, fail = 0;
@@ -1988,23 +1996,17 @@ async function _batchConfirmar(filename) {
   const scoreRaw = document.getElementById('score-text').textContent;
   const [c, t]   = scoreRaw.split('/').map(Number);
   const nota     = examSections ? null : Math.round(c / t * 20);
-  const periodo  = new Date().toISOString().slice(0, 10);
-
-  if (!examSections && materiaVocabId) {
-    const { error } = await sb.from('notas').upsert(
-      { alumno_id: selectedStudent.id, materia_id: materiaVocabId, periodo,
-        nota_1: nota, nota_2: null, nota_3: null, promedio: nota },
-      { onConflict: 'alumno_id,materia_id,periodo' }
-    );
-    if (error) throw new Error(error.message);
-  }
+  // Si ya estaba en el lote (re-escaneo), reemplazar
+  const existIdx = session.findIndex(s => s.alumno_id === selectedStudent.id);
+  if (existIdx >= 0) session.splice(existIdx, 1);
   session.push({
-    nombre:   `${selectedStudent.apellido} ${selectedStudent.nombre}`,
-    dni:      selectedStudent.dni,
-    correct:  c, total: t, nota,
-    results:  lastResults ? [...lastResults] : [],
-    sections: examSections ? JSON.parse(JSON.stringify(examSections)) : null,
-    key:      examKey ? [...examKey] : [],
+    alumno_id: selectedStudent.id,
+    nombre:    `${selectedStudent.apellido} ${selectedStudent.nombre}`,
+    dni:       selectedStudent.dni,
+    correct:   c, total: t, nota,
+    results:   lastResults ? [...lastResults] : [],
+    sections:  examSections ? JSON.parse(JSON.stringify(examSections)) : null,
+    key:       examKey ? [...examKey] : [],
   });
   saveSession();
 }
@@ -2023,43 +2025,37 @@ async function confirmarNota() {
   const scoreRaw = document.getElementById('score-text').textContent;
   const [c, t]   = scoreRaw.split('/').map(Number);
   const nota     = examSections ? null : Math.round(c / t * 20);
-  const periodo  = new Date().toISOString().slice(0, 10);
 
-  // Guardar en Supabase solo si es prueba sin segmentación (tiene nota /20)
-  if (!examSections) {
-    if (!materiaVocabId) { showToast('Materia Vocabulario no encontrada', false); return; }
-    showProc('Guardando nota...');
-    const { error } = await sb.from('notas').upsert(
-      { alumno_id: selectedStudent.id, materia_id: materiaVocabId, periodo,
-        nota_1: nota, nota_2: null, nota_3: null, promedio: nota },
-      { onConflict: 'alumno_id,materia_id,periodo' }
-    );
-    hideProc();
-    if (error) { showToast('Error al guardar: ' + error.message, false); return; }
+  // Si ya estaba en el lote (re-escaneo), reemplazar
+  const existIdx = session.findIndex(s => s.alumno_id === selectedStudent.id);
+  if (existIdx >= 0) {
+    if (!confirm(`${selectedStudent.apellido} ${selectedStudent.nombre} ya está en el lote. ¿Reemplazar?`)) return;
+    session.splice(existIdx, 1);
   }
 
   const entry = {
-    nombre:   `${selectedStudent.apellido} ${selectedStudent.nombre}`,
-    dni:      selectedStudent.dni,
-    correct:  c,
-    total:    t,
-    nota,                                            // null si es simulacro
-    results:  lastResults ? [...lastResults] : [],   // detalle completo de respuestas
-    sections: examSections ? JSON.parse(JSON.stringify(examSections)) : null,
-    key:      examKey ? [...examKey] : [],
+    alumno_id: selectedStudent.id,
+    nombre:    `${selectedStudent.apellido} ${selectedStudent.nombre}`,
+    dni:       selectedStudent.dni,
+    correct:   c,
+    total:     t,
+    nota,
+    results:   lastResults ? [...lastResults] : [],
+    sections:  examSections ? JSON.parse(JSON.stringify(examSections)) : null,
+    key:       examKey ? [...examKey] : [],
   };
   session.push(entry);
   saveSession();
 
   const msg = nota !== null
-    ? `Nota ${nota}/20 guardada — ${entry.nombre}`
-    : `Resultados guardados — ${entry.nombre}`;
+    ? `Lote: ${nota}/20 — ${entry.nombre}`
+    : `Lote: ${entry.correct}/${entry.total} — ${entry.nombre}`;
   showToast(msg, true);
   clearStudent();
   showScreen('screen-student');
 }
 
-const SESSION_KEY = () => `omr_session_${new Date().toISOString().slice(0,10)}`;
+const SESSION_KEY = () => `omr_session_${selectedFecha || new Date().toISOString().slice(0,10)}_${selectedMateria?.id || 'x'}`;
 
 function saveSession() {
   try { localStorage.setItem(SESSION_KEY(), JSON.stringify(session)); } catch(_) {}
@@ -2078,6 +2074,47 @@ function clearSession() {
   try { localStorage.removeItem(SESSION_KEY()); } catch(_) {}
   renderSummary();
   showToast('Sesión borrada', true);
+}
+
+function limpiarLote() {
+  if (!confirm('¿Limpiar el lote completo?\n\nLas notas NO han sido guardadas aún. Podrás subir las imágenes de nuevo.')) return;
+  session = [];
+  try { localStorage.removeItem(SESSION_KEY()); } catch(_) {}
+  renderSummary();
+  showToast('Lote limpiado. Sube las imágenes de nuevo.', true);
+  showScreen('screen-scan');
+}
+
+async function confirmarLote() {
+  if (!session.length) { showToast('Sin alumnos en el lote', false); return; }
+  if (!selectedMateria?.id) { showToast('Sin materia seleccionada', false); return; }
+  if (selectedMateria.is_simulacro) { showToast('Simulacro: las notas no se guardan en el registro académico', false); return; }
+
+  const conNota = session.filter(s => s.nota != null);
+  if (!conNota.length) { showToast('No hay notas para guardar', false); return; }
+
+  if (!confirm(`¿Guardar ${conNota.length} notas en "${selectedMateria.nombre}" para el ${selectedFecha}?\n\nEsta acción no se puede deshacer.`)) return;
+
+  showProc('Guardando notas en base de datos...');
+  let ok = 0, err = 0;
+  for (const e of conNota) {
+    const { error } = await sb.from('notas').upsert(
+      { alumno_id: e.alumno_id, materia_id: selectedMateria.id, periodo: selectedFecha,
+        nota_1: e.nota, nota_2: null, nota_3: null, promedio: e.nota },
+      { onConflict: 'alumno_id,materia_id,periodo' }
+    );
+    error ? err++ : ok++;
+  }
+  hideProc();
+
+  if (err) {
+    showToast(`${ok} guardadas, ${err} con error. Revisa la consola.`, false);
+  } else {
+    showToast(`✓ ${ok} notas guardadas en "${selectedMateria.nombre}"`, true);
+    session = [];
+    try { localStorage.removeItem(SESSION_KEY()); } catch(_) {}
+    renderSummary();
+  }
 }
 
 function saveExamKey() {
@@ -2112,6 +2149,95 @@ function clearExamKey() {
   examSections = null;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   SETUP — materia, fecha, asistencia
+═══════════════════════════════════════════════════════════════════ */
+async function loadMaterias() {
+  const { data } = await sb.from('materias').select('id, nombre').order('nombre');
+  allMaterias = data || [];
+  const sel = document.getElementById('setup-materia-select');
+  if (!sel) return;
+  if (!allMaterias.length) {
+    sel.innerHTML = '<option value="">Sin materias registradas</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Selecciona materia —</option>' +
+    allMaterias.map(m => `<option value="${m.id}">${escHtml(m.nombre)}</option>`).join('');
+}
+
+async function loadAttendance() {
+  attendanceList = [];
+  if (!selectedMateria?.id || !selectedFecha) return;
+  const { data: bloques } = await sb.from('bloques_asistencia')
+    .select('id')
+    .eq('materia_id', selectedMateria.id)
+    .eq('fecha', selectedFecha);
+  if (!bloques || !bloques.length) return;
+  const bloqueIds = bloques.map(b => b.id);
+  const { data } = await sb.from('asistencias')
+    .select('alumno_id, alumnos(perfiles(nombre, apellido, dni))')
+    .in('bloque_id', bloqueIds);
+  attendanceList = (data || [])
+    .filter(a => a.alumnos?.perfiles)
+    .map(a => ({
+      alumno_id: a.alumno_id,
+      nombre: `${a.alumnos.perfiles.apellido || ''} ${a.alumnos.perfiles.nombre || ''}`.trim(),
+      dni: a.alumnos.perfiles.dni || ''
+    }));
+}
+
+async function confirmarSetup() {
+  const matId = document.getElementById('setup-materia-select').value;
+  const fecha = document.getElementById('setup-fecha-input').value;
+  const statusEl = document.getElementById('setup-status');
+
+  if (!matId) { statusEl.textContent = 'Selecciona una materia.'; statusEl.style.color = 'var(--red)'; return; }
+  if (!fecha) { statusEl.textContent = 'Selecciona una fecha.'; statusEl.style.color = 'var(--red)'; return; }
+
+  const mat = allMaterias.find(m => m.id === matId);
+  if (!mat) return;
+
+  selectedMateria = { id: matId, nombre: mat.nombre, is_simulacro: mat.nombre.toLowerCase().includes('simulacro') };
+  selectedFecha   = fecha;
+
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = 'Cargando asistencia...';
+  await Promise.all([loadAttendance(), loadStudents()]);
+  loadSession();
+  statusEl.textContent = '';
+
+  if (IS_LOCAL) {
+    serverIP = '';
+    const hasKey = loadExamKey();
+    if (!pcMode) startCamera();
+    showScreen('screen-qr');
+    if (hasKey) _showQRResume(); else _showQRScanner();
+    return;
+  }
+
+  const savedIP = localStorage.getItem('omr_server_ip');
+  if (savedIP) {
+    document.getElementById('cfg-ip').value = savedIP;
+    setCfgStatus('Reconectando al servidor...', '');
+    showScreen('screen-config');
+    try {
+      const resp = await fetch(`https://${savedIP}/health`, { signal: AbortSignal.timeout(5000) });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error();
+      serverIP = savedIP;
+      if (!pcMode) await startCamera();
+      const hasKey = loadExamKey();
+      showScreen('screen-qr');
+      if (hasKey) _showQRResume(); else _showQRScanner();
+    } catch(_) {
+      setCfgStatus('No se pudo reconectar. Verifica la IP.', 'err');
+      showScreen('screen-config');
+    }
+  } else {
+    showScreen('screen-config');
+  }
+}
+
 async function loadMateria() {
   if (materiaVocabId) return;
   // Buscar por nombre
@@ -2131,16 +2257,26 @@ async function loadMateria() {
    SUMMARY
 ═══════════════════════════════════════════════════════════════════ */
 function renderSummary() {
-  const list     = document.getElementById('summary-list');
-  const statRow  = document.getElementById('stat-row');
+  const list      = document.getElementById('summary-list');
+  const statRow   = document.getElementById('stat-row');
   const typeBadge = document.getElementById('summary-type-badge');
-  list.innerHTML = '';
+  list.innerHTML  = '';
+
+  // Badge materia/fecha
+  const matBadge = document.getElementById('summary-materia-badge');
+  if (matBadge) {
+    matBadge.innerHTML = selectedMateria
+      ? `<div class="badge badge-gold">${escHtml(selectedMateria.nombre)} · ${selectedFecha}</div>`
+      : '';
+  }
 
   if (session.length === 0) {
     list.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:13px;text-align:center;padding:20px">Sin alumnos escaneados aún</div>';
     ['st-prom','st-max','st-min'].forEach(id => document.getElementById(id).textContent = '—');
-    statRow.style.display  = 'grid';
+    statRow.style.display   = 'grid';
     typeBadge.style.display = 'none';
+    _renderPending();
+    _updateConfirmarBtn();
     return;
   }
 
@@ -2185,6 +2321,45 @@ function renderSummary() {
     div.addEventListener('click', () => showAlumnoDetail(s.idx));
     list.appendChild(div);
   });
+
+  _renderPending();
+  _updateConfirmarBtn();
+}
+
+function _renderPending() {
+  const pendingEl = document.getElementById('summary-pending');
+  if (!pendingEl) return;
+  const gradedIds = new Set(session.map(s => s.alumno_id).filter(Boolean));
+  const pending   = attendanceList.filter(a => !gradedIds.has(a.alumno_id));
+  if (pending.length === 0) {
+    pendingEl.innerHTML = attendanceList.length > 0
+      ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--lime);text-align:center;padding:6px 0">✓ Todos los asistentes han sido calificados</div>`
+      : '';
+    return;
+  }
+  pendingEl.innerHTML = `
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
+                  letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:8px">
+        Pendientes (${pending.length}) — asistieron, no detectados
+      </div>
+      ${pending.map(p => `
+        <div style="background:rgba(224,85,85,.07);border:1px solid rgba(224,85,85,.25);
+                    padding:9px 14px;margin-bottom:5px;
+                    display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;
+                       font-size:13px;text-transform:uppercase;color:var(--chalk)">${escHtml(p.nombre)}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;
+                       color:var(--muted)">${escHtml(p.dni)}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function _updateConfirmarBtn() {
+  const btn = document.getElementById('btn-confirmar-lote');
+  if (!btn) return;
+  const show = session.length > 0 && selectedMateria && !selectedMateria.is_simulacro;
+  btn.style.display = show ? '' : 'none';
 }
 
 /* ═══════════════════════════════════════════════════════════════════
