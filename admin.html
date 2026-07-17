@@ -1468,6 +1468,7 @@
         <!-- Campos para sectores normales (académica / entrevista) -->
         <div class="fg full" id="n-campo-periodo"><label>Campo / Período</label><input type="text" id="n-periodo" placeholder="Ej: Práctica 1, Examen parcial..."/></div>
         <div class="fg full" id="n-campo-nota"><label>Nota (0–20)</label><input type="number" id="n-n1" min="0" max="20" step=".5" placeholder="--"/></div>
+        <div class="fg full" id="n-campo-fecha-examen"><label>Fecha del examen <span style="color:var(--red)">*</span></label><input type="date" id="n-fecha-examen"/></div>
         <input type="hidden" id="n-n2"/><input type="hidden" id="n-n3"/>
 
         <!-- Campos para aptitud física -->
@@ -2105,7 +2106,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.nf-wrap'))nfCerrarS
 
 function buildFechasDropdown(){
   const fechas=new Set();
-  allNotas.forEach(n=>{if(n.creado_en)fechas.add(n.creado_en.slice(0,10));});
+  allNotas.forEach(n=>{if(n.fecha_examen)fechas.add(n.fecha_examen.slice(0,10));});
   allResultadosFisicos.forEach(r=>{if(r.fecha)fechas.add(r.fecha);});
   const sorted=[...fechas].sort((a,b)=>b.localeCompare(a));
   const sel=document.getElementById('nf-fecha-sel');
@@ -2257,19 +2258,19 @@ async function generarNotasFiltradosPDF(){
       if(tieneMultiples){
         const body=sorted.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          const fecha=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
         });
-        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota 1','Nota 2','Nota 3','Prom.']],body,
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha examen','Práctica','Nota 1','Nota 2','Nota 3','Prom.']],body,
           didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
         });
       }else{
         const body=sorted.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          const fecha=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
         });
-        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota']],body,
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha examen','Práctica','Nota']],body,
           didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
         });
       }
@@ -3610,7 +3611,7 @@ async function loadRepAlTab(){
 
   if(_repAlTab==='notas'){
     const [{data:notas},{data:rf}]=await Promise.all([
-      sb.from('notas').select('nota_1,periodo,creado_en,materias(nombre,sector)').eq('alumno_id',_repAlumnoId).order('creado_en',{ascending:false}),
+      sb.from('notas').select('nota_1,periodo,fecha_examen,creado_en,materias(nombre,sector)').eq('alumno_id',_repAlumnoId).order('fecha_examen',{ascending:false}),
       sb.from('resultados_fisicos').select('nota,valor,fecha,pruebas_fisicas(nombre,tipo)').eq('alumno_id',_repAlumnoId).order('fecha',{ascending:false})
     ]);
     const rfFisica=(rf||[]).filter(r=>r.pruebas_fisicas?.materia_id===null||r.pruebas_fisicas?.materia_id===undefined);
@@ -3636,7 +3637,7 @@ async function loadRepAlTab(){
       html+=`<table class="nota-inner-table"><thead><tr><th>Período</th><th>Fecha</th><th>Nota</th></tr></thead><tbody>${
         ns.map(n=>{
           const c=(n.nota_1||0)>=11?'bg':'br';
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--';
+          const fecha=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}):'--';
           return`<tr><td>${n.periodo||'--'}</td><td>${fecha}</td><td><span class="badge ${c}">${n.nota_1??'--'}</span></td></tr>`;
         }).join('')
       }</tbody></table>`;
@@ -4526,7 +4527,7 @@ function renderNotas(){
   }
   // Sectores académicos
   const sectorMatIds=new Set(allMaterias.filter(m=>(m.sector||'aptitud_academica')===notasSectorTab).map(m=>m.id));
-  const notasFiltradas=allNotas.filter(n=>sectorMatIds.has(n.materia_id)&&_aluMatchFiltro(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&_notaMatchFiltro(n.creado_en));
+  const notasFiltradas=allNotas.filter(n=>sectorMatIds.has(n.materia_id)&&_aluMatchFiltro(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&_notaMatchFiltro(n.fecha_examen));
   if(!notasFiltradas.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">${allNotas.filter(n=>sectorMatIds.has(n.materia_id)).length?'Sin notas para el filtro aplicado':'Sin notas en este sector'}</div></div>`;return;}
   // Agrupar por materia → alumno → notas por fecha
   const byMat={};
@@ -4540,7 +4541,7 @@ function renderNotas(){
   el.innerHTML=`<div class="nota-sector-wrap">${Object.entries(byMat).map(([mid,md])=>{
     const aluEntries=_sortAluEntries(Object.entries(md.alumnos));
     const aluHTML=aluEntries.map(([aid,ad])=>{
-      const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
+      const sorted=[...ad.notas].sort((a,b)=>new Date(b.fecha_examen||b.creado_en)-new Date(a.fecha_examen||a.creado_en));
       const rows=sorted.map(n=>{
         const n1=n.nota_1??'--';const n2=n.nota_2??'--';const n3=n.nota_3??'--';
         const prom=n.promedio??'--';
@@ -4548,15 +4549,17 @@ function renderNotas(){
         const cp=(n.promedio||0)>=11?'bg':'br';
         const nomEsc=ad.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const perEsc=(n.periodo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const fechaDisp=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
+        const fechaEsc=n.fecha_examen||'';
         return`<tr>
-          <td>${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+          <td>${fechaDisp}</td>
           <td style="color:var(--muted)">${n.periodo||'--'}</td>
           <td><span class="badge ${c1}">${n1}</span></td>
           <td>${n2!=='--'?`<span class="badge ${(n.nota_2||0)>=11?'bg':'br'}">${n2}</span>`:'<span style="color:var(--muted)">--</span>'}</td>
           <td>${n3!=='--'?`<span class="badge ${(n.nota_3||0)>=11?'bg':'br'}">${n3}</span>`:'<span style="color:var(--muted)">--</span>'}</td>
           <td><span class="badge ${cp}" style="font-weight:700">${prom}</span></td>
           <td style="display:flex;gap:4px">
-            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="adminEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'})">Editar</button>
+            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="adminEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'},'${fechaEsc}')">Editar</button>
             <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="adminEliminarNota('${n.id}')">Elim.</button>
           </td>
         </tr>`;
@@ -4643,7 +4646,7 @@ async function adminEliminarNota(id){
   if(error)return myAlert('Error: '+error.message);
   await loadNotas();
 }
-function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
+function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1,fechaExamen=''){
   document.getElementById('n-alumno').value=alumnoId;
   document.getElementById('n-alumno-inp').value=nombre;
   const info=document.getElementById('n-alumno-info');
@@ -4651,6 +4654,7 @@ function adminEditarNota(alumnoId,nombre,materiaId,periodo,n1){
   document.getElementById('n-materia').value=materiaId;
   document.getElementById('n-periodo').value=periodo;
   document.getElementById('n-n1').value=n1!=='null'?n1:'';
+  document.getElementById('n-fecha-examen').value=fechaExamen;
   openMd('md-nota');
 }
 function parsePracUrls(url){if(!url)return[];try{const a=JSON.parse(url);return Array.isArray(a)?a:[url];}catch{return[url];}}
@@ -5538,6 +5542,7 @@ function openCargarNota(){
   document.getElementById('n-alumno-info').style.display='none';
   document.getElementById('n-periodo').value='';
   document.getElementById('n-n1').value='';
+  document.getElementById('n-fecha-examen').value=new Date().toISOString().slice(0,10);
   document.getElementById('n-marca').value='';
   document.getElementById('n-nota-fisica').value='';
   document.getElementById('n-nota-calc').textContent='--';
@@ -5673,7 +5678,9 @@ async function saveNota(){
     const valor=tipo==='tiempo'?parseTiempo(marcaRaw):parseFloat(marcaRaw);
     const sesion=await sb.auth.getSession();
     const userId=sesion.data.session?.user?.id;
-    const {error}=await sb.from('resultados_fisicos').insert({alumno_id:alumnoId,prueba_id:pruebaId,fecha:new Date().toISOString().split('T')[0],valor:isNaN(valor)?null:valor,nota:parseFloat(notaFisica),registrado_por:userId||null});
+    const fechaExamen=document.getElementById('n-fecha-examen').value;
+    if(!fechaExamen)return showMsg(msg,'Ingresa la fecha del examen','err');
+    const {error}=await sb.from('resultados_fisicos').insert({alumno_id:alumnoId,prueba_id:pruebaId,fecha:fechaExamen,valor:isNaN(valor)?null:valor,nota:parseFloat(notaFisica),registrado_por:userId||null});
     if(error)return showMsg(msg,error.message,'err');
     showMsg(msg,'Resultado guardado ','ok');
     await loadNotas();
@@ -5686,11 +5693,13 @@ async function saveNota(){
   periodo=document.getElementById('n-periodo').value.trim();
   const _v1=document.getElementById('n-n1').value;n1=_v1!==''?parseFloat(_v1):null;
   if(!periodo)return showMsg(msg,'Ingresa el campo / período','err');
+  const fechaExamen=document.getElementById('n-fecha-examen').value;
+  if(!fechaExamen)return showMsg(msg,'Ingresa la fecha del examen','err');
   const _v2=document.getElementById('n-n2').value;const n2=_v2!==''?parseFloat(_v2):null;
   const _v3=document.getElementById('n-n3').value;const n3=_v3!==''?parseFloat(_v3):null;
   const ns=[n1,n2,n3].filter(n=>n!==null);
   const prom=ns.length?parseFloat((ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(2)):null;
-  const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
+  const {error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo,fecha_examen:fechaExamen,nota_1:n1,nota_2:n2,nota_3:n3,promedio:prom},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Nota guardada ','ok');
   const _matNota=document.getElementById('n-materia')?.selectedOptions[0]?.text||'una materia';

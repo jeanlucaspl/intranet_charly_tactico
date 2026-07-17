@@ -411,6 +411,7 @@
         <datalist id="pn-titulos-list"></datalist>
       </div>
       <div class="fg"><label>Nota (0–20)</label><input type="number" id="pn-nota" min="0" max="20" step="0.5" placeholder="--"/></div>
+      <div class="fg"><label>Fecha del examen <span style="color:var(--red)">*</span></label><input type="date" id="pn-fecha-examen"/></div>
       <button class="btn btn-gold" onclick="saveNotaProfesor()">GUARDAR NOTA</button>
       <div class="msg" id="pn-msg"></div>
     </div>
@@ -1181,6 +1182,7 @@ async function loadNotasSelects(){
   pnAlumnos=alumnos||[];
   const sm=document.getElementById('pn-materia');
   sm.innerHTML='<option value="">Seleccionar materia...</option>'+pnMaterias.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
+  document.getElementById('pn-fecha-examen').value=new Date().toISOString().slice(0,10);
   await loadNotasProf();
 }
 
@@ -1201,7 +1203,7 @@ async function loadNotasProf(){
 
 function buildPnfFechasDropdown(){
   const fechas=new Set();
-  allNotasProf.forEach(n=>{if(n.creado_en)fechas.add(n.creado_en.slice(0,10));});
+  allNotasProf.forEach(n=>{if(n.fecha_examen)fechas.add(n.fecha_examen.slice(0,10));});
   const sorted=[...fechas].sort((a,b)=>b.localeCompare(a));
   const sel=document.getElementById('pnf-fecha-sel');
   if(!sel)return;
@@ -1217,7 +1219,7 @@ function renderNotasProf(){
   if(!allNotasProf.length){el.innerHTML='<div class="empty"><div class="ei"></div><div class="et">Sin notas registradas</div></div>';return;}
   const filtradas=allNotasProf.filter(n=>
     _pnfAluMatch(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&
-    _pnfFechaMatch(n.creado_en)
+    _pnfFechaMatch(n.fecha_examen)
   );
   if(!filtradas.length){el.innerHTML=`<div class="empty"><div class="ei"></div><div class="et">${allNotasProf.length?'Sin notas para el filtro aplicado':'Sin notas registradas'}</div></div>`;return;}
   // Agrupar: materia → alumno → notas
@@ -1236,18 +1238,20 @@ function renderNotasProf(){
   el.innerHTML=Object.entries(byMat).map(([mid,md])=>{
     const aluEntries=Object.entries(md.alumnos);
     const aluHTML=aluEntries.map(([aid,ad])=>{
-      const sorted=[...ad.notas].sort((a,b)=>new Date(b.creado_en)-new Date(a.creado_en));
+      const sorted=[...ad.notas].sort((a,b)=>new Date(b.fecha_examen||b.creado_en)-new Date(a.fecha_examen||a.creado_en));
       const rows=sorted.map(n=>{
         const nota=n.nota_1??'--';
         const c=(n.nota_1||0)>=11?'bg':'br';
         const nomEsc=ad.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const perEsc=(n.periodo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const fechaDisp=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
+        const fechaEsc=n.fecha_examen||'';
         return`<tr>
-          <td>${n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--'}</td>
+          <td>${fechaDisp}</td>
           <td style="color:var(--muted)">${n.periodo||'--'}</td>
           <td><span class="badge ${c}">${nota}</span></td>
           <td style="display:flex;gap:4px">
-            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="pnEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'})">Editar</button>
+            <button class="btn btn-outline" style="font-size:10px;padding:3px 8px" onclick="pnEditarNota('${n.alumno_id}','${nomEsc}','${n.materia_id}','${perEsc}',${n.nota_1??'null'},'${fechaEsc}')">Editar</button>
             <button class="btn btn-red" style="font-size:10px;padding:3px 8px" onclick="pnEliminarNota('${n.id}')">Elim.</button>
           </td>
         </tr>`;
@@ -1401,7 +1405,7 @@ async function generarNotasProfPDF(){
   // Filtrar notas con los filtros activos
   const filtradas=allNotasProf.filter(n=>
     _pnfAluMatch(`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`,n.alumnos?.perfiles?.dni)&&
-    _pnfFechaMatch(n.creado_en)
+    _pnfFechaMatch(n.fecha_examen)
   );
 
   if(!filtradas.length){
@@ -1422,19 +1426,19 @@ async function generarNotasProfPDF(){
       if(tieneMultiples){
         const body=md.rows.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          const fecha=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--',n.nota_2??'--',n.nota_3??'--',n.promedio??'--'];
         });
-        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota 1','Nota 2','Nota 3','Prom.']],body,
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha examen','Práctica','Nota 1','Nota 2','Nota 3','Prom.']],body,
           didParseCell:d=>{if([4,5,6,7].includes(d.column.index)&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];if(d.column.index===7)d.cell.styles.fontStyle='bold';}}
         });
       }else{
         const body=md.rows.map(n=>{
           const nombre=`${n.alumnos?.perfiles?.apellido||''} ${n.alumnos?.perfiles?.nombre||''}`.trim();
-          const fecha=n.creado_en?new Date(n.creado_en).toLocaleDateString('es-PE'):'--';
+          const fecha=n.fecha_examen?new Date(n.fecha_examen+'T12:00:00').toLocaleDateString('es-PE'):'--';
           return[nombre,n.alumnos?.perfiles?.dni||'--',fecha,n.periodo||'--',n.nota_1??'--'];
         });
-        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha','Práctica','Nota']],body,
+        doc.autoTable({...tableStyles,startY:curY,head:[['Alumno','DNI','Fecha examen','Práctica','Nota']],body,
           didParseCell:d=>{if(d.column.index===4&&d.section==='body'){const v=parseFloat(d.cell.raw);d.cell.styles.textColor=isNaN(v)?[30,40,60]:v>=11?[46,125,82]:[138,32,32];d.cell.styles.fontStyle='bold';}}
         });
       }
@@ -1523,12 +1527,13 @@ async function pnEliminarNota(id){
   if(error)return showMsg(document.getElementById('pn-msg'),error.message,'err');
   loadNotasProf();
 }
-function pnEditarNota(alumnoId,nombreAlumno,materiaId,titulo,nota){
+function pnEditarNota(alumnoId,nombreAlumno,materiaId,titulo,nota,fechaExamen=''){
   document.getElementById('pn-alumno').value=alumnoId;
   document.getElementById('pn-alumno-inp').value=nombreAlumno;
   document.getElementById('pn-materia').value=materiaId;
   document.getElementById('pn-titulo').value=titulo;
   document.getElementById('pn-nota').value=nota;
+  document.getElementById('pn-fecha-examen').value=fechaExamen;
   document.getElementById('pn-msg').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1538,11 +1543,19 @@ async function saveNotaProfesor(){
   const titulo=document.getElementById('pn-titulo').value.trim();
   const nota=parseFloat(document.getElementById('pn-nota').value);
   const msg=document.getElementById('pn-msg');
+  const fechaExamen=document.getElementById('pn-fecha-examen').value;
   if(!alumnoId||!materiaId||!titulo)return showMsg(msg,'Selecciona alumno, materia e ingresa un título','err');
   if(isNaN(nota)||nota<0||nota>20)return showMsg(msg,'Ingresa una nota válida entre 0 y 20','err');
-  const{error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo:titulo,nota_1:nota,nota_2:null,nota_3:null,promedio:nota},{onConflict:'alumno_id,materia_id,periodo'});
+  if(!fechaExamen)return showMsg(msg,'Ingresa la fecha del examen','err');
+  const{error}=await sb.from('notas').upsert({alumno_id:alumnoId,materia_id:materiaId,periodo:titulo,fecha_examen:fechaExamen,nota_1:nota,nota_2:null,nota_3:null,promedio:nota},{onConflict:'alumno_id,materia_id,periodo'});
   if(error)return showMsg(msg,error.message,'err');
   showMsg(msg,'Nota guardada ','ok');
+  document.getElementById('pn-alumno').value='';
+  document.getElementById('pn-alumno-inp').value='';
+  document.getElementById('pn-materia').value='';
+  document.getElementById('pn-titulo').value='';
+  document.getElementById('pn-nota').value='';
+  document.getElementById('pn-fecha-examen').value=new Date().toISOString().slice(0,10);
   // FCM al alumno y sus padres
   const _matNota=document.getElementById('pn-materia')?.selectedOptions[0]?.text||'una materia';
   sb.from('alumnos').select('perfil_id').eq('id',alumnoId).single().then(({data:al})=>{
