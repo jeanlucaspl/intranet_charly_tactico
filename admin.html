@@ -375,6 +375,7 @@
       <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
       <a class="sb-link" href="./herramientas.html" style="text-decoration:none">Generar Práctica</a>
       <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
+      <button class="sb-link" onclick="showPanel('mate-basica',this)">Prueba Mate Básica</button>
       <a id="sb-escaner-link" class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none;display:none">Escáner Cartilla</a>
       <a id="sb-reportes-link" class="sb-link" href="./reportes_fotos.html" style="text-decoration:none;display:none">Reportes con Fotos</a>
     </div>
@@ -870,6 +871,41 @@
       Solo cuadernillo (sin cartilla)
     </button>
 
+  </div>
+</div>
+
+<!-- ══ PRUEBA MATE BÁSICA ══ -->
+<div class="panel" id="panel-mate-basica">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="eye">Académico</div>
+      <div class="ttl">PRUEBA MATE BÁSICA</div>
+    </div>
+  </div>
+  <div style="max-width:520px">
+    <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px;margin-bottom:12px">
+      <div class="fg" style="margin-bottom:14px">
+        <label style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px">Número de preguntas</label>
+        <div id="mb-qty-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+          <button class="mb-qty" onclick="mbSetQty(10,this)">10</button>
+          <button class="mb-qty" onclick="mbSetQty(20,this)">20</button>
+          <button class="mb-qty" onclick="mbSetQty(30,this)">30</button>
+          <button class="mb-qty" onclick="mbSetQty(50,this)">50</button>
+          <button class="mb-qty sel" onclick="mbSetQty(100,this)">100</button>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>Fecha de la prueba</label>
+        <input type="date" id="mb-fecha" style="max-width:200px"/>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Título personalizado <span style="color:var(--muted);font-size:11px;font-weight:400">(opcional)</span></label>
+        <input type="text" id="mb-titulo" placeholder="ej. Práctica N° 1 — Operaciones Básicas" maxlength="80"/>
+      </div>
+    </div>
+    <button class="btn btn-gold" id="mb-btn" style="width:100%;font-size:15px;padding:14px" onclick="mbGenerar()">
+      GENERAR PRUEBA →
+    </button>
   </div>
 </div>
 
@@ -9462,6 +9498,16 @@ async function wn_save() {
 .voc-qty:hover{border-color:rgba(201,168,76,.4);color:var(--gold)}
 .voc-qty:hover::after,.voc-qty.sel::after{transform:scaleX(1)}
 .voc-qty.sel{border-color:var(--gold);color:var(--gold);background:var(--navy2)}
+.mb-qty{
+  background:var(--navy3);border:1px solid var(--border);
+  padding:10px 4px;cursor:pointer;text-align:center;
+  font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--white);
+  letter-spacing:.04em;transition:all .15s;position:relative;
+}
+.mb-qty::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .15s}
+.mb-qty:hover{border-color:rgba(201,168,76,.4);color:var(--gold)}
+.mb-qty:hover::after,.mb-qty.sel::after{transform:scaleX(1)}
+.mb-qty.sel{border-color:var(--gold);color:var(--gold);background:var(--navy2)}
 </style>
 
 <script>
@@ -9953,6 +9999,179 @@ async function wn_save() {
     if(fi) fi.value = new Date().toISOString().slice(0,10);
     vocUpdateBadge();
   });
+
+})();
+
+/* ═════════════════════════════════════════════════════════════════
+   PRUEBA MATE BÁSICA — genera PDF proporcional desde banco_preguntas
+════════════════════════════════════════════════════════════════════ */
+(function(){
+  const MB = { n: 100, grouped: {}, loaded: false };
+
+  const _origMB = window.showPanel;
+  window.showPanel = function(id, btn){
+    _origMB(id, btn);
+    if(id === 'mate-basica') mbInit();
+  };
+
+  function mbInit(){
+    const fi = document.getElementById('mb-fecha');
+    if(fi && !fi.value) fi.value = new Date().toISOString().slice(0,10);
+    if(!MB.loaded) mbLoad().catch(e => console.warn('[MB]', e));
+  }
+
+  window.mbSetQty = function(n, el){
+    MB.n = n;
+    document.querySelectorAll('.mb-qty').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+  };
+
+  async function mbLoad(){
+    const { data: mats } = await sb.from('materias').select('id,nombre,codigo');
+    const mat = (mats||[]).find(m => (m.codigo||'').toUpperCase()==='MA-01' || /matem/i.test(m.nombre));
+    if(!mat) throw new Error('Materia MA-01 no encontrada');
+    const { data: rows } = await sb.from('banco_preguntas')
+      .select('subtema,enunciado_texto').eq('materia_id', mat.id);
+    MB.grouped = {};
+    for(const row of (rows||[])){
+      const m = (row.enunciado_texto||'').match(/\[\[([^\]]+)\],\s*\[([^\]]+)\]\]/);
+      if(!m) continue;
+      const tema = (row.subtema||'General').replace(/:$/,'');
+      if(!MB.grouped[tema]) MB.grouped[tema] = [];
+      MB.grouped[tema].push({ q: m[1].trim(), a: m[2].trim(), subtema: tema });
+    }
+    MB.loaded = true;
+  }
+
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function selectProportional(grouped, total){
+    const keys = Object.keys(grouped).filter(k => grouped[k].length > 0);
+    const counts = keys.map(k => grouped[k].length);
+    const totalItems = counts.reduce((s,c) => s+c, 0);
+    const actualTotal = Math.min(total, totalItems);
+    let allocs = keys.map((k,i) => ({
+      key: k,
+      n: Math.floor((counts[i]/totalItems)*actualTotal),
+      rem: ((counts[i]/totalItems)*actualTotal)%1
+    }));
+    let assigned = allocs.reduce((s,a) => s+a.n, 0);
+    allocs.sort((a,b) => b.rem-a.rem);
+    for(let i=0; i<actualTotal-assigned; i++) allocs[i].n++;
+    const result = {};
+    for(const alloc of allocs){
+      result[alloc.key] = shuffle([...grouped[alloc.key]]).slice(0, alloc.n);
+    }
+    return result; // ordered by subtema for PDF sections
+  }
+
+  window.mbGenerar = async function(){
+    const btn = document.getElementById('mb-btn');
+    btn.disabled = true; btn.textContent = 'Generando…';
+    try {
+      if(!MB.loaded) await mbLoad();
+      const totalDisp = Object.values(MB.grouped).reduce((s,a) => s+a.length, 0);
+      if(!totalDisp) throw new Error('No hay preguntas cargadas para Matemática');
+      const byTema = selectProportional(MB.grouped, MB.n);
+      mbPDF(byTema);
+    } catch(e){
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'GENERAR PRUEBA →';
+    }
+  };
+
+  function mbPDF(byTema){
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+
+    const M=8, PW=210, PH=297, CW=PW-M*2;
+    const BLK=[0,0,0], DARK=[20,20,20], MUT=[110,110,110], RULE=[180,180,180];
+
+    const fechaEl  = document.getElementById('mb-fecha');
+    const fechaVal = fechaEl?.value || new Date().toISOString().slice(0,10);
+    const [fy,fm,fd] = fechaVal.split('-');
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const fechaStr = `${parseInt(fd)} de ${meses[parseInt(fm)-1]} de ${fy}`;
+    const tituloExtra = (document.getElementById('mb-titulo')?.value||'').trim();
+    const titulo = (tituloExtra || 'PRUEBA DE OPERACIONES BÁSICAS').toUpperCase();
+
+    const HDR_H = M+14, FTR_TOP = PH-M-6;
+    const COLS=2, GAP=4, COLW=(CW-GAP*(COLS-1))/COLS;
+    function colX(c){ return M + c*(COLW+GAP); }
+
+    function drawHeader(){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
+      doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, M+4, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text(titulo, PW/2, M+9, {align:'center'});
+      doc.setFontSize(7); doc.setTextColor(...MUT);
+      doc.text(fechaStr, PW-M, M+4, {align:'right'});
+      doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
+      doc.line(M, M+11, PW-M, M+11);
+    }
+    function drawFooter(){
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
+      doc.text('Academia Charly Táctico TEDAX', PW/2, PH-M+2, {align:'center'});
+    }
+
+    drawHeader(); drawFooter();
+
+    let col=0, curY=HDR_H, qNum=1;
+    const allQs = []; // collect for answer key
+
+    for(const [subtema, items] of Object.entries(byTema)){
+      if(!items.length) continue;
+
+      // subtema header
+      if(curY+8 > FTR_TOP){ col++; if(col>=COLS){col=0;doc.addPage();drawHeader();drawFooter();} curY=HDR_H; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUT);
+      doc.text(subtema.toUpperCase(), colX(col), curY+3);
+      doc.setDrawColor(...RULE); doc.setLineWidth(0.2);
+      doc.line(colX(col), curY+4, colX(col)+COLW-2, curY+4);
+      curY+=8;
+
+      for(const q of items){
+        if(curY+7 > FTR_TOP){ col++; if(col>=COLS){col=0;doc.addPage();drawHeader();drawFooter();} curY=HDR_H; }
+        const qx = colX(col);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+        const text = `${qNum}. ${q.q} = `;
+        doc.text(text, qx, curY+4);
+        const tw = doc.getTextWidth(text);
+        const lineLen = Math.min(18, COLW-tw-4);
+        if(lineLen>2){ doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(qx+tw, curY+4.5, qx+tw+lineLen, curY+4.5); }
+        curY+=7;
+        allQs.push(q);
+        qNum++;
+      }
+    }
+
+    // Clave de respuestas
+    doc.addPage(); drawHeader(); drawFooter();
+    let ky=HDR_H+4;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
+    doc.text('CLAVE DE RESPUESTAS', PW/2, ky, {align:'center'});
+    doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
+    doc.line(M, ky+2, PW-M, ky+2);
+    ky+=8;
+    const KPL=10, cellW=CW/KPL;
+    allQs.forEach((q,ki)=>{
+      const row=Math.floor(ki/KPL), c2=ki%KPL;
+      const kx=M+c2*cellW, kyy=ky+row*5.5;
+      doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(8);
+      doc.text(`${ki+1}.`, kx, kyy+3);
+      doc.setFont('helvetica','bold'); doc.setTextColor(...BLK);
+      doc.text(q.a, kx+8, kyy+3);
+    });
+
+    _pdfSave(doc, `prueba_mate_basica_${fechaVal}.pdf`);
+  }
 
 })();
 </script>
