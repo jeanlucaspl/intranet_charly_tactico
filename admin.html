@@ -10187,23 +10187,35 @@ async function wn_save() {
 
     document.body.removeChild(box);
 
-    // Clave de respuestas
+    // Clave de respuestas — 4 columnas, con salto de página automático
     doc.addPage();
     const BLK=[0,0,0], MUT=[110,110,110], RULE=[180,180,180];
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
-    doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, MT+4, {align:'center'});
-    doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('CLAVE DE RESPUESTAS — '+titulo, PW/2, MT+9, {align:'center'});
-    doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(ML, MT+11, PW-MR, MT+11);
-    let ky = MT+18;
-    const KPL=10, cellW=(PW-ML-MR)/KPL;
+    const drawKeyHeader = () => {
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
+      doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, MT+4, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text('CLAVE DE RESPUESTAS — '+titulo, PW/2, MT+9, {align:'center'});
+      doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(ML, MT+11, PW-MR, MT+11);
+    };
+    drawKeyHeader();
+    const KPL=4, kCellW=(PW-ML-MR)/KPL;  // ~45mm por celda
+    const ROW_H=6.5;
+    let kRow=0, kY=MT+18;
     allQs.forEach((q,ki)=>{
-      const row=Math.floor(ki/KPL), c2=ki%KPL;
-      const kx=ML+c2*cellW, kyy=ky+row*5.5;
-      doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(8);
-      doc.text(`${ki+1}.`, kx, kyy+3);
-      doc.setFont('helvetica','bold'); doc.setTextColor(...BLK);
-      doc.text(latexToText(q.a), kx+8, kyy+3);
+      const kCol = ki % KPL;
+      if(kCol===0 && ki>0){
+        kRow++;
+        if(kY + kRow*ROW_H + ROW_H > PH-MB){
+          doc.addPage(); drawKeyHeader(); kRow=0; kY=MT+18;
+        }
+      }
+      const kx = ML + kCol*kCellW;
+      const kyy = kY + kRow*ROW_H;
+      doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(7.5);
+      doc.text(`${ki+1}.`, kx, kyy+3.5);
+      doc.setFont('helvetica','bold'); doc.setTextColor(...BLK); doc.setFontSize(8.5);
+      const ans = doc.splitTextToSize(latexToText(q.a), kCellW-8);
+      doc.text(ans[0], kx+7, kyy+3.5);
     });
     doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
     doc.text('Academia Charly Táctico TEDAX', PW/2, PH-MB+2, {align:'center'});
