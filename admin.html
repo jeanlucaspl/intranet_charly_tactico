@@ -10084,6 +10084,31 @@ async function wn_save() {
     }
   };
 
+  function latexToText(s){
+    if(!s) return '';
+    // Braced commands (may nest one level)
+    for(let i=0;i<3;i++){
+      s = s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+      s = s.replace(/\\sqrt\{([^{}]*)\}/g, 'raiz($1)');
+      s = s.replace(/\\overline\{([^{}]*)\}/g, '($1)');
+      s = s.replace(/\\text\{([^{}]*)\}/g, '$1');
+    }
+    // Simple substitutions
+    s = s.replace(/\\times/g,     '\u00D7');  // ×
+    s = s.replace(/\\div/g,       '\u00F7');  // ÷
+    s = s.replace(/\\dots/g,      '...');
+    s = s.replace(/\\dot/g,       '.');
+    s = s.replace(/\\neq/g,       '\u2260');  // ≠
+    s = s.replace(/\\in\b/g,      '\u2208');  // ∈
+    s = s.replace(/\\rightarrow/g,'\u2192');  // →
+    s = s.replace(/\\quad/g,      '  ');
+    s = s.replace(/\\left/g,      '');
+    s = s.replace(/\\right/g,     '');
+    s = s.replace(/\\\\/g,        '');        // \\ (newline) → nada
+    s = s.replace(/\\[a-zA-Z]+/g, '');        // cualquier otro comando restante
+    return s.trim();
+  }
+
   function mbPDF(byTema){
     const {jsPDF} = window.jspdf;
     const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
@@ -10138,7 +10163,7 @@ async function wn_save() {
         if(curY+7 > FTR_TOP){ col++; if(col>=COLS){col=0;doc.addPage();drawHeader();drawFooter();} curY=HDR_H; }
         const qx = colX(col);
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-        const text = `${qNum}. ${q.q} = `;
+        const text = `${qNum}. ${latexToText(q.q)} = `;
         doc.text(text, qx, curY+4);
         const tw = doc.getTextWidth(text);
         const lineLen = Math.min(18, COLW-tw-4);
@@ -10164,7 +10189,7 @@ async function wn_save() {
       doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(8);
       doc.text(`${ki+1}.`, kx, kyy+3);
       doc.setFont('helvetica','bold'); doc.setTextColor(...BLK);
-      doc.text(q.a, kx+8, kyy+3);
+      doc.text(latexToText(q.a), kx+8, kyy+3);
     });
 
     _pdfSave(doc, `prueba_mate_basica_${fechaVal}.pdf`);
