@@ -1230,7 +1230,21 @@ function buildFlashDeck(preguntas) {
   for (const q of preguntas) {
     if (q.tipo === 'simple') {
       const sol = q.banco_soluciones?.[0];
-      if (!sol) continue;
+      if (!sol) {
+        // Formato [[expr],[ans]] (mate básica)
+        const m = (q.enunciado_texto || '').match(/\[\[([^\]]+)\],\s*\[([^\]]+)\]\]/);
+        if (!m) continue;
+        const ans = m[2].trim();
+        cards.push({
+          parent_texto: null,
+          front_texto:  `$${m[1].trim()}$`,
+          front_img:    null,
+          back_texto:   ans.includes('\\') ? `$${ans}$` : ans,
+          back_alt:     null,
+          subtema:      (q.subtema || '').replace(/:$/, ''),
+        });
+        continue;
+      }
       const back = sol.tipo === 'desarrollo'
         ? (sol.desarrollo_texto || '')
         : `Alternativa correcta: ${LTRS[sol.alternativa_correcta ?? 0]}`;
