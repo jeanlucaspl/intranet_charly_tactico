@@ -10076,7 +10076,7 @@ async function wn_save() {
       const totalDisp = Object.values(MB.grouped).reduce((s,a) => s+a.length, 0);
       if(!totalDisp) throw new Error('No hay preguntas cargadas para Matemática');
       const byTema = selectProportional(MB.grouped, MB.n);
-      mbPDF(byTema);
+      await mbPDF(byTema);
     } catch(e){
       alert('Error: ' + e.message);
     } finally {
@@ -10116,104 +10116,97 @@ async function wn_save() {
     const fechaStr = `${parseInt(fd)} de ${meses[parseInt(fm)-1]} de ${fy}`;
     const titulo = (document.getElementById('mb-titulo')?.value.trim() || 'PRUEBA DE OPERACIONES BÁSICAS').toUpperCase();
 
-    // Recolectar preguntas en orden
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    const PW=210, PH=297, ML=14, MR=14, MT=14, MB=14;
+    const GAP=8;
+    const colW = (PW - ML - MR - GAP) / 2;  // ~87mm por columna
+    const colX = [ML, ML + colW + GAP];
+    const mmToPx = 3.7795275591;
+    const SCALE = 3;
+    const boxPx = Math.round(colW * mmToPx);
+
+    // Caja oculta para renderizar cada pregunta individualmente
+    const box = document.createElement('div');
+    box.style.cssText = `position:fixed;left:-9999px;top:0;width:${boxPx}px;background:white;z-index:-999;font-family:Arial,sans-serif;box-sizing:border-box;`;
+    document.body.appendChild(box);
+
+    // Cabecera en página 1
+    const drawHeader = () => {
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+      doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, MT+4, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text(titulo, PW/2, MT+9, {align:'center'});
+      doc.setFontSize(8); doc.setTextColor(100,100,100);
+      doc.text(fechaStr, PW/2, MT+13, {align:'center'});
+      doc.setDrawColor(180,180,180); doc.setLineWidth(0.3);
+      doc.line(ML, MT+15, PW-MR, MT+15);
+    };
+    drawHeader();
+
+    let col = 0;
+    let y = MT + 18;
+
+    const ensureSpace = (hMm) => {
+      if(y + hMm > PH - MB){
+        if(col === 0){ col = 1; y = MT + 18; }
+        else { doc.addPage(); drawHeader(); col = 0; y = MT + 18; }
+      }
+    };
+
     const allQs = [];
-    let qHtml = '';
     let qNum = 1;
+
     for(const [subtema, items] of Object.entries(byTema)){
       if(!items.length) continue;
-      qHtml += `<div class="mb-sub">${subtema.toUpperCase()}</div>`;
+
+      // Etiqueta de subtema (texto nativo jsPDF)
+      const subLabel = subtema.replace(/:$/, '').toUpperCase();
+      ensureSpace(6);
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(140,140,140);
+      doc.text(subLabel, colX[col], y + 3.5);
+      doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+      doc.line(colX[col], y + 4.5, colX[col] + colW, y + 4.5);
+      y += 6;
+
       for(const q of items){
         const hasFrac = q.q.includes('\\frac');
-        qHtml += `<div class="mb-q${hasFrac ? ' mb-q-frac' : ''}"><span class="mb-n">${qNum}.</span> $${q.q}$</div>`;
+        const fs = hasFrac ? 14 : 11;
+        const lh = hasFrac ? 2.1 : 1.7;
+        box.innerHTML = `<div style="font-size:${fs}px;line-height:${lh};color:#000;padding:1px 2px"><span style="color:#999;font-size:9px;margin-right:2px">${qNum}.</span> $${q.q}$</div>`;
+        await MathJax.typesetPromise([box]);
+        const canvas = await html2canvas(box, {scale:SCALE, backgroundColor:'white', useCORS:true, logging:false});
+        const hMm = canvas.height / SCALE / mmToPx;
+        ensureSpace(hMm);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', colX[col], y, colW, hMm);
+        y += hMm + 0.5;
         allQs.push(q);
         qNum++;
       }
     }
 
-    // Crear contenedor oculto para render con MathJax
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-999';
-    wrap.innerHTML = `
-      <style>
-        #mb-render { font-family: Arial, sans-serif; font-size: 11px; color: #000;
-          padding: 28px 36px; box-sizing: border-box; width: 794px; background: white; }
-        #mb-render .hdr { text-align:center; border-bottom:1px solid #bbb; padding-bottom:8px; margin-bottom:14px; }
-        #mb-render .hdr-inst { font-weight:bold; font-size:13px; }
-        #mb-render .hdr-tit  { font-size:11px; margin-top:3px; }
-        #mb-render .hdr-fecha{ font-size:10px; color:#666; margin-top:2px; }
-        #mb-render .mb-cols  { column-count:2; column-gap:24px; }
-        #mb-render .mb-sub   { font-weight:bold; font-size:10px; color:#888; text-transform:uppercase;
-          letter-spacing:.08em; margin:10px 0 4px; border-bottom:0.5px solid #ccc;
-          break-inside:avoid; column-span:none; }
-        #mb-render .mb-q       { margin:3px 0; line-height:1.8; break-inside:avoid; }
-        #mb-render .mb-q-frac  { font-size:14px; line-height:2.2; }
-        #mb-render .mb-n       { color:#888; font-size:10px; margin-right:2px; }
-        #mb-render .mjx-chtml  { display:inline !important; }
-      </style>
-      <div id="mb-render">
-        <div class="hdr">
-          <div class="hdr-inst">ACADEMIA CHARLY TÁCTICO TEDAX</div>
-          <div class="hdr-tit">${titulo}</div>
-          <div class="hdr-fecha">${fechaStr}</div>
-        </div>
-        <div class="mb-cols">${qHtml}</div>
-      </div>`;
-    document.body.appendChild(wrap);
+    document.body.removeChild(box);
 
-    // Renderizar MathJax
-    await MathJax.typesetPromise([wrap]);
-
-    // Capturar con html2canvas
-    const root = wrap.querySelector('#mb-render');
-    const canvas = await html2canvas(root, { scale:2, backgroundColor:'white', useCORS:true });
-    document.body.removeChild(wrap);
-
-    // Convertir a PDF: slice por páginas A4
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-    const PW=210, PH=297, M=10;
-    const contentW = PW - M*2;
-    const contentH = PH - M*2;
-    const mmPerPx = contentW / (canvas.width / 2);       // escala 2x
-    const pageHpx  = Math.floor(contentH / mmPerPx * 2); // alto de página en px canvas
-
-    let offsetY = 0;
-    let first = true;
-    while(offsetY < canvas.height){
-      if(!first) doc.addPage();
-      first = false;
-      const sliceH = Math.min(pageHpx, canvas.height - offsetY);
-      const tmp = document.createElement('canvas');
-      tmp.width = canvas.width; tmp.height = sliceH;
-      const ctx = tmp.getContext('2d');
-      ctx.fillStyle = 'white'; ctx.fillRect(0,0,tmp.width,tmp.height);
-      ctx.drawImage(canvas, 0, -offsetY);
-      const sliceHmm = (sliceH / 2) * mmPerPx;
-      doc.addImage(tmp.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, contentW, sliceHmm);
-      offsetY += pageHpx;
-    }
-
-    // Clave de respuestas (texto simple, respuestas son números)
+    // Clave de respuestas
     doc.addPage();
     const BLK=[0,0,0], MUT=[110,110,110], RULE=[180,180,180];
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
-    doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, M+4, {align:'center'});
+    doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, MT+4, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('CLAVE DE RESPUESTAS — '+titulo, PW/2, M+9, {align:'center'});
-    doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(M, M+11, PW-M, M+11);
-    let ky = M+18;
-    const KPL=10, cellW=(PW-M*2)/KPL;
+    doc.text('CLAVE DE RESPUESTAS — '+titulo, PW/2, MT+9, {align:'center'});
+    doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(ML, MT+11, PW-MR, MT+11);
+    let ky = MT+18;
+    const KPL=10, cellW=(PW-ML-MR)/KPL;
     allQs.forEach((q,ki)=>{
       const row=Math.floor(ki/KPL), c2=ki%KPL;
-      const kx=M+c2*cellW, kyy=ky+row*5.5;
+      const kx=ML+c2*cellW, kyy=ky+row*5.5;
       doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(8);
       doc.text(`${ki+1}.`, kx, kyy+3);
       doc.setFont('helvetica','bold'); doc.setTextColor(...BLK);
       doc.text(latexToText(q.a), kx+8, kyy+3);
     });
     doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
-    doc.text('Academia Charly Táctico TEDAX', PW/2, PH-M+2, {align:'center'});
+    doc.text('Academia Charly Táctico TEDAX', PW/2, PH-MB+2, {align:'center'});
 
     _pdfSave(doc, `prueba_mate_basica_${fechaVal}.pdf`);
   }
