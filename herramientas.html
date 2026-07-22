@@ -106,7 +106,7 @@
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <button class="tb-back" onclick="history.back()">← Volver</button>
+  <button class="tb-back" id="btn-volver" onclick="history.back()">← Volver</button>
   <div class="tb-brand">CHARLY <span>TÁCTICO</span></div>
   <div class="tb-sep"></div>
   <div style="text-align:right">
@@ -195,7 +195,7 @@ function showTool(tool, btn) {
   if (tool === 'armador') {
     if (typeof gpIniciar === 'function') gpIniciar();
   } else {
-    if (typeof bpInit === 'function' && !BP?.init) bpInit();
+    if (typeof bpIniciar === 'function') bpIniciar();
   }
 }
 
@@ -305,7 +305,7 @@ async function init() {
   if (urlPanel === 'armador') {
     showTool('armador', document.getElementById('sb-armador'));
   } else {
-    if (typeof bpInit === 'function') bpInit();
+    if (typeof bpIniciar === 'function') bpIniciar();
   }
 }
 </script>
