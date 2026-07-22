@@ -10025,7 +10025,8 @@ async function wn_save() {
 
   async function mbLoad(){
     const { data: mats } = await sb.from('materias').select('id,nombre,codigo');
-    const mat = (mats||[]).find(m => (m.codigo||'').toUpperCase()==='MA-01' || /matem/i.test(m.nombre));
+    const mat = (mats||[]).find(m => (m.codigo||'').toUpperCase()==='MA-01')
+             || (mats||[]).find(m => /^matemat/i.test(m.nombre));  // empieza con "matemat", excluye "Razonamiento Matemático"
     if(!mat) throw new Error('Materia MA-01 no encontrada');
     const { data: rows } = await sb.from('banco_preguntas')
       .select('subtema,enunciado_texto').eq('materia_id', mat.id);
