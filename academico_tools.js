@@ -1329,8 +1329,11 @@ async function bpIniciar(){
   if(!BP.init){
     if(!allMaterias.length)await loadMaterias();
     BP.mats=allMaterias.filter(m=>(m.sector||'aptitud_academica')!=='aptitud_fisica');
-    await bpRefreshSubtemas(null);
     BP.init=true;
+    bpNueva();bpRenderUI();
+    // Carga subtemas en background para no bloquear el render inicial
+    bpRefreshSubtemas(null).then(()=>bpRenderUI()).catch(()=>{});
+    return;
   }
   bpNueva();bpRenderUI();
 }
