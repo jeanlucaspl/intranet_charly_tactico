@@ -788,6 +788,12 @@ function typeset(el) {
   if (window.MathJax && el) MathJax.typesetPromise([el]).catch(() => {});
 }
 
+const COMPLEX_MATH_RE = /\\frac|\\sqrt|\\sum|\\int|\\prod|\\lim|\\binom|\\over\b|\\begin/;
+function flashMathStyle(texts) {
+  const combined = texts.join(' ');
+  return COMPLEX_MATH_RE.test(combined) ? ' style="font-size:20px;line-height:1.85"' : '';
+}
+
 function imgHtml(url, style) {
   if (!url) return '';
   return `<img src="${url}" style="max-width:100%;border-radius:4px;margin:8px 0${style ? ';' + style : ''}" loading="lazy">`;
@@ -1328,7 +1334,8 @@ function renderCard() {
       <div class="parent-text">${escHtml(card.parent_texto)}</div>`;
   }
 
-  frontHtml += `<div class="fc-text">${escHtml(card.front_texto)}</div>`;
+  const mathSt = flashMathStyle([card.front_texto || '', card.back_texto || '']);
+  frontHtml += `<div class="fc-text"${mathSt}>${escHtml(card.front_texto)}</div>`;
   if (card.front_img) frontHtml += imgHtml(card.front_img, '');
   frontHtml += `<div class="fc-tap-hint">TAP PARA VER SOLUCIÓN</div>`;
   frontEl.innerHTML = frontHtml;
@@ -1336,7 +1343,7 @@ function renderCard() {
   /* BACK */
   const backEl  = $('fc-back');
   let backHtml  = '<div class="fc-label">Solución</div>';
-  backHtml += `<div class="fc-text">${escHtml(card.back_texto)}</div>`;
+  backHtml += `<div class="fc-text"${mathSt}>${escHtml(card.back_texto)}</div>`;
   if (card.back_alt !== null) {
     backHtml += `<div class="fc-alt-correct">${LTRS[card.back_alt]}</div>`;
   }
