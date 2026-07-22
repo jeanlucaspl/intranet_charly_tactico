@@ -10124,7 +10124,8 @@ async function wn_save() {
       if(!items.length) continue;
       qHtml += `<div class="mb-sub">${subtema.toUpperCase()}</div>`;
       for(const q of items){
-        qHtml += `<div class="mb-q"><span class="mb-n">${qNum}.</span> $${q.q}$ = <span class="mb-blank"></span></div>`;
+        const hasFrac = q.q.includes('\\frac');
+        qHtml += `<div class="mb-q${hasFrac ? ' mb-q-frac' : ''}"><span class="mb-n">${qNum}.</span> $${q.q}$</div>`;
         allQs.push(q);
         qNum++;
       }
@@ -10145,11 +10146,10 @@ async function wn_save() {
         #mb-render .mb-sub   { font-weight:bold; font-size:10px; color:#888; text-transform:uppercase;
           letter-spacing:.08em; margin:10px 0 4px; border-bottom:0.5px solid #ccc;
           break-inside:avoid; column-span:none; }
-        #mb-render .mb-q     { margin:3px 0; line-height:1.8; break-inside:avoid; }
-        #mb-render .mb-n     { color:#888; font-size:10px; margin-right:2px; }
-        #mb-render .mb-blank { display:inline-block; width:50px; border-bottom:1px solid #000;
-          vertical-align:bottom; margin-left:4px; }
-        #mb-render .mjx-chtml{ display:inline !important; }
+        #mb-render .mb-q       { margin:3px 0; line-height:1.8; break-inside:avoid; }
+        #mb-render .mb-q-frac  { font-size:14px; line-height:2.2; }
+        #mb-render .mb-n       { color:#888; font-size:10px; margin-right:2px; }
+        #mb-render .mjx-chtml  { display:inline !important; }
       </style>
       <div id="mb-render">
         <div class="hdr">
