@@ -374,8 +374,7 @@
       <button class="sb-link" onclick="showPanel('practicas',this)">Prácticas</button>
       <button class="sb-link" onclick="showPanel('soluciones',this)">Soluciones</button>
       <a class="sb-link" href="./herramientas.html" style="text-decoration:none">Generar Práctica</a>
-      <button class="sb-link" onclick="showPanel('vocabulario',this)">Prueba Vocabulario</button>
-      <button class="sb-link" onclick="showPanel('mate-basica',this)">Prueba Mate Básica</button>
+      <button class="sb-link" onclick="showPanel('pruebas-basicas',this)">Pruebas Básicas</button>
       <a id="sb-escaner-link" class="sb-link" href="./escaner_cartilla.html" style="text-decoration:none;display:none">Escáner Cartilla</a>
       <a id="sb-reportes-link" class="sb-link" href="./reportes_fotos.html" style="text-decoration:none;display:none">Reportes con Fotos</a>
     </div>
@@ -825,19 +824,23 @@
 </div>
 
 <!-- ══ PRUEBA VOCABULARIO ══ -->
-<div class="panel" id="panel-vocabulario">
+<!-- ══ PRUEBAS BÁSICAS ══ -->
+<div class="panel" id="panel-pruebas-basicas">
   <div class="ph">
     <div class="ph-left">
       <div class="eye">Académico</div>
-      <div class="ttl">PRUEBA DE VOCABULARIO</div>
+      <div class="ttl">PRUEBAS BÁSICAS</div>
     </div>
   </div>
 
-  <div style="max-width:520px">
+  <div class="aula-tabs">
+    <div class="aula-tab active" id="pb-tab-voc" onclick="pbShowTab('vocabulario')">Vocabulario</div>
+    <div class="aula-tab" id="pb-tab-mb" onclick="pbShowTab('mate-basica')">Mate Básica</div>
+  </div>
 
-    <!-- Config card -->
+  <!-- TAB: VOCABULARIO -->
+  <div id="pb-pane-vocabulario" style="max-width:520px;padding-top:16px">
     <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px;margin-bottom:12px">
-
       <div class="fg" style="margin-bottom:14px">
         <label style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px">Número de preguntas</label>
         <div id="voc-qty-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
@@ -848,41 +851,26 @@
           <button class="voc-qty sel" data-n="100" onclick="vocSetQty(100,this)">100</button>
         </div>
       </div>
-
       <div class="fg" style="margin-bottom:14px">
         <label>Fecha de la prueba</label>
         <input type="date" id="voc-fecha" style="max-width:200px"/>
       </div>
-
       <div class="fg" style="margin-bottom:0">
         <label>Título personalizado <span style="color:var(--muted);font-size:11px;font-weight:400">(opcional)</span></label>
         <input type="text" id="voc-titulo" placeholder="ej. Práctica N° 1 — Vocabulario" maxlength="80"/>
       </div>
     </div>
-
-    <!-- Layout preview badge -->
     <div id="voc-badge" style="margin-bottom:14px"></div>
-
-    <!-- Generate buttons -->
     <button class="btn btn-gold" id="voc-btn-completo" style="width:100%;font-size:15px;padding:14px;margin-bottom:8px" onclick="vocGenerarCompleto()">
       GENERAR PRUEBA COMPLETA →
     </button>
     <button class="btn btn-outline" style="width:100%;font-size:13px;padding:10px" onclick="vocGenerar()">
       Solo cuadernillo (sin cartilla)
     </button>
-
   </div>
-</div>
 
-<!-- ══ PRUEBA MATE BÁSICA ══ -->
-<div class="panel" id="panel-mate-basica">
-  <div class="ph">
-    <div class="ph-left">
-      <div class="eye">Académico</div>
-      <div class="ttl">PRUEBA MATE BÁSICA</div>
-    </div>
-  </div>
-  <div style="max-width:520px">
+  <!-- TAB: MATE BÁSICA -->
+  <div id="pb-pane-mate-basica" style="max-width:520px;padding-top:16px;display:none">
     <div style="background:var(--navy2);border:1px solid var(--border);padding:20px 22px;margin-bottom:12px">
       <div class="fg" style="margin-bottom:14px">
         <label style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px">Número de preguntas</label>
@@ -907,6 +895,7 @@
       GENERAR PRUEBA →
     </button>
   </div>
+
 </div>
 
 <!-- ══ NOTIFICACIONES ══ -->
@@ -9523,7 +9512,7 @@ async function wn_save() {
   const _origShowPanel = window.showPanel;
   window.showPanel = function(id, btn){
     _origShowPanel(id, btn);
-    if(id === 'vocabulario') vocInit();
+    if(id === 'pruebas-basicas') vocInit();
   };
 
   function vocInit(){
@@ -9536,6 +9525,14 @@ async function wn_save() {
   }
 
   /* ── Botones cantidad ── */
+  window.pbShowTab = function(tab){
+    ['vocabulario','mate-basica'].forEach(t => {
+      document.getElementById('pb-pane-'+t).style.display = t===tab ? '' : 'none';
+      document.getElementById('pb-tab-'+(t==='vocabulario'?'voc':'mb')).classList.toggle('active', t===tab);
+    });
+    if(tab==='vocabulario') vocInit();
+  };
+
   window.vocSetQty = function(n, el){
     VOC.n = n;
     document.querySelectorAll('.voc-qty').forEach(b => b.classList.remove('sel'));
@@ -10011,7 +10008,7 @@ async function wn_save() {
   const _origMB = window.showPanel;
   window.showPanel = function(id, btn){
     _origMB(id, btn);
-    if(id === 'mate-basica') mbInit();
+    if(id === 'pruebas-basicas') mbLoad().catch(()=>{});
   };
 
   function mbInit(){
