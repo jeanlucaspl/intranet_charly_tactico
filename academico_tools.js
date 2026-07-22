@@ -17,6 +17,14 @@ function gpTW(n){return gpCW(n)-gpIND[n]-2;}
 const gpEsc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function gpFSn(nc){return Math.round(gpFS[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
 function gpLHn(nc){return Math.round(gpLH[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
+// Mínimo de font-size para expresiones LaTeX complejas (fracciones, raíces, etc.)
+const GP_MATH_MIN_PT = 13;
+const GP_COMPLEX_RE = /\\frac|\\sqrt|\\sum|\\int|\\prod|\\lim|\\binom|\\over\b|\\begin/;
+function gpEffectiveFsPt(texts, fsPt){
+  if(fsPt >= GP_MATH_MIN_PT) return fsPt;
+  const combined = (Array.isArray(texts) ? texts : [texts]).join(' ');
+  return GP_COMPLEX_RE.test(combined) ? GP_MATH_MIN_PT : fsPt;
+}
 
 /* ── Draft (localStorage) ── */
 function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:GP.cfg,targetPages:GP.targetPages,secciones:GP.secciones}));}catch(e){}}
@@ -591,21 +599,23 @@ async function gpPrerenderAll(nc){
       if(item.tipo==='texto') continue; // texto se dibuja directamente en PDF
       // Sin LaTeX ni imagen adjunta → marcar para renderizado nativo (texto vectorial)
       if(gpCanNative(item)){imgs.push({native:true});continue;}
+      const itemTexts=[item.e,item.ePost,...(item.si||[]),...(item.alts||[])];
+      const itemFsPt=gpEffectiveFsPt(itemTexts,fsPt);
       if(item.tipo==='alternativas'){
         // Render enunciado y alternativas por separado para el algoritmo de corte de columna
-        box.innerHTML=gpBuildEnunciadoHTML(item,fsPt);
+        box.innerHTML=gpBuildEnunciadoHTML(item,itemFsPt);
         await MathJax.typesetPromise([box]);
         const canvasE=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvasE);
         const hE=canvasE.height/(mmToPx*4);
-        box.innerHTML=gpBuildAltsHTML(item,fsPt);
+        box.innerHTML=gpBuildAltsHTML(item,itemFsPt);
         await MathJax.typesetPromise([box]);
         const canvasA=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvasA);
         const hA=canvasA.height/(mmToPx*4);
         imgs.push({urlE:canvasE.toDataURL('image/png'),hE,urlA:canvasA.toDataURL('image/png'),hA,wMm:gpTW(nc),split:true});
       } else {
-        box.innerHTML=gpBuildQHTML(item,fsPt);
+        box.innerHTML=gpBuildQHTML(item,itemFsPt);
         await MathJax.typesetPromise([box]);
         const canvas=await html2canvas(box,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true});
         gpBinarize(canvas);
@@ -1061,7 +1071,8 @@ async function generarPracticaPDF(){
       box.style.cssText=`position:fixed;top:0;left:${-(devW+20)}px;width:${devW}px;background:#fff;z-index:9999;padding:4px 2px`;
       document.body.appendChild(box);
       for(const q of devMap){
-        box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:9px;line-height:15px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
+        const solFsPx=(gpEffectiveFsPt([q.bpSolDesarrollo],9)*(96/72)).toFixed(1);
+        box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${solFsPx}px;line-height:${(parseFloat(solFsPx)*1.6).toFixed(1)}px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
         await MathJax.typesetPromise([box]);
         const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
         q._devImg={url:canvas.toDataURL('image/png'),wMm:gpTW(1),hMm:canvas.height/(mmToPx*2)};
