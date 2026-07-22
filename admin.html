@@ -10109,80 +10109,101 @@ async function wn_save() {
     return s.trim();
   }
 
-  function mbPDF(byTema){
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-
-    const M=8, PW=210, PH=297, CW=PW-M*2;
-    const BLK=[0,0,0], DARK=[20,20,20], MUT=[110,110,110], RULE=[180,180,180];
-
-    const fechaEl  = document.getElementById('mb-fecha');
-    const fechaVal = fechaEl?.value || new Date().toISOString().slice(0,10);
+  async function mbPDF(byTema){
+    const fechaVal = document.getElementById('mb-fecha')?.value || new Date().toISOString().slice(0,10);
     const [fy,fm,fd] = fechaVal.split('-');
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const fechaStr = `${parseInt(fd)} de ${meses[parseInt(fm)-1]} de ${fy}`;
-    const tituloExtra = (document.getElementById('mb-titulo')?.value||'').trim();
-    const titulo = (tituloExtra || 'PRUEBA DE OPERACIONES BÁSICAS').toUpperCase();
+    const titulo = (document.getElementById('mb-titulo')?.value.trim() || 'PRUEBA DE OPERACIONES BÁSICAS').toUpperCase();
 
-    const HDR_H = M+14, FTR_TOP = PH-M-6;
-    const COLS=2, GAP=4, COLW=(CW-GAP*(COLS-1))/COLS;
-    function colX(c){ return M + c*(COLW+GAP); }
-
-    function drawHeader(){
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
-      doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, M+4, {align:'center'});
-      doc.setFont('helvetica','normal'); doc.setFontSize(8);
-      doc.text(titulo, PW/2, M+9, {align:'center'});
-      doc.setFontSize(7); doc.setTextColor(...MUT);
-      doc.text(fechaStr, PW-M, M+4, {align:'right'});
-      doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
-      doc.line(M, M+11, PW-M, M+11);
-    }
-    function drawFooter(){
-      doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
-      doc.text('Academia Charly Táctico TEDAX', PW/2, PH-M+2, {align:'center'});
-    }
-
-    drawHeader(); drawFooter();
-
-    let col=0, curY=HDR_H, qNum=1;
-    const allQs = []; // collect for answer key
-
+    // Recolectar preguntas en orden
+    const allQs = [];
+    let qHtml = '';
+    let qNum = 1;
     for(const [subtema, items] of Object.entries(byTema)){
       if(!items.length) continue;
-
-      // subtema header
-      if(curY+8 > FTR_TOP){ col++; if(col>=COLS){col=0;doc.addPage();drawHeader();drawFooter();} curY=HDR_H; }
-      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...MUT);
-      doc.text(subtema.toUpperCase(), colX(col), curY+3);
-      doc.setDrawColor(...RULE); doc.setLineWidth(0.2);
-      doc.line(colX(col), curY+4, colX(col)+COLW-2, curY+4);
-      curY+=8;
-
+      qHtml += `<div class="mb-sub">${subtema.toUpperCase()}</div>`;
       for(const q of items){
-        if(curY+7 > FTR_TOP){ col++; if(col>=COLS){col=0;doc.addPage();drawHeader();drawFooter();} curY=HDR_H; }
-        const qx = colX(col);
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-        const text = `${qNum}. ${latexToText(q.q)} = `;
-        doc.text(text, qx, curY+4);
-        const tw = doc.getTextWidth(text);
-        const lineLen = Math.min(18, COLW-tw-4);
-        if(lineLen>2){ doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(qx+tw, curY+4.5, qx+tw+lineLen, curY+4.5); }
-        curY+=7;
+        qHtml += `<div class="mb-q"><span class="mb-n">${qNum}.</span> $${q.q}$ = <span class="mb-blank"></span></div>`;
         allQs.push(q);
         qNum++;
       }
     }
 
-    // Clave de respuestas
-    doc.addPage(); drawHeader(); drawFooter();
-    let ky=HDR_H+4;
+    // Crear contenedor oculto para render con MathJax
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-999';
+    wrap.innerHTML = `
+      <style>
+        #mb-render { font-family: Arial, sans-serif; font-size: 11px; color: #000;
+          padding: 28px 36px; box-sizing: border-box; width: 794px; background: white; }
+        #mb-render .hdr { text-align:center; border-bottom:1px solid #bbb; padding-bottom:8px; margin-bottom:14px; }
+        #mb-render .hdr-inst { font-weight:bold; font-size:13px; }
+        #mb-render .hdr-tit  { font-size:11px; margin-top:3px; }
+        #mb-render .hdr-fecha{ font-size:10px; color:#666; margin-top:2px; }
+        #mb-render .mb-cols  { column-count:2; column-gap:24px; }
+        #mb-render .mb-sub   { font-weight:bold; font-size:10px; color:#888; text-transform:uppercase;
+          letter-spacing:.08em; margin:10px 0 4px; border-bottom:0.5px solid #ccc;
+          break-inside:avoid; column-span:none; }
+        #mb-render .mb-q     { margin:3px 0; line-height:1.8; break-inside:avoid; }
+        #mb-render .mb-n     { color:#888; font-size:10px; margin-right:2px; }
+        #mb-render .mb-blank { display:inline-block; width:50px; border-bottom:1px solid #000;
+          vertical-align:bottom; margin-left:4px; }
+        #mb-render .mjx-chtml{ display:inline !important; }
+      </style>
+      <div id="mb-render">
+        <div class="hdr">
+          <div class="hdr-inst">ACADEMIA CHARLY TÁCTICO TEDAX</div>
+          <div class="hdr-tit">${titulo}</div>
+          <div class="hdr-fecha">${fechaStr}</div>
+        </div>
+        <div class="mb-cols">${qHtml}</div>
+      </div>`;
+    document.body.appendChild(wrap);
+
+    // Renderizar MathJax
+    await MathJax.typesetPromise([wrap]);
+
+    // Capturar con html2canvas
+    const root = wrap.querySelector('#mb-render');
+    const canvas = await html2canvas(root, { scale:2, backgroundColor:'white', useCORS:true });
+    document.body.removeChild(wrap);
+
+    // Convertir a PDF: slice por páginas A4
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    const PW=210, PH=297, M=10;
+    const contentW = PW - M*2;
+    const contentH = PH - M*2;
+    const mmPerPx = contentW / (canvas.width / 2);       // escala 2x
+    const pageHpx  = Math.floor(contentH / mmPerPx * 2); // alto de página en px canvas
+
+    let offsetY = 0;
+    let first = true;
+    while(offsetY < canvas.height){
+      if(!first) doc.addPage();
+      first = false;
+      const sliceH = Math.min(pageHpx, canvas.height - offsetY);
+      const tmp = document.createElement('canvas');
+      tmp.width = canvas.width; tmp.height = sliceH;
+      const ctx = tmp.getContext('2d');
+      ctx.fillStyle = 'white'; ctx.fillRect(0,0,tmp.width,tmp.height);
+      ctx.drawImage(canvas, 0, -offsetY);
+      const sliceHmm = (sliceH / 2) * mmPerPx;
+      doc.addImage(tmp.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, contentW, sliceHmm);
+      offsetY += pageHpx;
+    }
+
+    // Clave de respuestas (texto simple, respuestas son números)
+    doc.addPage();
+    const BLK=[0,0,0], MUT=[110,110,110], RULE=[180,180,180];
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...BLK);
-    doc.text('CLAVE DE RESPUESTAS', PW/2, ky, {align:'center'});
-    doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
-    doc.line(M, ky+2, PW-M, ky+2);
-    ky+=8;
-    const KPL=10, cellW=CW/KPL;
+    doc.text('ACADEMIA CHARLY TÁCTICO TEDAX', PW/2, M+4, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('CLAVE DE RESPUESTAS — '+titulo, PW/2, M+9, {align:'center'});
+    doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(M, M+11, PW-M, M+11);
+    let ky = M+18;
+    const KPL=10, cellW=(PW-M*2)/KPL;
     allQs.forEach((q,ki)=>{
       const row=Math.floor(ki/KPL), c2=ki%KPL;
       const kx=M+c2*cellW, kyy=ky+row*5.5;
@@ -10191,6 +10212,8 @@ async function wn_save() {
       doc.setFont('helvetica','bold'); doc.setTextColor(...BLK);
       doc.text(latexToText(q.a), kx+8, kyy+3);
     });
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
+    doc.text('Academia Charly Táctico TEDAX', PW/2, PH-M+2, {align:'center'});
 
     _pdfSave(doc, `prueba_mate_basica_${fechaVal}.pdf`);
   }
