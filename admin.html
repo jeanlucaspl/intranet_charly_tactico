@@ -10187,7 +10187,7 @@ async function wn_save() {
 
     document.body.removeChild(box);
 
-    // Clave de respuestas — 4 columnas, con salto de página automático
+    // Clave de respuestas — columnas dinámicas según ancho de respuesta
     doc.addPage();
     const BLK=[0,0,0], MUT=[110,110,110], RULE=[180,180,180];
     const drawKeyHeader = () => {
@@ -10198,27 +10198,55 @@ async function wn_save() {
       doc.setDrawColor(...RULE); doc.setLineWidth(0.3); doc.line(ML, MT+11, PW-MR, MT+11);
     };
     drawKeyHeader();
-    const KPL=4, kCellW=(PW-ML-MR)/KPL;  // ~45mm por celda
-    const ROW_H=6.5;
-    let kRow=0, kY=MT+18;
-    allQs.forEach((q,ki)=>{
-      const kCol = ki % KPL;
-      if(kCol===0 && ki>0){
-        kRow++;
-        if(kY + kRow*ROW_H + ROW_H > PH-MB){
-          doc.addPage(); drawKeyHeader(); kRow=0; kY=MT+18;
-        }
+
+    // Medir ancho máximo de respuesta en texto plano
+    const allTextAns = allQs.map(q => latexToText(q.a));
+    doc.setFontSize(8.5);
+    const SF = doc.internal.scaleFactor;
+    let maxAnsW = 0;
+    for(const txt of allTextAns){
+      const w = doc.getStringUnitWidth(txt) * 8.5 / SF;
+      if(w > maxAnsW) maxAnsW = w;
+    }
+    // Cada celda = numCol(7mm) + ansCol
+    const NUM_W = 7;
+    const ansColW = Math.min(65, Math.max(16, maxAnsW + 3));
+    const pairW = NUM_W + ansColW;
+    const availW = PW - ML - MR;
+    const KPL = Math.max(2, Math.floor(availW / pairW));
+    const actualPairW = availW / KPL;
+    const actualAnsW = actualPairW - NUM_W;
+
+    // Armar filas y columnas para autoTable
+    const kBody = [];
+    for(let i = 0; i < allQs.length; i += KPL){
+      const row = {};
+      for(let c = 0; c < KPL; c++){
+        const idx = i + c;
+        row[`n${c}`] = idx < allQs.length ? `${idx+1}.` : '';
+        row[`a${c}`] = idx < allQs.length ? allTextAns[idx] : '';
       }
-      const kx = ML + kCol*kCellW;
-      const kyy = kY + kRow*ROW_H;
-      doc.setFont('helvetica','normal'); doc.setTextColor(...MUT); doc.setFontSize(7.5);
-      doc.text(`${ki+1}.`, kx, kyy+3.5);
-      doc.setFont('helvetica','bold'); doc.setTextColor(...BLK); doc.setFontSize(8.5);
-      const ans = doc.splitTextToSize(latexToText(q.a), kCellW-8);
-      doc.text(ans[0], kx+7, kyy+3.5);
+      kBody.push(row);
+    }
+    const kColumns = [];
+    const kColStyles = {};
+    for(let c = 0; c < KPL; c++){
+      kColumns.push({header:'', dataKey:`n${c}`});
+      kColumns.push({header:'', dataKey:`a${c}`});
+      kColStyles[`n${c}`] = {cellWidth: NUM_W, textColor: MUT, fontSize: 7.5, fontStyle:'normal'};
+      kColStyles[`a${c}`] = {cellWidth: actualAnsW, textColor: BLK, fontSize: 8.5, fontStyle:'bold'};
+    }
+
+    doc.autoTable({
+      startY: MT + 14,
+      margin: {left: ML, right: MR, top: MT + 14, bottom: MB},
+      columns: kColumns,
+      body: kBody,
+      styles: {cellPadding: 1.5, overflow:'linebreak', lineColor: RULE, lineWidth: 0.1},
+      columnStyles: kColStyles,
+      theme: 'plain',
+      didDrawPage: (data) => { if(data.pageNumber > 1) drawKeyHeader(); },
     });
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUT);
-    doc.text('Academia Charly Táctico TEDAX', PW/2, PH-MB+2, {align:'center'});
 
     _pdfSave(doc, `prueba_mate_basica_${fechaVal}.pdf`);
   }
