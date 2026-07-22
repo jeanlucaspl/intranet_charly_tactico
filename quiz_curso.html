@@ -922,6 +922,8 @@ function buildQuizPool(preguntas) {
         id: q.id,
         subtema: q.subtema || '',
         enunciado_texto: q.enunciado_texto || '',
+        enunciado_imagen_url: q.enunciado_imagen_url || null,
+        enunciado_post: q.enunciado_post || '',
         subitems,
       });
     }
@@ -1033,8 +1035,19 @@ function renderBloque(item) {
     </div>
   `).join('');
 
+  const hasTexto = item.enunciado_texto.trim();
+  const hasImg   = item.enunciado_imagen_url;
+  const hasPost  = item.enunciado_post.trim();
+
+  const bloqueHtml = (hasTexto || hasImg || hasPost) ? `
+    <div class="bloque-texto">
+      ${hasTexto ? `<div style="white-space:pre-wrap;line-height:1.8">${escHtml(item.enunciado_texto)}</div>` : ''}
+      ${hasImg   ? `<img src="${escHtml(item.enunciado_imagen_url)}" style="max-width:100%;margin:10px 0;display:block">` : ''}
+      ${hasPost  ? `<div style="white-space:pre-wrap;line-height:1.8;margin-top:8px;color:var(--muted)">${escHtml(item.enunciado_post)}</div>` : ''}
+    </div>` : '';
+
   return `
-    <div class="bloque-texto">${escHtml(item.enunciado_texto)}</div>
+    ${bloqueHtml}
     <div id="subitems-container">${subHtml}</div>
   `;
 }
