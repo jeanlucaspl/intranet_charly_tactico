@@ -289,7 +289,7 @@ async function init() {
 
   // Qty buttons
   const qtyGrid = document.getElementById('qty-grid');
-  const qtys = [10, 20, 30, 50].filter(n => n <= totalAvailable);
+  const qtys = [10, 20, 30, 50, 100].filter(n => n <= totalAvailable);
   if (totalAvailable > 0 && !qtys.includes(totalAvailable)) qtys.push(totalAvailable);
   qtys.sort((a, b) => a - b);
   for (const n of qtys) {
