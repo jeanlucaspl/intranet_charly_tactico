@@ -185,6 +185,7 @@
     .card-tag.quiz  { color: var(--gold);  border-color: rgba(201,168,76,.4);  background: rgba(201,168,76,.07); }
     .card-tag.flash { color: var(--lime);  border-color: rgba(157,217,0,.4);   background: rgba(157,217,0,.06); }
     .card-tag.prox  { color: var(--orange); border-color: rgba(224,122,53,.4); background: rgba(224,122,53,.07); }
+    .card-tag.test  { color: #6ab0e8;  border-color: rgba(106,176,232,.4);   background: rgba(106,176,232,.06); }
 
     /* Loading state */
     .loading-state {
@@ -256,6 +257,28 @@
     <div class="course-grid" id="grid-mates"></div>
   </div>
 
+  <!-- PRUEBAS BÁSICAS -->
+  <div class="section" id="section-basicas" style="display:none">
+    <div class="sec-header">
+      <div class="sec-title">PRUEBAS BÁSICAS</div>
+      <div class="sec-line"></div>
+    </div>
+    <div class="course-grid">
+      <a class="course-card" href="./quiz_definiciones.html">
+        <div class="card-ico">📖</div>
+        <div class="card-name">Prueba Vocabulario</div>
+        <div class="card-sub">Definiciones · Significados</div>
+        <span class="card-tag test">Test</span>
+      </a>
+      <a class="course-card" href="./prueba_mate_basica.html">
+        <div class="card-ico">🔢</div>
+        <div class="card-name">Mate Básica</div>
+        <div class="card-sub">Operaciones · Selección proporcional</div>
+        <span class="card-tag test">Test</span>
+      </a>
+    </div>
+  </div>
+
 </div><!-- /app -->
 
 <script>
@@ -272,13 +295,6 @@ const SPECIAL_LETRAS = [
     ico: '↔',
     sub: 'Léxico táctico',
     link: './quiz_rv.html',
-    tipo: null,
-  },
-  {
-    nombre: 'Vocabulario',
-    ico: '📖',
-    sub: 'Definiciones',
-    link: './quiz_definiciones.html',
     tipo: null,
   },
 ];
@@ -385,6 +401,7 @@ async function init() {
   document.getElementById('loading-state').style.display = 'none';
   document.getElementById('section-letras').style.display = '';
   document.getElementById('section-mates').style.display = '';
+  document.getElementById('section-basicas').style.display = '';
 }
 
 init().catch(err => {
