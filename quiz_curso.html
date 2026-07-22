@@ -1248,11 +1248,13 @@ function buildFlashDeck(preguntas) {
       const back = sol.tipo === 'desarrollo'
         ? (sol.desarrollo_texto || '')
         : `Alternativa correcta: ${LTRS[sol.alternativa_correcta ?? 0]}`;
+      const frontTxt = q.enunciado_texto || '';
+      const wrapMath = s => s.includes('\\') ? `$${s}$` : s;
       cards.push({
         parent_texto: null,
-        front_texto:  q.enunciado_texto || '',
+        front_texto:  wrapMath(frontTxt),
         front_img:    q.enunciado_imagen_url || null,
-        back_texto:   back,
+        back_texto:   sol.tipo === 'desarrollo' ? wrapMath(back) : back,
         back_alt:     sol.tipo === 'alternativa' ? (sol.alternativa_correcta ?? 0) : null,
         subtema:      q.subtema || '',
       });
