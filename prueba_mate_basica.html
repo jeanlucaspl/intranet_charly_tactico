@@ -248,7 +248,7 @@ async function init() {
 
   const { data: mats } = await sb.from('materias').select('id,nombre,codigo');
   const mat = (mats || []).find(m =>
-    (m.codigo || '').toUpperCase() === 'MA-01' || /matemát/i.test(m.nombre)
+    (m.codigo || '').toUpperCase() === 'MA-01' || /matem/i.test(m.nombre)
   );
 
   if (!mat) {
@@ -330,21 +330,23 @@ function showQ() {
   document.getElementById('prog-fill').style.width = (current / pool.length * 100) + '%';
   document.getElementById('prog-txt').textContent = `${current + 1} / ${pool.length}`;
   document.getElementById('q-tema').textContent = item.subtema;
-  document.getElementById('q-text').textContent = item.q;
+  const qtEl = document.getElementById('q-text');
+  qtEl.innerHTML = '$' + item.q + '$';
   document.getElementById('answer-block').classList.remove('visible');
-  document.getElementById('q-answer').textContent = '';
+  document.getElementById('q-answer').innerHTML = '';
   document.getElementById('btn-reveal').style.display = '';
   document.getElementById('action-row').style.display = 'none';
-  if (window.MathJax?.typesetPromise) MathJax.typesetPromise([document.getElementById('q-text')]).catch(() => {});
+  if (window.MathJax?.typesetPromise) MathJax.typesetPromise([qtEl]).catch(() => {});
 }
 
 function revealAnswer() {
   const item = pool[current];
-  document.getElementById('q-answer').textContent = item.a;
+  const qaEl = document.getElementById('q-answer');
+  qaEl.innerHTML = '$' + item.a + '$';
   document.getElementById('answer-block').classList.add('visible');
   document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('action-row').style.display = 'flex';
-  if (window.MathJax?.typesetPromise) MathJax.typesetPromise([document.getElementById('q-answer')]).catch(() => {});
+  if (window.MathJax?.typesetPromise) MathJax.typesetPromise([qaEl]).catch(() => {});
 }
 
 function markAnswer(correct) {
