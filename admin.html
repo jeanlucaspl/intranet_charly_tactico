@@ -10027,8 +10027,15 @@ async function wn_save() {
     const { data: mats } = await sb.from('materias').select('id,nombre,codigo');
     const mat = (mats||[]).find(m => m.codigo==='MA-01' || m.nombre==='Matematica');
     if(!mat) throw new Error('Materia MA-01 no encontrada');
-    const { data: rows } = await sb.from('banco_preguntas')
-      .select('subtema,enunciado_texto').eq('materia_id', mat.id);
+    const rows = [];
+    const PAGE = 1000;
+    for(let from = 0; ; from += PAGE){
+      const { data } = await sb.from('banco_preguntas')
+        .select('subtema,enunciado_texto').eq('materia_id', mat.id)
+        .range(from, from + PAGE - 1);
+      if(data?.length) rows.push(...data);
+      if(!data || data.length < PAGE) break;
+    }
     MB.grouped = {};
     for(const row of (rows||[])){
       const m = (row.enunciado_texto||'').match(/\[\[([^\]]+)\],\s*\[([^\]]+)\]\]/);

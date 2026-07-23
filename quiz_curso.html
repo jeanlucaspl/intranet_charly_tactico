@@ -822,22 +822,31 @@ async function init() {
     return;
   }
 
-  /* Cargar preguntas con join completo */
-  const { data: preguntas, error } = await sb.from('banco_preguntas')
-    .select(`
-      id, tipo, subtema, enunciado_texto, enunciado_imagen_url, enunciado_post,
-      banco_subitems(id, orden, texto, imagen_url,
+  /* Cargar preguntas con join completo (paginado para superar límite de 1000) */
+  const preguntas = [];
+  const PAGE = 1000;
+  let loadError = null;
+  for(let from = 0; ; from += PAGE){
+    const { data, error } = await sb.from('banco_preguntas')
+      .select(`
+        id, tipo, subtema, enunciado_texto, enunciado_imagen_url, enunciado_post,
+        banco_subitems(id, orden, texto, imagen_url,
+          banco_alternativas(id, orden, texto),
+          banco_soluciones(id, tipo, alternativa_correcta, desarrollo_texto)
+        ),
         banco_alternativas(id, orden, texto),
         banco_soluciones(id, tipo, alternativa_correcta, desarrollo_texto)
-      ),
-      banco_alternativas(id, orden, texto),
-      banco_soluciones(id, tipo, alternativa_correcta, desarrollo_texto)
-    `)
-    .eq('materia_id', MATERIA_ID);
+      `)
+      .eq('materia_id', MATERIA_ID)
+      .range(from, from + PAGE - 1);
+    if(error){ loadError = error; break; }
+    if(data?.length) preguntas.push(...data);
+    if(!data || data.length < PAGE) break;
+  }
 
-  if (error) {
-    console.error('[quiz_curso] load error:', error);
-    showEmptyState('Error al cargar', error.message || 'No se pudo cargar el banco de preguntas.');
+  if (loadError) {
+    console.error('[quiz_curso] load error:', loadError);
+    showEmptyState('Error al cargar', loadError.message || 'No se pudo cargar el banco de preguntas.');
     return;
   }
 
