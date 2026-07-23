@@ -10038,7 +10038,7 @@ async function wn_save() {
     }
     MB.grouped = {};
     for(const row of (rows||[])){
-      const m = (row.enunciado_texto||'').match(/\[\[([^\]]+)\],\s*\[([^\]]+)\]\]/);
+      const m = (row.enunciado_texto||'').match(/\[\[(.+)\],\s*\[(.+)\]\]/);
       if(!m) continue;
       const tema = (row.subtema||'General').replace(/:$/,'');
       if(!MB.grouped[tema]) MB.grouped[tema] = [];

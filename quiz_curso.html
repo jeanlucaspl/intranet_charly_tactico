@@ -1247,7 +1247,7 @@ function buildFlashDeck(preguntas) {
       const sol = q.banco_soluciones?.[0];
       if (!sol) {
         // Formato [[expr],[ans]] (mate básica)
-        const m = (q.enunciado_texto || '').match(/\[\[([^\]]+)\],\s*\[([^\]]+)\]\]/);
+        const m = (q.enunciado_texto || '').match(/\[\[(.+)\],\s*\[(.+)\]\]/);
         if (!m) continue;
         const ans = m[2].trim();
         cards.push({
