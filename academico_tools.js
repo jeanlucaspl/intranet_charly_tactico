@@ -28,6 +28,24 @@ function gpAddDisplayStyle(text){
     return GP_COMPLEX_RE.test(inner)?`$\\displaystyle ${inner}$`:m;
   });
 }
+// Convierte LaTeX con \text{} al formato mixto HTML+$math$:
+// el contenido de \text{} queda como HTML plano (evita que tildes/dieresis
+// queden en modo math de MathJax donde tienen métricas distintas)
+function gpMbWrap(s){
+  if(!s) return '';
+  const parts=[];
+  const re=/\\text\{([^}]*)\}/g;
+  let last=0,m;
+  while((m=re.exec(s))!==null){
+    const before=s.slice(last,m.index).trim();
+    if(before) parts.push(`$${before}$`);
+    parts.push(m[1]); // texto plano fuera del modo math
+    last=m.index+m[0].length;
+  }
+  const after=s.slice(last).trim();
+  if(after) parts.push(`$${after}$`);
+  return parts.join('')||`$${s}$`;
+}
 
 /* ── Draft (localStorage) ── */
 function gpSaveDraft(){try{localStorage.setItem('gp_draft',JSON.stringify({cfg:GP.cfg,targetPages:GP.targetPages,secciones:GP.secciones}));}catch(e){}}
@@ -2242,9 +2260,9 @@ function bpToGpItems(preg){
     const sol=preg.banco_soluciones?.[0]||null;
     // Parsear formato [[pregunta],[respuesta]] usado en mate básica
     const _mb=(preg.enunciado_texto||'').match(/^\[\[(.+)\],\s*\[(.+)\]\]\s*$/);
-    const _e=_mb?`$${_mb[1]}$`:(preg.enunciado_texto||'');
+    const _e=_mb?gpMbWrap(_mb[1]):(preg.enunciado_texto||'');
     const _solTipo=_mb?'desarrollo':(sol?.tipo||null);
-    const _solDes=_mb?`$${_mb[2]}$`:(sol?.desarrollo_texto||'');
+    const _solDes=_mb?gpMbWrap(_mb[2]):(sol?.desarrollo_texto||'');
     items.push({
       tipo:alts.length?'alternativas':'pregunta',
       e:_e,ePost:preg.enunciado_post||'',imgData:null,
