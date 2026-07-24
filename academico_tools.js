@@ -17,13 +17,16 @@ function gpTW(n){return gpCW(n)-gpIND[n]-2;}
 const gpEsc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function gpFSn(nc){return Math.round(gpFS[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
 function gpLHn(nc){return Math.round(gpLH[nc]*(GP.cfg.escalaFuente||1)*10)/10;}
-// Mínimo de font-size para expresiones LaTeX complejas (fracciones, raíces, etc.)
-const GP_MATH_MIN_PT = 13;
+// Detecta expresiones LaTeX complejas para inyectar \displaystyle
 const GP_COMPLEX_RE = /\\frac|\\sqrt|\\sum|\\int|\\prod|\\lim|\\binom|\\over\b|\\begin/;
-function gpEffectiveFsPt(texts, fsPt){
-  if(fsPt >= GP_MATH_MIN_PT) return fsPt;
-  const combined = (Array.isArray(texts) ? texts : [texts]).join(' ');
-  return GP_COMPLEX_RE.test(combined) ? GP_MATH_MIN_PT : fsPt;
+function gpEffectiveFsPt(texts, fsPt){ return fsPt; }
+// Inyecta \displaystyle dentro de cada bloque $...$ cuando hay fracciones/raíces
+function gpAddDisplayStyle(text){
+  if(!text||!GP_COMPLEX_RE.test(text)) return text;
+  return text.replace(/\$\$[\s\S]+?\$\$|\$([^$]+)\$/g,(m,inner)=>{
+    if(!inner) return m; // bloque $$...$$ → no tocar
+    return GP_COMPLEX_RE.test(inner)?`$\\displaystyle ${inner}$`:m;
+  });
 }
 
 /* ── Draft (localStorage) ── */
@@ -454,14 +457,14 @@ function gpBuildQHTML(item,fsPt){
   let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
   gpNormParas(item.e).forEach(par=>{
     if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-    h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+    h+=`<p style="margin:0 0 1px 0;text-align:justify">${gpAddDisplayStyle(par)}</p>`;
   });
   const _imgSrc=item.imgData||(item.bpImgUrl||null);
   if(_imgSrc){
     h+=`<img src="${_imgSrc}" crossorigin="anonymous" style="max-width:100%;height:auto;display:block;margin:3px 0">`;
     gpNormParas(item.ePost).forEach(par=>{
       if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-      h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+      h+=`<p style="margin:0 0 1px 0;text-align:justify">${gpAddDisplayStyle(par)}</p>`;
     });
   }
   if(item.tipo==='alternativas'){
@@ -471,13 +474,13 @@ function gpBuildQHTML(item,fsPt){
     const cols=maxAltLen>42?1:2;
     h+=`<div style="display:grid;grid-template-columns:${cols===1?'1fr':'1fr 1fr'};gap:1px 8px;margin-top:2px">`;
     ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
-      const txt=(item.alts||[])[i]||'';
+      const txt=gpAddDisplayStyle((item.alts||[])[i]||'');
       h+=`<div style="display:flex;gap:4px;align-items:flex-start;padding:0"><span style="font-weight:700;min-width:13px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
     });
     h+=`</div>`;
   } else {
     (item.si||[]).forEach((si,i)=>{
-      h+=`<div style="display:flex;gap:6px;margin-top:2px"><span style="color:#333333;font-weight:700;min-width:18px;flex-shrink:0">${String.fromCharCode(97+i)})</span><span>${si}</span></div>`;
+      h+=`<div style="display:flex;gap:6px;margin-top:2px"><span style="color:#333333;font-weight:700;min-width:18px;flex-shrink:0">${String.fromCharCode(97+i)})</span><span>${gpAddDisplayStyle(si)}</span></div>`;
     });
   }
   return h+'</div>';
@@ -487,14 +490,14 @@ function gpBuildEnunciadoHTML(item,fsPt){
   let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
   gpNormParas(item.e).forEach(par=>{
     if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-    h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+    h+=`<p style="margin:0 0 1px 0;text-align:justify">${gpAddDisplayStyle(par)}</p>`;
   });
   const _imgSrc=item.imgData||(item.bpImgUrl||null);
   if(_imgSrc){
     h+=`<img src="${_imgSrc}" crossorigin="anonymous" style="max-width:100%;height:auto;display:block;margin:3px 0">`;
     gpNormParas(item.ePost).forEach(par=>{
       if(!par.trim()){h+=`<div style="height:${(fsPt*(96/72)*.4).toFixed(1)}px"></div>`;return;}
-      h+=`<p style="margin:0 0 1px 0;text-align:justify">${par}</p>`;
+      h+=`<p style="margin:0 0 1px 0;text-align:justify">${gpAddDisplayStyle(par)}</p>`;
     });
   }
   return h+'</div>';
@@ -508,7 +511,7 @@ function gpBuildAltsHTML(item,fsPt){
   let h=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${fsPx}px;line-height:${lhPx}px;color:#141e32;padding:1px 0">`;
   h+=`<div style="display:grid;grid-template-columns:${cols===1?'1fr':'1fr 1fr'};gap:1px 8px;margin-top:2px">`;
   ['A','B','C','D','E'].slice(0,n).forEach((L,i)=>{
-    const txt=(item.alts||[])[i]||'';
+    const txt=gpAddDisplayStyle((item.alts||[])[i]||'');
     h+=`<div style="display:flex;gap:4px;align-items:flex-start;padding:0"><span style="font-weight:700;min-width:13px;flex-shrink:0">${L})</span><span>${txt}</span></div>`;
   });
   h+=`</div></div>`;
