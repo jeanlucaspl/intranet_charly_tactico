@@ -1241,6 +1241,42 @@ function showResults() {
 /* ═══════════════════════════════════════════════════════════
    BUILD FLASH DECK
 ═══════════════════════════════════════════════════════════ */
+// Convierte LaTeX con \text{} a formato mixto HTML + $math$:
+// el contenido de \text{} queda como HTML plano para que tildes/dieresis
+// no pasen por las métricas de MathJax donde se ven más pequeños.
+function mbWrap(s) {
+  if (!s) return '';
+  const parts = [];
+  const re = /\\text\{([^}]*)\}/g;
+  let last = 0, m;
+  while ((m = re.exec(s)) !== null) {
+    const before = s.slice(last, m.index).trim();
+    if (before) parts.push(`$${before}$`);
+    parts.push(m[1]);
+    last = m.index + m[0].length;
+  }
+  const after = s.slice(last).trim();
+  if (after) parts.push(`$${after}$`);
+  return parts.join('') || `$${s}$`;
+}
+// mbWrapDisplay: igual pero usa $$...$$ para soluciones (permite saltos de línea)
+function mbWrapDisplay(s) {
+  if (!s) return '';
+  if (!s.includes('\\') && !s.includes('$')) return s;
+  const parts = [];
+  const re = /\\text\{([^}]*)\}/g;
+  let last = 0, m;
+  while ((m = re.exec(s)) !== null) {
+    const before = s.slice(last, m.index).trim();
+    if (before) parts.push(`$$${before}$$`);
+    parts.push(m[1]);
+    last = m.index + m[0].length;
+  }
+  const after = s.slice(last).trim();
+  if (after) parts.push(`$$${after}$$`);
+  return parts.join('') || `$$${s}$$`;
+}
+
 function buildFlashDeck(preguntas) {
   const cards = [];
   for (const q of preguntas) {
@@ -1250,12 +1286,11 @@ function buildFlashDeck(preguntas) {
         // Formato [[expr],[ans]] (mate básica)
         const m = (q.enunciado_texto || '').match(/\[\[(.+)\],\s*\[(.+)\]\]/);
         if (!m) continue;
-        const ans = m[2].trim();
         cards.push({
           parent_texto: null,
-          front_texto:  `$${m[1].trim()}$`,
+          front_texto:  mbWrap(m[1].trim()),
           front_img:    null,
-          back_texto:   ans.includes('\\') ? `$${ans}$` : ans,
+          back_texto:   mbWrapDisplay(m[2].trim()),
           back_alt:     null,
           subtema:      (q.subtema || '').replace(/:$/, ''),
         });
@@ -1265,15 +1300,11 @@ function buildFlashDeck(preguntas) {
         ? (sol.desarrollo_texto || '')
         : `Alternativa correcta: ${LTRS[sol.alternativa_correcta ?? 0]}`;
       const frontTxt = q.enunciado_texto || '';
-      // wrapMath: solo envuelve si tiene LaTeX y NO tiene ya delimitadores $
-      const wrapMath    = s => (s.includes('\\') && !s.includes('$')) ? `$${s}$` : s;
-      // wrapDisplay: para soluciones — usa $$...$$ (display math, puede hacer saltos de línea)
-      const wrapDisplay = s => (s.includes('\\') && !s.includes('$')) ? `$$${s}$$` : s;
       cards.push({
         parent_texto: null,
-        front_texto:  wrapMath(frontTxt),
+        front_texto:  mbWrap(frontTxt),
         front_img:    q.enunciado_imagen_url || null,
-        back_texto:   sol.tipo === 'desarrollo' ? wrapDisplay(back) : back,
+        back_texto:   sol.tipo === 'desarrollo' ? mbWrapDisplay(back) : back,
         back_alt:     sol.tipo === 'alternativa' ? (sol.alternativa_correcta ?? 0) : null,
         subtema:      q.subtema || '',
       });
