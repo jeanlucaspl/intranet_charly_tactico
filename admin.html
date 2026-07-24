@@ -10178,9 +10178,10 @@ async function wn_save() {
 
       for(const q of items){
         const hasFrac = q.q.includes('\\frac');
-        const fs = hasFrac ? 14 : 11;
-        const lh = hasFrac ? 2.1 : 1.7;
-        box.innerHTML = `<div style="font-size:${fs}px;line-height:${lh};color:#000;padding:1px 2px"><span style="color:#999;font-size:9px;margin-right:2px">${qNum}.</span> $${q.q}$</div>`;
+        // Siempre 11px de texto; \displaystyle agranda solo las fracciones
+        const latex = hasFrac ? `\\displaystyle ${q.q}` : q.q;
+        const lh = hasFrac ? 2.4 : 1.7;
+        box.innerHTML = `<div style="font-size:11px;line-height:${lh};color:#000;padding:1px 2px"><span style="color:#999;font-size:9px;margin-right:2px">${qNum}.</span> $${latex}$</div>`;
         await MathJax.typesetPromise([box]);
         const canvas = await html2canvas(box, {scale:SCALE, backgroundColor:'white', useCORS:true, logging:false});
         const hMm = canvas.height / SCALE / mmToPx;
