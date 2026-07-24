@@ -29,22 +29,28 @@ function gpAddDisplayStyle(text){
   });
 }
 // Convierte LaTeX con \text{} al formato mixto HTML+$math$:
-// el contenido de \text{} queda como HTML plano (evita que tildes/dieresis
-// queden en modo math de MathJax donde tienen métricas distintas)
+// - Si ya tiene $ → devuelve tal cual
+// - Si tiene \text{} → extrae texto plano + envuelve el LaTeX en $...$
+// - Si tiene LaTeX sin $ → envuelve en $...$
+// - Texto plano → devuelve tal cual
+const _gpHasLatex=s=>s.includes('\\')||s.includes('^{')||s.includes('_{');
 function gpMbWrap(s){
   if(!s) return '';
+  if(s.includes('$')) return s;
+  if(!_gpHasLatex(s)) return s;
+  if(!s.includes('\\text{')) return `$${s}$`;
   const parts=[];
   const re=/\\text\{([^}]*)\}/g;
   let last=0,m;
   while((m=re.exec(s))!==null){
     const before=s.slice(last,m.index).trim();
     if(before) parts.push(`$${before}$`);
-    parts.push(m[1]); // texto plano fuera del modo math
+    parts.push(m[1]);
     last=m.index+m[0].length;
   }
   const after=s.slice(last).trim();
   if(after) parts.push(`$${after}$`);
-  return parts.join('')||`$${s}$`;
+  return parts.join('');
 }
 
 /* ── Draft (localStorage) ── */

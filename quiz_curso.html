@@ -1241,11 +1241,19 @@ function showResults() {
 /* ═══════════════════════════════════════════════════════════
    BUILD FLASH DECK
 ═══════════════════════════════════════════════════════════ */
+// Detecta si un string tiene LaTeX que necesita delimitadores $
+const _hasLatexCmd = s => s.includes('\\') || s.includes('^{') || s.includes('_{');
 // Convierte LaTeX con \text{} a formato mixto HTML + $math$:
-// el contenido de \text{} queda como HTML plano para que tildes/dieresis
-// no pasen por las métricas de MathJax donde se ven más pequeños.
+// - Si ya tiene $ delimitadores → devuelve tal cual (no re-envolver)
+// - Si tiene \text{} → extrae texto plano + envuelve el LaTeX en $...$
+// - Si tiene LaTeX sin $ → envuelve en $...$
+// - Texto plano sin LaTeX → devuelve tal cual
 function mbWrap(s) {
   if (!s) return '';
+  if (s.includes('$')) return s;          // ya tiene delimitadores
+  if (!_hasLatexCmd(s)) return s;         // texto plano — sin cambios
+  if (!s.includes('\\text{')) return `$${s}$`; // LaTeX puro sin \text{}
+  // Tiene \text{}: extraer como HTML plano + envolver partes math en $...$
   const parts = [];
   const re = /\\text\{([^}]*)\}/g;
   let last = 0, m;
@@ -1257,12 +1265,14 @@ function mbWrap(s) {
   }
   const after = s.slice(last).trim();
   if (after) parts.push(`$${after}$`);
-  return parts.join('') || `$${s}$`;
+  return parts.join('');
 }
 // mbWrapDisplay: igual pero usa $$...$$ para soluciones (permite saltos de línea)
 function mbWrapDisplay(s) {
   if (!s) return '';
-  if (!s.includes('\\') && !s.includes('$')) return s;
+  if (s.includes('$')) return s;
+  if (!_hasLatexCmd(s)) return s;
+  if (!s.includes('\\text{')) return `$$${s}$$`;
   const parts = [];
   const re = /\\text\{([^}]*)\}/g;
   let last = 0, m;
@@ -1274,7 +1284,7 @@ function mbWrapDisplay(s) {
   }
   const after = s.slice(last).trim();
   if (after) parts.push(`$$${after}$$`);
-  return parts.join('') || `$$${s}$$`;
+  return parts.join('');
 }
 
 function buildFlashDeck(preguntas) {
