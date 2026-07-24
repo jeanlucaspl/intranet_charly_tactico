@@ -13,6 +13,7 @@
   <script>
     MathJax = {
       tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+      chtml: { displayOverflow: 'linebreak' },
       startup: { typeset: false }
     };
   </script>
@@ -406,7 +407,7 @@
       padding: 28px 24px;
       background: var(--navy2);
       border: 1px solid var(--border);
-      overflow-y: auto;
+      overflow: auto;
     }
     .fc-back {
       transform: rotateY(180deg);
@@ -1264,12 +1265,15 @@ function buildFlashDeck(preguntas) {
         ? (sol.desarrollo_texto || '')
         : `Alternativa correcta: ${LTRS[sol.alternativa_correcta ?? 0]}`;
       const frontTxt = q.enunciado_texto || '';
-      const wrapMath = s => s.includes('\\') ? `$${s}$` : s;
+      // wrapMath: solo envuelve si tiene LaTeX y NO tiene ya delimitadores $
+      const wrapMath    = s => (s.includes('\\') && !s.includes('$')) ? `$${s}$` : s;
+      // wrapDisplay: para soluciones — usa $$...$$ (display math, puede hacer saltos de línea)
+      const wrapDisplay = s => (s.includes('\\') && !s.includes('$')) ? `$$${s}$$` : s;
       cards.push({
         parent_texto: null,
         front_texto:  wrapMath(frontTxt),
         front_img:    q.enunciado_imagen_url || null,
-        back_texto:   sol.tipo === 'desarrollo' ? wrapMath(back) : back,
+        back_texto:   sol.tipo === 'desarrollo' ? wrapDisplay(back) : back,
         back_alt:     sol.tipo === 'alternativa' ? (sol.alternativa_correcta ?? 0) : null,
         subtema:      q.subtema || '',
       });
