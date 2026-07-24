@@ -10208,11 +10208,11 @@ async function wn_save() {
     };
     drawKeyHeader();
 
-    // Grid: 4 pares (número + respuesta) por fila
-    const NCOLS_K  = 4;
-    const kPairW   = availW / NCOLS_K;   // ~45.5 mm
-    const kNumW    = 7;                   // mm para el número
-    const kAnsW    = kPairW - kNumW;      // mm para la respuesta
+    // Grid: 3 pares (número + respuesta) por fila (~60mm por par)
+    const NCOLS_K  = 3;
+    const kPairW   = availW / NCOLS_K;
+    const kNumW    = 7;
+    const kAnsW    = kPairW - kNumW;
     const kAnsPx   = Math.round(kAnsW * mmToPx);
 
     // Caja oculta para renderizar cada respuesta
@@ -10223,11 +10223,30 @@ async function wn_save() {
     // Pre-renderizar todas las respuestas
     const kRendered = [];
     for(const q of allQs){
-      const hasLatex = q.a.includes('\\');
-      const hasFrac  = q.a.includes('\\frac') || q.a.includes('\\sqrt');
-      const latex    = hasLatex ? (hasFrac ? `\\displaystyle ${q.a}` : q.a) : null;
+      const a = q.a.trim();
+      // Detectar LaTeX: backslash O superíndice/subíndice con llaves
+      const hasLatex = a.includes('\\') || a.includes('^{') || a.includes('_{');
+      const hasFrac  = a.includes('\\frac') || a.includes('\\sqrt');
+      const ds       = hasFrac ? '\\displaystyle ' : '';
       const lh       = hasFrac ? 2.0 : 1.5;
-      kBox.innerHTML = `<div style="font-size:9px;line-height:${lh};color:#000;padding:0 2px;white-space:normal;word-break:break-word">${hasLatex ? `$${latex}$` : q.a}</div>`;
+
+      // Respuestas con \rightarrow → partir en pasos, uno por línea
+      let innerHtml;
+      if(hasLatex && a.includes('\\rightarrow')){
+        const steps = a.split('\\rightarrow').map(s => s.trim());
+        innerHtml = steps.map((s, i) => {
+          const sHasLatex = s.includes('\\') || s.includes('^{');
+          const wrapped   = sHasLatex ? `$${ds}${s}$` : s;
+          const arrow     = i > 0 ? '<span style="color:#888;margin-right:1px">→</span>' : '';
+          return `<div style="margin-top:${i>0?'2px':'0'}">${arrow}${wrapped}</div>`;
+        }).join('');
+      } else if(hasLatex){
+        innerHtml = `$${ds}${a}$`;
+      } else {
+        innerHtml = a;
+      }
+
+      kBox.innerHTML = `<div style="font-size:9px;line-height:${lh};color:#000;padding:0 2px">${innerHtml}</div>`;
       if(hasLatex) await MathJax.typesetPromise([kBox]);
       const canvas = await html2canvas(kBox, {scale:SCALE, backgroundColor:'white', useCORS:true, logging:false});
       kRendered.push({img: canvas.toDataURL('image/png'), hMm: canvas.height / SCALE / mmToPx});
