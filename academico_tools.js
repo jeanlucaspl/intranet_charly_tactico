@@ -1074,8 +1074,8 @@ async function generarPracticaPDF(){
       box.style.cssText=`position:fixed;top:0;left:${-(devW+20)}px;width:${devW}px;background:#fff;z-index:9999;padding:4px 2px`;
       document.body.appendChild(box);
       for(const q of devMap){
-        const solFsPx=(gpEffectiveFsPt([q.bpSolDesarrollo],9)*(96/72)).toFixed(1);
-        box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${solFsPx}px;line-height:${(parseFloat(solFsPx)*1.6).toFixed(1)}px;color:#141e32;white-space:pre-wrap">${q.bpSolDesarrollo}</div>`;
+        const solFsPx=(9*(96/72)).toFixed(1);
+        box.innerHTML=`<div style="font-family:Helvetica,Arial,sans-serif;font-size:${solFsPx}px;line-height:${(parseFloat(solFsPx)*1.6).toFixed(1)}px;color:#141e32;white-space:pre-wrap">${gpAddDisplayStyle(q.bpSolDesarrollo)}</div>`;
         await MathJax.typesetPromise([box]);
         const canvas=await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
         q._devImg={url:canvas.toDataURL('image/png'),wMm:gpTW(1),hMm:canvas.height/(mmToPx*2)};
@@ -2240,16 +2240,21 @@ function bpToGpItems(preg){
   }else{
     const alts=(preg.banco_alternativas||[]).slice().sort((a,b)=>a.orden-b.orden);
     const sol=preg.banco_soluciones?.[0]||null;
+    // Parsear formato [[pregunta],[respuesta]] usado en mate básica
+    const _mb=(preg.enunciado_texto||'').match(/^\[\[(.+)\],\s*\[(.+)\]\]\s*$/);
+    const _e=_mb?`$${_mb[1]}$`:(preg.enunciado_texto||'');
+    const _solTipo=_mb?'desarrollo':(sol?.tipo||null);
+    const _solDes=_mb?`$${_mb[2]}$`:(sol?.desarrollo_texto||'');
     items.push({
       tipo:alts.length?'alternativas':'pregunta',
-      e:preg.enunciado_texto||'',ePost:preg.enunciado_post||'',imgData:null,
+      e:_e,ePost:preg.enunciado_post||'',imgData:null,
       bpImgUrl:preg.enunciado_imagen_url||null,imgW:0,imgH:0,p:1,si:[],
       alts:Array.from({length:5},(_,i)=>alts[i]?.texto||''),
       altCorrecta:sol?.tipo==='alternativa'?(sol.alternativa_correcta??-1):-1,
       numAlts:alts.filter(a=>a.texto?.trim()).length||5,align:'left',
       bpId:preg.id,bpSiId:null,bpSubtema:preg.subtema||'',
-      bpSolTipo:sol?.tipo||null,bpSolAlt:sol?.alternativa_correcta??-1,
-      bpSolDesarrollo:sol?.desarrollo_texto||''
+      bpSolTipo:_solTipo,bpSolAlt:sol?.alternativa_correcta??-1,
+      bpSolDesarrollo:_solDes
     });
   }
   return items;
